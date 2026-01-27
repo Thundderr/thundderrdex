@@ -9,7 +9,9 @@ const MAX_RECENT_SEARCHES = 20;
 interface ModuleStore {
   modules: PokemonModule[];
   recentSearches: RecentSearch[];
+  newlyCreatedModuleId: string | null;
   addModule: (type?: ModuleType) => void;
+  clearNewlyCreatedModule: () => void;
   addTypeChartModule: () => void;
   removeModule: (id: string) => void;
   updateModule: (id: string, updates: Partial<PokemonModule>) => void;
@@ -48,11 +50,18 @@ export const useModuleStore = create<ModuleStore>()(
     (set, get) => ({
       modules: [createDefaultModule()],
       recentSearches: [],
+      newlyCreatedModuleId: null,
 
       addModule: (type: ModuleType = "pokemon") => {
+        const newModule = createDefaultModule(type);
         set((state) => ({
-          modules: [...state.modules, createDefaultModule(type)],
+          modules: [...state.modules, newModule],
+          newlyCreatedModuleId: newModule.id,
         }));
+      },
+
+      clearNewlyCreatedModule: () => {
+        set({ newlyCreatedModuleId: null });
       },
 
       addTypeChartModule: () => {

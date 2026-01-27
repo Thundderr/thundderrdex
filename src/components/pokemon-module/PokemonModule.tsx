@@ -6,6 +6,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { usePokemon } from "@/hooks/usePokemon";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { useModuleStore } from "@/stores/moduleStore";
+import { useGenerationStore } from "@/stores/generationStore";
+import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
+import { TYPES_BY_GENERATION } from "@/data/typeChart";
 import { PokemonModule as PokemonModuleType, ModuleTab } from "@/types/module";
 import { StatsDisplay } from "./StatsDisplay";
 import { AbilitiesPanel } from "./AbilitiesPanel";
@@ -22,18 +25,54 @@ interface Props {
 const TABS: { id: ModuleTab; label: string }[] = [
   { id: "stats", label: "Stats" },
   { id: "abilities", label: "Abilities" },
-  { id: "types", label: "Types" },
+  { id: "types", label: "Matchups" },
   { id: "moves", label: "Moves" },
 ];
 
+// Pokemon generation ranges by Pokedex number
+function getPokemonGeneration(pokedexId: number): number {
+  if (pokedexId <= 151) return 1;
+  if (pokedexId <= 251) return 2;
+  if (pokedexId <= 386) return 3;
+  if (pokedexId <= 493) return 4;
+  if (pokedexId <= 649) return 5;
+  if (pokedexId <= 721) return 6;
+  if (pokedexId <= 809) return 7;
+  if (pokedexId <= 905) return 8;
+  return 9;
+}
+
 export function PokemonModule({ module, isOverlay = false }: Props) {
-  const { setPokemon, setActiveTab, toggleMinimize, removeModule } =
+  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule } =
     useModuleStore();
+  const moduleContainerRef = useRef<HTMLDivElement>(null);
+  const { globalGeneration, setGeneration } = useGenerationStore();
   const {
     data: pokemon,
     isLoading,
     error,
   } = usePokemon(module.pokemonName);
+
+  // Get types for the selected generation
+  const genTypes = useMemo(() => {
+    if (!pokemon) return [];
+    return getTypesForGeneration(pokemon, globalGeneration);
+  }, [pokemon, globalGeneration]);
+
+  // Check if types changed from current
+  const typesChanged = useMemo(() => {
+    if (!pokemon) return false;
+    const currentTypeNames = pokemon.types.map((t) => t.name).sort().join(",");
+    const genTypeNames = genTypes.map((t) => t.name).sort().join(",");
+    return currentTypeNames !== genTypeNames;
+  }, [pokemon, genTypes]);
+
+  // Check if Pokemon exists in the current generation
+  const pokemonExistsInGen = useMemo(() => {
+    if (!pokemon) return true;
+    const pokeGen = getPokemonGeneration(pokemon.id);
+    return pokeGen <= globalGeneration;
+  }, [pokemon, globalGeneration]);
 
   const {
     attributes,
@@ -130,9 +169,33 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     }
   }, [highlightedIndex, filteredResults.length]);
 
+  // Auto-scroll and focus for newly created modules
+  useEffect(() => {
+    if (newlyCreatedModuleId === module.id && !isOverlay) {
+      // Clear the flag first to prevent re-triggering
+      clearNewlyCreatedModule();
+
+      // Scroll the module into view with a small delay to ensure render is complete
+      setTimeout(() => {
+        moduleContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+
+        // Start search after scroll animation
+        setTimeout(() => {
+          startSearch();
+        }, 300);
+      }, 50);
+    }
+  }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
+
+  // Combine refs for both dnd-kit and scroll functionality
+  const setRefs = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       style={style}
       className={`bg-slate-900 rounded-lg border border-slate-700 shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500" : ""
@@ -223,31 +286,58 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               ref={listRef}
               className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-72 overflow-auto"
             >
-              {filteredResults.map((poke, index) => (
-                <li
-                  key={poke.id}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                  onClick={() => handleSelect(poke.name)}
-                  className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                    index === highlightedIndex
-                      ? "bg-slate-700"
-                      : "hover:bg-slate-700/50"
-                  }`}
-                >
-                  <Image
-                    src={poke.spriteUrl}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="pixelated"
-                    unoptimized
-                  />
-                  <span className="text-white text-sm">{poke.displayName}</span>
-                  <span className="text-slate-400 text-xs ml-auto">
-                    #{poke.id}
-                  </span>
-                </li>
-              ))}
+              {filteredResults.map((poke, index) => {
+                const pokeGen = getPokemonGeneration(poke.id);
+                const existsInGen = pokeGen <= globalGeneration;
+
+                return (
+                  <li
+                    key={poke.id}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => existsInGen && handleSelect(poke.name)}
+                    className={`flex items-center gap-2 px-3 py-2 transition-colors ${
+                      index === highlightedIndex
+                        ? "bg-slate-700"
+                        : "hover:bg-slate-700/50"
+                    } ${!existsInGen ? "cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <Image
+                        src={poke.spriteUrl}
+                        alt=""
+                        width={28}
+                        height={28}
+                        className={`pixelated ${!existsInGen ? "opacity-40 grayscale" : ""}`}
+                        unoptimized
+                      />
+                      {!existsInGen && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-full h-0.5 bg-red-500 rotate-[-20deg]" />
+                        </div>
+                      )}
+                    </div>
+                    <span className={`text-sm flex-1 ${existsInGen ? "text-white" : "text-slate-500 line-through"}`}>
+                      {poke.displayName}
+                    </span>
+                    <span className="text-slate-400 text-xs">
+                      #{poke.id}
+                    </span>
+                    {!existsInGen && (
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGeneration(pokeGen);
+                        }}
+                        className="px-1.5 py-0.5 text-[10px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors"
+                        title={`Switch to Gen ${pokeGen} to enable`}
+                      >
+                        Gen {pokeGen}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -260,34 +350,6 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          <button
-            onClick={() => toggleMinimize(module.id)}
-            className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-            title={module.isMinimized ? "Expand" : "Minimize"}
-          >
-            <svg
-              className="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {module.isMinimized ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 12H4"
-                />
-              )}
-            </svg>
-          </button>
           <button
             onClick={() => removeModule(module.id)}
             className="p-1.5 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
@@ -311,8 +373,23 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       </div>
 
       {/* Content */}
-      {!module.isMinimized && (
-        <div className="p-4 min-h-[600px]">
+      <div className="relative p-4 min-h-[600px]">
+          {/* Invalid generation overlay */}
+          {pokemon && !pokemonExistsInGen && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="absolute inset-0 bg-black/60" />
+              <div className="relative">
+                <svg className="w-32 h-32 text-red-500/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M4 4l16 16" />
+                </svg>
+                <p className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-red-400 text-sm font-medium whitespace-nowrap">
+                  Not in Gen {globalGeneration}
+                </p>
+              </div>
+            </div>
+          )}
+
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -362,10 +439,25 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                   <p className="text-sm text-slate-400 mb-1">
                     #{pokemon.id.toString().padStart(4, "0")}
                   </p>
-                  <div className="flex gap-1.5">
-                    {pokemon.types.map((type) => (
-                      <TypeBadge key={type.name} type={type.name} size="sm" />
-                    ))}
+                  <div className="flex items-center gap-1.5">
+                    {pokemon.types.map((type) => {
+                      const availableTypes = TYPES_BY_GENERATION[globalGeneration] || [];
+                      const typeExistsInGen = availableTypes.includes(type.name);
+                      return (
+                        <div key={type.name} className="relative">
+                          <TypeBadge type={type.name} size="sm" />
+                          {!typeExistsInGen && (
+                            <div
+                              className="absolute inset-0 flex items-center justify-center"
+                              title={`${type.name.charAt(0).toUpperCase() + type.name.slice(1)} didn't exist in Gen ${globalGeneration}`}
+                            >
+                              <div className="absolute inset-0 bg-black/50 rounded" />
+                              <div className="absolute w-full h-0.5 bg-red-500 rotate-[-20deg] shadow-sm" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -401,7 +493,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                 {module.activeTab === "moves" && module.pokemonName && (
                   <LearnsetTable
                     pokemonName={module.pokemonName}
-                    pokemonTypes={pokemon.types}
+                    pokemonTypes={genTypes}
                   />
                 )}
               </div>
@@ -414,7 +506,6 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
             </div>
           )}
         </div>
-      )}
     </div>
   );
 }

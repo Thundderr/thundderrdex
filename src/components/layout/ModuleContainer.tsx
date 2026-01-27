@@ -74,7 +74,7 @@ export function ModuleContainer() {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-slate-400">
         <p className="text-lg mb-4">No modules yet</p>
-        <p className="text-sm">Click &quot;+ Pokemon&quot; or &quot;+ Types&quot; to get started</p>
+        <p className="text-sm">Click &quot;+ Pokemon&quot; or &quot;+ Type Chart&quot; to get started</p>
       </div>
     );
   }

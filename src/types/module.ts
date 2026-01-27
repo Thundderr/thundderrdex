@@ -13,6 +13,12 @@ export interface PokemonModule {
   showCalculatedStats: boolean;
 }
 
+export interface WorkspaceTab {
+  id: string;
+  name: string;
+  modules: PokemonModule[];
+}
+
 export interface RecentSearch {
   pokemonName: string;
   moduleState: Omit<PokemonModule, "id" | "moduleType">;

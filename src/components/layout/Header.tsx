@@ -56,7 +56,7 @@ export function Header() {
             onClick={addTypeChartModule}
             className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            + Types
+            + Type Chart
           </button>
         </div>
       </div>

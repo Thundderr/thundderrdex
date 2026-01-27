@@ -181,8 +181,9 @@ export function StatsDisplay({ stats, moduleId }: Props) {
             {NATURES.map((nature) => (
               <option key={nature.name} value={nature.name}>
                 {nature.name}
-                {nature.increasedStat &&
-                  ` (+${STAT_DISPLAY_NAMES[nature.increasedStat]}, -${STAT_DISPLAY_NAMES[nature.decreasedStat!]})`}
+                {nature.increasedStat
+                  ? ` (+${STAT_DISPLAY_NAMES[nature.increasedStat]}, -${STAT_DISPLAY_NAMES[nature.decreasedStat!]})`
+                  : " (Neutral)"}
               </option>
             ))}
           </select>

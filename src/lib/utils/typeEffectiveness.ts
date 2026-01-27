@@ -1,5 +1,5 @@
 import { PokemonTypeName } from "@/types/pokemon";
-import { TYPE_CHART, ALL_TYPES } from "@/data/typeChart";
+import { TYPE_CHART, ALL_TYPES, TYPES_BY_GENERATION, getTypeChartForGeneration } from "@/data/typeChart";
 
 export interface TypeMatchup {
   type: PokemonTypeName;
@@ -14,22 +14,27 @@ export interface DualTypeEffectiveness {
 }
 
 export function calculateDualTypeEffectiveness(
-  types: PokemonTypeName[]
+  types: PokemonTypeName[],
+  generation: number = 9
 ): DualTypeEffectiveness {
-  const multipliers: Record<PokemonTypeName, number> = {} as Record<
-    PokemonTypeName,
-    number
-  >;
+  const typeChart = getTypeChartForGeneration(generation);
+  const availableTypes = TYPES_BY_GENERATION[generation] || ALL_TYPES;
 
-  // Initialize all multipliers to 1
-  for (const type of ALL_TYPES) {
+  const multipliers: Record<string, number> = {};
+
+  // Initialize all multipliers to 1 for types that exist in this generation
+  for (const type of availableTypes) {
     multipliers[type] = 1;
   }
 
   // Calculate multipliers for each attacking type
-  for (const attackingType of ALL_TYPES) {
+  for (const attackingType of availableTypes) {
     for (const defendingType of types) {
-      const typeData = TYPE_CHART[defendingType].defending;
+      // Skip if defending type doesn't exist in this generation
+      if (!availableTypes.includes(defendingType)) continue;
+
+      const typeData = typeChart[defendingType]?.defending;
+      if (!typeData) continue;
 
       if (typeData.immuneTo.includes(attackingType)) {
         multipliers[attackingType] *= 0;

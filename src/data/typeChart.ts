@@ -13,6 +13,20 @@ export interface TypeEffectiveness {
   };
 }
 
+// Types available per generation
+export const TYPES_BY_GENERATION: Record<number, PokemonTypeName[]> = {
+  1: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon"],
+  2: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel"],
+  3: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel"],
+  4: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel"],
+  5: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel"],
+  6: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"],
+  7: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"],
+  8: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"],
+  9: ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"],
+};
+
+// Current type chart (Gen 6+)
 export const TYPE_CHART: Record<PokemonTypeName, TypeEffectiveness> = {
   normal: {
     attacking: {
@@ -284,3 +298,176 @@ export const ALL_TYPES: PokemonTypeName[] = [
   "steel",
   "fairy",
 ];
+
+// Generation-specific type chart overrides
+// Gen 1: Ghost was bugged (0x vs Psychic instead of 2x), Poison was 2x vs Bug
+// Gen 2-5: Steel resisted Ghost and Dark
+// Gen 6+: Steel lost Ghost/Dark resistance, Fairy added
+
+interface TypeOverride {
+  attacking?: Partial<TypeEffectiveness["attacking"]>;
+  defending?: Partial<TypeEffectiveness["defending"]>;
+}
+
+type GenerationOverrides = Partial<Record<PokemonTypeName, TypeOverride>>;
+
+export const TYPE_CHART_OVERRIDES: Record<number, GenerationOverrides> = {
+  // Gen 1: Ghost immune to Psychic (bug), Poison super effective vs Bug
+  1: {
+    ghost: {
+      attacking: {
+        superEffective: [], // Ghost couldn't hit Psychic due to bug
+        immune: ["normal", "psychic"], // Psychic was immune to Ghost in Gen 1
+      },
+    },
+    psychic: {
+      defending: {
+        weakTo: ["bug"], // Only Bug was super effective (Ghost was bugged)
+        immuneTo: ["ghost"],
+      },
+    },
+    poison: {
+      attacking: {
+        superEffective: ["grass", "bug"], // Poison was 2x vs Bug in Gen 1
+      },
+    },
+    bug: {
+      defending: {
+        weakTo: ["fire", "flying", "rock", "poison"], // Weak to Poison in Gen 1
+      },
+    },
+  },
+  // Gen 2-5: Steel resisted Ghost and Dark
+  2: {
+    steel: {
+      defending: {
+        resistantTo: [
+          "normal", "grass", "ice", "flying", "psychic", "bug", "rock", "dragon", "steel",
+          "ghost", "dark", // Steel resisted Ghost and Dark in Gen 2-5
+        ],
+      },
+    },
+    ghost: {
+      attacking: {
+        notVeryEffective: ["dark", "steel"], // Ghost was resisted by Steel
+      },
+    },
+    dark: {
+      attacking: {
+        notVeryEffective: ["fighting", "dark", "steel"], // Dark was resisted by Steel
+      },
+    },
+  },
+  3: {
+    steel: {
+      defending: {
+        resistantTo: [
+          "normal", "grass", "ice", "flying", "psychic", "bug", "rock", "dragon", "steel",
+          "ghost", "dark",
+        ],
+      },
+    },
+    ghost: {
+      attacking: {
+        notVeryEffective: ["dark", "steel"],
+      },
+    },
+    dark: {
+      attacking: {
+        notVeryEffective: ["fighting", "dark", "steel"],
+      },
+    },
+  },
+  4: {
+    steel: {
+      defending: {
+        resistantTo: [
+          "normal", "grass", "ice", "flying", "psychic", "bug", "rock", "dragon", "steel",
+          "ghost", "dark",
+        ],
+      },
+    },
+    ghost: {
+      attacking: {
+        notVeryEffective: ["dark", "steel"],
+      },
+    },
+    dark: {
+      attacking: {
+        notVeryEffective: ["fighting", "dark", "steel"],
+      },
+    },
+  },
+  5: {
+    steel: {
+      defending: {
+        resistantTo: [
+          "normal", "grass", "ice", "flying", "psychic", "bug", "rock", "dragon", "steel",
+          "ghost", "dark",
+        ],
+      },
+    },
+    ghost: {
+      attacking: {
+        notVeryEffective: ["dark", "steel"],
+      },
+    },
+    dark: {
+      attacking: {
+        notVeryEffective: ["fighting", "dark", "steel"],
+      },
+    },
+  },
+  // Gen 6+: Use default TYPE_CHART (no overrides needed)
+};
+
+// Get type chart for a specific generation
+export function getTypeChartForGeneration(generation: number): Record<PokemonTypeName, TypeEffectiveness> {
+  const availableTypes = TYPES_BY_GENERATION[generation] || ALL_TYPES;
+  const overrides = TYPE_CHART_OVERRIDES[generation] || {};
+
+  const genChart: Record<PokemonTypeName, TypeEffectiveness> = {} as Record<PokemonTypeName, TypeEffectiveness>;
+
+  for (const type of availableTypes) {
+    const baseChart = TYPE_CHART[type];
+    const typeOverride = overrides[type];
+
+    if (typeOverride) {
+      // Merge overrides with base chart
+      genChart[type] = {
+        attacking: {
+          superEffective: typeOverride.attacking?.superEffective ??
+            baseChart.attacking.superEffective.filter(t => availableTypes.includes(t)),
+          notVeryEffective: typeOverride.attacking?.notVeryEffective ??
+            baseChart.attacking.notVeryEffective.filter(t => availableTypes.includes(t)),
+          immune: typeOverride.attacking?.immune ??
+            baseChart.attacking.immune.filter(t => availableTypes.includes(t)),
+        },
+        defending: {
+          weakTo: typeOverride.defending?.weakTo ??
+            baseChart.defending.weakTo.filter(t => availableTypes.includes(t)),
+          resistantTo: typeOverride.defending?.resistantTo ??
+            baseChart.defending.resistantTo.filter(t => availableTypes.includes(t)),
+          immuneTo: typeOverride.defending?.immuneTo ??
+            baseChart.defending.immuneTo.filter(t => availableTypes.includes(t)),
+        },
+      };
+    } else {
+      // Filter out types that don't exist in this generation
+      genChart[type] = {
+        attacking: {
+          superEffective: baseChart.attacking.superEffective.filter(t => availableTypes.includes(t)),
+          notVeryEffective: baseChart.attacking.notVeryEffective.filter(t => availableTypes.includes(t)),
+          immune: baseChart.attacking.immune.filter(t => availableTypes.includes(t)),
+        },
+        defending: {
+          weakTo: baseChart.defending.weakTo.filter(t => availableTypes.includes(t)),
+          resistantTo: baseChart.defending.resistantTo.filter(t => availableTypes.includes(t)),
+          immuneTo: baseChart.defending.immuneTo.filter(t => availableTypes.includes(t)),
+        },
+      };
+    }
+  }
+
+  return genChart;
+}

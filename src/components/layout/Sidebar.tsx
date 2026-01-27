@@ -1,14 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
+import { usePokemonList } from "@/hooks/usePokemonList";
 import { GENERATIONS } from "@/data/generations";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
 
+// Pokemon generation ranges by Pokedex number
+function getPokemonGeneration(pokedexId: number): number {
+  if (pokedexId <= 151) return 1;
+  if (pokedexId <= 251) return 2;
+  if (pokedexId <= 386) return 3;
+  if (pokedexId <= 493) return 4;
+  if (pokedexId <= 649) return 5;
+  if (pokedexId <= 721) return 6;
+  if (pokedexId <= 809) return 7;
+  if (pokedexId <= 905) return 8;
+  return 9;
+}
+
 export function Sidebar() {
-  const { globalGeneration } = useGenerationStore();
+  const { globalGeneration, setGeneration } = useGenerationStore();
   const { modules, recentSearches, restoreFromRecent, clearRecentSearches, bringModuleToFront } = useModuleStore();
+  const { data: pokemonList } = usePokemonList();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -16,6 +31,12 @@ export function Sidebar() {
   }, []);
 
   const currentGen = GENERATIONS.find((g) => g.id === globalGeneration);
+
+  // Create a lookup map from Pokemon name to ID
+  const pokemonIdMap = useMemo(() => {
+    if (!pokemonList) return new Map<string, number>();
+    return new Map(pokemonList.map((p) => [p.name, p.id]));
+  }, [pokemonList]);
 
   // Get current Pokemon modules (only those with a Pokemon selected)
   const currentPokemon = modules
@@ -36,27 +57,49 @@ export function Sidebar() {
 
       {/* Current Pokemon */}
       {isMounted && currentPokemon.length > 0 && (
-        <div className="mb-4 flex-shrink-0 max-h-32 overflow-hidden flex flex-col">
+        <div className="mb-4 flex-shrink-0 flex flex-col" style={{ maxHeight: '300px' }}>
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Current
           </h3>
           <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-            {currentPokemon.map((pokemon) => (
-              <button
-                key={pokemon.id}
-                onClick={() => bringModuleToFront(pokemon.id)}
-                className="w-full text-left px-2 py-1.5 text-sm text-blue-300 hover:bg-slate-800 rounded transition-colors truncate"
-                title={`Bring ${formatPokemonName(pokemon.name)} to front`}
-              >
-                {formatPokemonName(pokemon.name)}
-              </button>
-            ))}
+            {currentPokemon.map((pokemon) => {
+              const pokeId = pokemonIdMap.get(pokemon.name);
+              const pokeGen = pokeId ? getPokemonGeneration(pokeId) : 1;
+              const existsInGen = pokeGen <= globalGeneration;
+
+              return (
+                <div key={pokemon.id} className="flex items-center gap-1">
+                  <button
+                    onClick={() => bringModuleToFront(pokemon.id)}
+                    className={`flex-1 text-left px-2 py-1.5 text-sm rounded transition-colors truncate ${
+                      existsInGen
+                        ? "text-blue-300 hover:bg-slate-800"
+                        : "text-slate-500 hover:bg-slate-800/50"
+                    }`}
+                    title={existsInGen ? `Bring ${formatPokemonName(pokemon.name)} to front` : `${formatPokemonName(pokemon.name)} doesn't exist in Gen ${globalGeneration}`}
+                  >
+                    <span className={!existsInGen ? "text-slate-500" : ""}>
+                      {formatPokemonName(pokemon.name)}
+                    </span>
+                  </button>
+                  {!existsInGen && (
+                    <button
+                      onClick={() => setGeneration(pokeGen)}
+                      className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
+                      title={`Switch to Gen ${pokeGen}`}
+                    >
+                      {pokeGen}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Recent Searches */}
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+      {/* Recent Searches - takes remaining space */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Recent
@@ -73,16 +116,36 @@ export function Sidebar() {
 
         {isMounted && recentSearches.length > 0 ? (
           <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-            {recentSearches.map((recent) => (
-              <button
-                key={recent.pokemonName}
-                onClick={() => restoreFromRecent(recent.pokemonName)}
-                className="w-full text-left px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-800 rounded transition-colors truncate"
-                title={`Restore ${formatPokemonName(recent.pokemonName)}`}
-              >
-                {formatPokemonName(recent.pokemonName)}
-              </button>
-            ))}
+            {recentSearches.map((recent) => {
+              const pokeId = pokemonIdMap.get(recent.pokemonName);
+              const pokeGen = pokeId ? getPokemonGeneration(pokeId) : 1;
+              const existsInGen = pokeGen <= globalGeneration;
+
+              return (
+                <div key={recent.pokemonName} className="flex items-center gap-1">
+                  <button
+                    onClick={() => existsInGen && restoreFromRecent(recent.pokemonName)}
+                    className={`flex-1 text-left px-2 py-1.5 text-sm rounded transition-colors truncate ${
+                      existsInGen
+                        ? "text-slate-300 hover:bg-slate-800 cursor-pointer"
+                        : "text-slate-500 cursor-not-allowed"
+                    }`}
+                    title={existsInGen ? `Restore ${formatPokemonName(recent.pokemonName)}` : `${formatPokemonName(recent.pokemonName)} doesn't exist in Gen ${globalGeneration}`}
+                  >
+                    {formatPokemonName(recent.pokemonName)}
+                  </button>
+                  {!existsInGen && (
+                    <button
+                      onClick={() => setGeneration(pokeGen)}
+                      className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
+                      title={`Switch to Gen ${pokeGen}`}
+                    >
+                      {pokeGen}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-slate-500">
@@ -91,8 +154,8 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Footer */}
-      <div className="pt-4 border-t border-slate-800 mt-4">
+      {/* Footer - fixed at bottom */}
+      <div className="pt-4 border-t border-slate-800 mt-auto flex-shrink-0">
         <p className="text-xs text-slate-500">
           Data from{" "}
           <a

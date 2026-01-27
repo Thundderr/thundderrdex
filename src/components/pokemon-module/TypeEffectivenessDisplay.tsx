@@ -3,12 +3,46 @@
 import { useMemo } from "react";
 import { Pokemon, PokemonTypeName } from "@/types/pokemon";
 import { calculateDualTypeEffectiveness } from "@/lib/utils/typeEffectiveness";
-import { TypeBadge } from "@/components/type-chart/TypeBadge";
+import { TYPE_COLORS } from "@/data/typeChart";
 import { useGenerationStore } from "@/stores/generationStore";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 
 interface Props {
   pokemon: Pokemon;
+}
+
+function getContrastColor(hexColor: string): string {
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? "#000000" : "#ffffff";
+}
+
+function capitalizeType(type: string): string {
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function TypeChip({ type, multiplier }: { type: PokemonTypeName; multiplier?: string }) {
+  const color = TYPE_COLORS[type];
+  const textColor = getContrastColor(color);
+
+  return (
+    <span
+      className="inline-flex items-center rounded text-xs font-semibold leading-none overflow-hidden"
+      style={{ backgroundColor: color, color: textColor }}
+    >
+      <span className="px-2 py-1">{capitalizeType(type)}</span>
+      {multiplier && (
+        <span
+          className="px-1.5 py-1 text-[11px] font-bold"
+          style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
+        >
+          {multiplier}
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function TypeEffectivenessDisplay({ pokemon }: Props) {
@@ -21,47 +55,22 @@ export function TypeEffectivenessDisplay({ pokemon }: Props) {
 
   const effectiveness = useMemo(() => {
     return calculateDualTypeEffectiveness(
-      types.map((t) => t.name) as PokemonTypeName[]
+      types.map((t) => t.name) as PokemonTypeName[],
+      globalGeneration
     );
-  }, [types]);
-
-  // Check if types changed from current
-  const typesChanged = useMemo(() => {
-    const currentTypeNames = pokemon.types.map((t) => t.name).sort().join(",");
-    const genTypeNames = types.map((t) => t.name).sort().join(",");
-    return currentTypeNames !== genTypeNames;
-  }, [pokemon.types, types]);
+  }, [types, globalGeneration]);
 
   return (
     <div className="space-y-4">
-      {/* Type Change Notice */}
-      {typesChanged && (
-        <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-lg p-2 text-xs text-yellow-300">
-          Showing types for Gen {globalGeneration}. Current: {pokemon.types.map((t) => t.name).join("/")}
-        </div>
-      )}
-
-      {/* Current Types Display - just badges, no heading */}
-      <div className="flex gap-2">
-        {types.map((type) => (
-          <TypeBadge key={type.name} type={type.name} size="sm" />
-        ))}
-      </div>
-
       {/* Weaknesses */}
       {effectiveness.weaknesses.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">
             Weak to
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {effectiveness.weaknesses.map(({ type, multiplier }) => (
-              <div key={type} className="flex items-center gap-1">
-                <TypeBadge type={type} size="sm" />
-                <span className="text-xs text-red-300 font-mono">
-                  {multiplier}x
-                </span>
-              </div>
+              <TypeChip key={type} type={type} multiplier={`${multiplier}×`} />
             ))}
           </div>
         </div>
@@ -73,14 +82,9 @@ export function TypeEffectivenessDisplay({ pokemon }: Props) {
           <h4 className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">
             Resistant to
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {effectiveness.resistances.map(({ type, multiplier }) => (
-              <div key={type} className="flex items-center gap-1">
-                <TypeBadge type={type} size="sm" />
-                <span className="text-xs text-green-300 font-mono">
-                  {multiplier}x
-                </span>
-              </div>
+              <TypeChip key={type} type={type} multiplier={`${multiplier}×`} />
             ))}
           </div>
         </div>
@@ -92,9 +96,9 @@ export function TypeEffectivenessDisplay({ pokemon }: Props) {
           <h4 className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2">
             Immune to
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {effectiveness.immunities.map((type) => (
-              <TypeBadge key={type} type={type} size="sm" />
+              <TypeChip key={type} type={type} multiplier="0×" />
             ))}
           </div>
         </div>
