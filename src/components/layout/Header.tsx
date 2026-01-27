@@ -7,7 +7,7 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { GENERATIONS } from "@/data/generations";
 
 export function Header() {
-  const { addModule, addTypeChartModule, tabs, activeTabId } = useModuleStore();
+  const { addModule, addTypeChartModule, addTeamBuilderModule, tabs, activeTabId } = useModuleStore();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -63,6 +63,12 @@ export function Header() {
             className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
           >
             + Type Chart
+          </button>
+          <button
+            onClick={addTeamBuilderModule}
+            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            + Team Builder
           </button>
         </div>
       </div>

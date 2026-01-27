@@ -12,6 +12,7 @@ const GLOBAL_SHORTCUTS = [
   { key: "Shift + X", description: "Close current tab" },
   { key: "Shift + P", description: "New Pokemon module" },
   { key: "Shift + C", description: "New Type Chart module" },
+  { key: "Shift + B", description: "New Team Builder module" },
   { key: "Shift + I", description: "Show keyboard shortcuts" },
   { key: "[", description: "Previous tab" },
   { key: "]", description: "Next tab" },

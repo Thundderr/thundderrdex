@@ -1,0 +1,529 @@
+"use client";
+
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import Image from "next/image";
+import { useModuleStore } from "@/stores/moduleStore";
+import { useGenerationStore } from "@/stores/generationStore";
+import { usePokemonList } from "@/hooks/usePokemonList";
+import { usePokemon } from "@/hooks/usePokemon";
+import { TeamBuilderModule as TeamBuilderModuleType } from "@/types/module";
+import { PokemonTypeName } from "@/types/pokemon";
+import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
+import { calculateDualTypeEffectiveness } from "@/lib/utils/typeEffectiveness";
+import { TYPES_BY_GENERATION, TYPE_COLORS } from "@/data/typeChart";
+import { TypeBadge } from "@/components/type-chart/TypeBadge";
+
+interface Props {
+  module: TeamBuilderModuleType;
+  isOverlay?: boolean;
+}
+
+// Pokemon generation ranges by Pokedex number
+function getPokemonGeneration(pokedexId: number): number {
+  if (pokedexId <= 151) return 1;
+  if (pokedexId <= 251) return 2;
+  if (pokedexId <= 386) return 3;
+  if (pokedexId <= 493) return 4;
+  if (pokedexId <= 649) return 5;
+  if (pokedexId <= 721) return 6;
+  if (pokedexId <= 809) return 7;
+  if (pokedexId <= 905) return 8;
+  return 9;
+}
+
+// Team slot component with search
+function TeamSlot({
+  slotIndex,
+  pokemonName,
+  moduleId,
+  globalGeneration,
+}: {
+  slotIndex: number;
+  pokemonName: string | null;
+  moduleId: string;
+  globalGeneration: number;
+}) {
+  const { setTeamSlot, clearTeamSlot } = useModuleStore();
+  const { setGeneration } = useGenerationStore();
+  const { data: pokemon } = usePokemon(pokemonName);
+  const { data: pokemonList } = usePokemonList();
+
+  const [isSearching, setIsSearching] = useState(false);
+  const [query, setQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // Get types for the selected generation
+  const genTypes = useMemo(() => {
+    if (!pokemon) return [];
+    return getTypesForGeneration(pokemon, globalGeneration);
+  }, [pokemon, globalGeneration]);
+
+  // Check if Pokemon exists in the current generation
+  const pokemonExistsInGen = useMemo(() => {
+    if (!pokemon) return true;
+    const pokeGen = getPokemonGeneration(pokemon.id);
+    return pokeGen <= globalGeneration;
+  }, [pokemon, globalGeneration]);
+
+  const filteredResults = useMemo(() => {
+    if (!query || !pokemonList) return [];
+    const lowerQuery = query.toLowerCase().trim();
+    if (!lowerQuery) return [];
+
+    return pokemonList
+      .filter(
+        (p) =>
+          p.name.includes(lowerQuery) ||
+          p.displayName.toLowerCase().includes(lowerQuery) ||
+          p.id.toString() === lowerQuery
+      )
+      .slice(0, 8)
+      .sort((a, b) => {
+        const aStarts = a.name.startsWith(lowerQuery);
+        const bStarts = b.name.startsWith(lowerQuery);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return a.id - b.id;
+      });
+  }, [query, pokemonList]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex((i) => Math.min(i + 1, filteredResults.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((i) => Math.max(i - 1, 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (filteredResults[highlightedIndex]) {
+          handleSelect(filteredResults[highlightedIndex].name);
+        }
+        break;
+      case "Escape":
+        setIsSearching(false);
+        setQuery("");
+        break;
+    }
+  };
+
+  const handleSelect = (name: string) => {
+    setTeamSlot(moduleId, slotIndex, name);
+    setQuery("");
+    setIsSearching(false);
+    setHighlightedIndex(0);
+  };
+
+  const startSearch = () => {
+    setIsSearching(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [query]);
+
+  useEffect(() => {
+    if (listRef.current && filteredResults.length > 0) {
+      const item = listRef.current.children[highlightedIndex] as HTMLElement;
+      item?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex, filteredResults.length]);
+
+  return (
+    <div className={`relative bg-slate-800 rounded-lg p-2 ${!pokemonExistsInGen && pokemon ? "opacity-50" : ""}`}>
+      {isSearching ? (
+        <div className="relative">
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onBlur={() => setTimeout(() => {
+              setIsSearching(false);
+              setQuery("");
+            }, 200)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search..."
+            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+            autoFocus
+          />
+          {filteredResults.length > 0 && (
+            <ul
+              ref={listRef}
+              className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-48 overflow-auto"
+            >
+              {filteredResults.map((poke, index) => {
+                const pokeGen = getPokemonGeneration(poke.id);
+                const existsInGen = pokeGen <= globalGeneration;
+
+                return (
+                  <li
+                    key={poke.id}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => existsInGen && handleSelect(poke.name)}
+                    className={`flex items-center gap-1.5 px-2 py-1 text-xs transition-colors ${
+                      index === highlightedIndex ? "bg-slate-700" : "hover:bg-slate-700/50"
+                    } ${!existsInGen ? "cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <Image
+                      src={poke.spriteUrl}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className={`pixelated ${!existsInGen ? "opacity-40 grayscale" : ""}`}
+                      unoptimized
+                    />
+                    <span className={`flex-1 truncate ${existsInGen ? "text-white" : "text-slate-500"}`}>
+                      {poke.displayName}
+                    </span>
+                    {!existsInGen && (
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGeneration(pokeGen);
+                        }}
+                        className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded"
+                      >
+                        Gen {pokeGen}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : pokemon ? (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-shrink-0">
+            <Image
+              src={pokemon.sprites.front_default || ""}
+              alt={pokemon.displayName}
+              width={32}
+              height={32}
+              className="pixelated"
+              unoptimized
+            />
+            {!pokemonExistsInGen && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-full h-0.5 bg-red-500 rotate-[-20deg]" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-white truncate">{pokemon.displayName}</p>
+            <div className="flex gap-0.5 mt-0.5">
+              {genTypes.map((type) => (
+                <span
+                  key={type.name}
+                  className="px-1 py-0.5 text-[9px] rounded"
+                  style={{ backgroundColor: TYPE_COLORS[type.name], color: "white" }}
+                >
+                  {type.name.slice(0, 3).toUpperCase()}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-0.5">
+            <button
+              onClick={startSearch}
+              className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
+              title="Change Pokemon"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => clearTeamSlot(moduleId, slotIndex)}
+              className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded"
+              title="Remove Pokemon"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={startSearch}
+          className="w-full flex items-center justify-center gap-1.5 py-3 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="text-xs">Add Pokemon</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Type name display helper
+function formatTypeName(type: PokemonTypeName): string {
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+// Coverage analysis component
+function TeamCoverage({
+  teamSlots,
+  globalGeneration,
+}: {
+  teamSlots: (string | null)[];
+  globalGeneration: number;
+}) {
+  const availableTypes = TYPES_BY_GENERATION[globalGeneration] || TYPES_BY_GENERATION[9];
+
+  // Fetch all team Pokemon data
+  const pokemonQueries = teamSlots.map((name) => usePokemon(name));
+
+  // Calculate team coverage
+  const coverage = useMemo(() => {
+    const typeStats: Record<PokemonTypeName, { weak: number; resist: number; immune: number }> = {} as Record<PokemonTypeName, { weak: number; resist: number; immune: number }>;
+
+    // Initialize all types
+    for (const type of availableTypes) {
+      typeStats[type] = { weak: 0, resist: 0, immune: 0 };
+    }
+
+    // Calculate for each team member
+    for (const query of pokemonQueries) {
+      const pokemon = query.data;
+      if (!pokemon) continue;
+
+      // Check if Pokemon exists in this generation
+      const pokeGen = getPokemonGeneration(pokemon.id);
+      if (pokeGen > globalGeneration) continue;
+
+      // Get types for this generation
+      const types = getTypesForGeneration(pokemon, globalGeneration);
+      const typeNames = types.map((t) => t.name);
+
+      // Calculate effectiveness
+      const effectiveness = calculateDualTypeEffectiveness(typeNames, globalGeneration);
+
+      // Update stats
+      for (const { type, multiplier } of effectiveness.weaknesses) {
+        if (typeStats[type]) typeStats[type].weak++;
+      }
+      for (const { type } of effectiveness.resistances) {
+        if (typeStats[type]) typeStats[type].resist++;
+      }
+      for (const type of effectiveness.immunities) {
+        if (typeStats[type]) typeStats[type].immune++;
+      }
+    }
+
+    return typeStats;
+  }, [pokemonQueries, globalGeneration, availableTypes]);
+
+  // Count team members
+  const teamCount = pokemonQueries.filter((q) => q.data && getPokemonGeneration(q.data.id) <= globalGeneration).length;
+
+  // Calculate totals
+  const totals = useMemo(() => {
+    let totalWeaknesses = 0;
+    let totalResistances = 0;
+    let totalImmunities = 0;
+
+    for (const type of availableTypes) {
+      const stats = coverage[type];
+      totalWeaknesses += stats.weak;
+      totalResistances += stats.resist;
+      totalImmunities += stats.immune;
+    }
+
+    return { totalWeaknesses, totalResistances, totalImmunities };
+  }, [coverage, availableTypes]);
+
+  return (
+    <div className="mt-4 flex-1">
+      <h3 className="text-sm font-semibold text-slate-300 mb-3">
+        Team Defensive Coverage ({teamCount}/6)
+      </h3>
+
+      {/* Main layout: Types on left, Totals on right */}
+      <div className="flex gap-4">
+        {/* Type Grid - Two columns */}
+        <div className="flex-1 grid grid-cols-2 gap-1.5">
+          {availableTypes.map((type) => {
+            const stats = coverage[type];
+
+            let bgOpacity = "";
+            if (stats.weak > 0 && stats.weak > stats.resist + stats.immune) {
+              bgOpacity = "ring-1 ring-red-500/50";
+            } else if (stats.resist > 0 || stats.immune > 0) {
+              bgOpacity = "ring-1 ring-green-500/50";
+            }
+
+            return (
+              <div
+                key={type}
+                className={`flex items-center justify-between gap-1 px-2 py-1.5 rounded ${bgOpacity}`}
+              >
+                <span
+                  className="px-2 py-0.5 text-xs font-medium rounded text-white"
+                  style={{ backgroundColor: TYPE_COLORS[type] }}
+                >
+                  {formatTypeName(type)}
+                </span>
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  {stats.weak > 0 && (
+                    <span className="text-red-400">-{stats.weak}</span>
+                  )}
+                  {(stats.resist > 0 || stats.immune > 0) && (
+                    <span className="text-green-400">+{stats.resist + stats.immune}</span>
+                  )}
+                  {stats.weak === 0 && stats.resist === 0 && stats.immune === 0 && (
+                    <span className="text-slate-500">0</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Totals on right - stacked vertically */}
+        <div className="w-36 flex flex-col gap-3">
+          <div className="bg-red-900/20 border border-red-800/50 rounded-lg p-3 text-center flex-1 flex flex-col justify-center">
+            <p className="text-xs text-red-300 uppercase tracking-wider mb-1">Weaknesses</p>
+            <p className="text-3xl font-bold text-red-400">{totals.totalWeaknesses}</p>
+          </div>
+          <div className="bg-green-900/20 border border-green-800/50 rounded-lg p-3 text-center flex-1 flex flex-col justify-center">
+            <p className="text-xs text-green-300 uppercase tracking-wider mb-1">Resistances</p>
+            <p className="text-3xl font-bold text-green-400">{totals.totalResistances + totals.totalImmunities}</p>
+            {totals.totalImmunities > 0 && (
+              <p className="text-[10px] text-green-300 mt-0.5">({totals.totalImmunities} immune)</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function TeamBuilderModule({ module, isOverlay = false }: Props) {
+  const { toggleMinimize, removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
+  const { globalGeneration } = useGenerationStore();
+  const moduleContainerRef = useRef<HTMLDivElement>(null);
+  const isSelected = selectedModuleId === module.id;
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: module.id, disabled: isOverlay });
+
+  const style = isOverlay
+    ? { opacity: 0.95 }
+    : {
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0 : 1,
+      };
+
+  // Auto-scroll for newly created modules
+  useEffect(() => {
+    if (newlyCreatedModuleId === module.id && !isOverlay) {
+      clearNewlyCreatedModule();
+      setTimeout(() => {
+        moduleContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 50);
+    }
+  }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
+
+  // Combine refs
+  const setRefs = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  };
+
+  return (
+    <div
+      ref={setRefs}
+      style={style}
+      onClick={() => selectModule(module.id)}
+      className={`md:col-span-2 xl:col-span-2 bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+        isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
+      } ${
+        isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
+      }`}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-700 rounded"
+        >
+          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+          </svg>
+        </div>
+
+        <div className="flex-1 mx-2 text-sm font-medium text-white">
+          Team Builder
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => toggleMinimize(module.id)}
+            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+            title={module.isMinimized ? "Expand" : "Minimize"}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {module.isMinimized ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              )}
+            </svg>
+          </button>
+          <button
+            onClick={() => removeModule(module.id)}
+            className="p-1 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
+            title="Remove module"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      {!module.isMinimized && (
+        <div className="p-4 flex flex-col">
+          {/* Team Slots Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {module.teamSlots.map((pokemonName, index) => (
+              <TeamSlot
+                key={index}
+                slotIndex={index}
+                pokemonName={pokemonName}
+                moduleId={module.id}
+                globalGeneration={globalGeneration}
+              />
+            ))}
+          </div>
+
+          {/* Team Coverage */}
+          <TeamCoverage teamSlots={module.teamSlots} globalGeneration={globalGeneration} />
+        </div>
+      )}
+    </div>
+  );
+}

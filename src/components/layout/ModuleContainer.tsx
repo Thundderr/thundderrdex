@@ -20,7 +20,7 @@ import {
 import { useModuleStore } from "@/stores/moduleStore";
 import { PokemonModule } from "@/components/pokemon-module/PokemonModule";
 import { TypeChartModule } from "@/components/pokemon-module/TypeChartModule";
-import { PokemonModule as PokemonModuleType } from "@/types/module";
+import { TeamBuilderModule } from "@/components/pokemon-module/TeamBuilderModule";
 
 export function ModuleContainer() {
   const { tabs, activeTabId, reorderModules } = useModuleStore();
@@ -102,6 +102,9 @@ export function ModuleContainer() {
             if (module.moduleType === "type-chart") {
               return <TypeChartModule key={module.id} module={module} />;
             }
+            if (module.moduleType === "team-builder") {
+              return <TeamBuilderModule key={module.id} module={module} />;
+            }
             return <PokemonModule key={module.id} module={module} />;
           })}
         </div>
@@ -110,6 +113,8 @@ export function ModuleContainer() {
         {activeModule ? (
           activeModule.moduleType === "type-chart" ? (
             <TypeChartModule module={activeModule} isOverlay />
+          ) : activeModule.moduleType === "team-builder" ? (
+            <TeamBuilderModule module={activeModule} isOverlay />
           ) : (
             <PokemonModule module={activeModule} isOverlay />
           )

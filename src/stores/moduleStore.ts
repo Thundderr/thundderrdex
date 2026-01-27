@@ -1,19 +1,26 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
 
 const createDefaultModule = (type: ModuleType = "pokemon"): PokemonModule => ({
   id: uuidv4(),
-  moduleType: type,
+  moduleType: type as "pokemon" | "type-chart",
   pokemonName: null,
   isMinimized: false,
   activeTab: "stats",
   statModifiers: { ...DEFAULT_STAT_MODIFIERS },
   showCalculatedStats: false,
+});
+
+const createTeamBuilderModule = (): TeamBuilderModule => ({
+  id: uuidv4(),
+  moduleType: "team-builder",
+  isMinimized: false,
+  teamSlots: [null, null, null, null, null, null],
 });
 
 const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
@@ -50,8 +57,12 @@ interface ModuleStore {
   addModule: (type?: ModuleType) => void;
   clearNewlyCreatedModule: () => void;
   addTypeChartModule: () => void;
+  addTeamBuilderModule: () => void;
   removeModule: (id: string) => void;
   updateModule: (id: string, updates: Partial<PokemonModule>) => void;
+  // Team Builder methods
+  setTeamSlot: (moduleId: string, slotIndex: number, pokemonName: string | null) => void;
+  clearTeamSlot: (moduleId: string, slotIndex: number) => void;
   setPokemon: (id: string, pokemonName: string) => void;
   setActiveTab: (id: string, tab: ModuleTab) => void;
   toggleMinimize: (id: string) => void;
@@ -80,7 +91,7 @@ const getActiveTab = (state: { tabs: WorkspaceTab[]; activeTabId: string }): Wor
 // Helper to update modules in active tab
 const updateActiveTabModules = (
   state: { tabs: WorkspaceTab[]; activeTabId: string },
-  updater: (modules: PokemonModule[]) => PokemonModule[]
+  updater: (modules: AnyModule[]) => AnyModule[]
 ): WorkspaceTab[] => {
   return state.tabs.map((tab) =>
     tab.id === state.activeTabId
@@ -254,6 +265,47 @@ export const useModuleStore = create<ModuleStore>()(
         }));
       },
 
+      addTeamBuilderModule: () => {
+        const newModule = createTeamBuilderModule();
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      setTeamSlot: (moduleId, slotIndex, pokemonName) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "team-builder") {
+                const teamModule = m as TeamBuilderModule;
+                const newSlots = [...teamModule.teamSlots];
+                newSlots[slotIndex] = pokemonName;
+                return { ...teamModule, teamSlots: newSlots };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      clearTeamSlot: (moduleId, slotIndex) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "team-builder") {
+                const teamModule = m as TeamBuilderModule;
+                const newSlots = [...teamModule.teamSlots];
+                newSlots[slotIndex] = null;
+                return { ...teamModule, teamSlots: newSlots };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
       removeModule: (id) => {
         const state = get();
         const activeTab = getActiveTab(state);
@@ -318,7 +370,12 @@ export const useModuleStore = create<ModuleStore>()(
       updateModule: (id, updates) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) => (m.id === id ? { ...m, ...updates } : m))
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, ...updates } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -430,11 +487,12 @@ export const useModuleStore = create<ModuleStore>()(
       setStatModifiers: (id, modifiers) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id
-                ? { ...m, statModifiers: { ...m.statModifiers, ...modifiers } }
-                : m
-            )
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, statModifiers: { ...m.statModifiers, ...modifiers } } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -442,11 +500,12 @@ export const useModuleStore = create<ModuleStore>()(
       setLevel: (id, level) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id
-                ? { ...m, statModifiers: { ...m.statModifiers, level: clampLevel(level) } }
-                : m
-            )
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, statModifiers: { ...m.statModifiers, level: clampLevel(level) } } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -454,17 +513,18 @@ export const useModuleStore = create<ModuleStore>()(
       setIv: (id, stat, value) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id
-                ? {
-                    ...m,
-                    statModifiers: {
-                      ...m.statModifiers,
-                      ivs: { ...m.statModifiers.ivs, [stat]: clampIv(value) },
-                    },
-                  }
-                : m
-            )
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return {
+                  ...m,
+                  statModifiers: {
+                    ...m.statModifiers,
+                    ivs: { ...m.statModifiers.ivs, [stat]: clampIv(value) },
+                  },
+                } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -473,7 +533,7 @@ export const useModuleStore = create<ModuleStore>()(
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
             modules.map((m) => {
-              if (m.id !== id) return m;
+              if (m.id !== id || m.moduleType !== "pokemon") return m;
 
               const clampedValue = clampEv(value);
               const newEvs = { ...m.statModifiers.evs, [stat]: clampedValue };
@@ -487,7 +547,7 @@ export const useModuleStore = create<ModuleStore>()(
               return {
                 ...m,
                 statModifiers: { ...m.statModifiers, evs: newEvs },
-              };
+              } as PokemonModule;
             })
           ),
         }));
@@ -497,24 +557,25 @@ export const useModuleStore = create<ModuleStore>()(
         const clampedValue = clampIv(value);
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id
-                ? {
-                    ...m,
-                    statModifiers: {
-                      ...m.statModifiers,
-                      ivs: {
-                        hp: clampedValue,
-                        attack: clampedValue,
-                        defense: clampedValue,
-                        specialAttack: clampedValue,
-                        specialDefense: clampedValue,
-                        speed: clampedValue,
-                      },
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return {
+                  ...m,
+                  statModifiers: {
+                    ...m.statModifiers,
+                    ivs: {
+                      hp: clampedValue,
+                      attack: clampedValue,
+                      defense: clampedValue,
+                      specialAttack: clampedValue,
+                      specialDefense: clampedValue,
+                      speed: clampedValue,
                     },
-                  }
-                : m
-            )
+                  },
+                } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -522,24 +583,25 @@ export const useModuleStore = create<ModuleStore>()(
       setAllEvs: (id, evs) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id
-                ? {
-                    ...m,
-                    statModifiers: {
-                      ...m.statModifiers,
-                      evs: {
-                        hp: clampEv(evs.hp),
-                        attack: clampEv(evs.attack),
-                        defense: clampEv(evs.defense),
-                        specialAttack: clampEv(evs.specialAttack),
-                        specialDefense: clampEv(evs.specialDefense),
-                        speed: clampEv(evs.speed),
-                      },
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return {
+                  ...m,
+                  statModifiers: {
+                    ...m.statModifiers,
+                    evs: {
+                      hp: clampEv(evs.hp),
+                      attack: clampEv(evs.attack),
+                      defense: clampEv(evs.defense),
+                      specialAttack: clampEv(evs.specialAttack),
+                      specialDefense: clampEv(evs.specialDefense),
+                      speed: clampEv(evs.speed),
                     },
-                  }
-                : m
-            )
+                  },
+                } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -547,11 +609,12 @@ export const useModuleStore = create<ModuleStore>()(
       setNature: (id, nature) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id
-                ? { ...m, statModifiers: { ...m.statModifiers, nature } }
-                : m
-            )
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, statModifiers: { ...m.statModifiers, nature } } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -559,9 +622,12 @@ export const useModuleStore = create<ModuleStore>()(
       toggleCalculatedStats: (id) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id ? { ...m, showCalculatedStats: !m.showCalculatedStats } : m
-            )
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, showCalculatedStats: !m.showCalculatedStats } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },
@@ -569,9 +635,12 @@ export const useModuleStore = create<ModuleStore>()(
       resetStatModifiers: (id) => {
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
-            modules.map((m) =>
-              m.id === id ? { ...m, statModifiers: { ...DEFAULT_STAT_MODIFIERS } } : m
-            )
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, statModifiers: { ...DEFAULT_STAT_MODIFIERS } } as PokemonModule;
+              }
+              return m;
+            })
           ),
         }));
       },

@@ -1,17 +1,32 @@
 import { StatModifiers } from "@/lib/utils/statCalculator";
 
 export type ModuleTab = "stats" | "abilities" | "types" | "moves";
-export type ModuleType = "pokemon" | "type-chart";
+export type ModuleType = "pokemon" | "type-chart" | "team-builder";
 
-export interface PokemonModule {
+// Base module interface
+export interface BaseModule {
   id: string;
   moduleType: ModuleType;
-  pokemonName: string | null;
   isMinimized: boolean;
+}
+
+// Pokemon module specific fields
+export interface PokemonModule extends BaseModule {
+  moduleType: "pokemon" | "type-chart";
+  pokemonName: string | null;
   activeTab: ModuleTab;
   statModifiers: StatModifiers;
   showCalculatedStats: boolean;
 }
+
+// Team Builder module specific fields
+export interface TeamBuilderModule extends BaseModule {
+  moduleType: "team-builder";
+  teamSlots: (string | null)[]; // Array of 6 pokemon names
+}
+
+// Union type for all modules
+export type AnyModule = PokemonModule | TeamBuilderModule;
 
 export interface RecentSearch {
   pokemonName: string;
@@ -22,6 +37,6 @@ export interface RecentSearch {
 export interface WorkspaceTab {
   id: string;
   name: string;
-  modules: PokemonModule[];
+  modules: AnyModule[];
   recentSearches: RecentSearch[];
 }

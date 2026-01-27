@@ -47,7 +47,7 @@ export function Sidebar() {
 
   // Get current Pokemon modules (only those with a Pokemon selected)
   const currentPokemon = modules
-    .filter((m) => m.moduleType === "pokemon" && m.pokemonName)
+    .filter((m): m is import("@/types/module").PokemonModule => m.moduleType === "pokemon" && !!m.pokemonName)
     .map((m) => ({ id: m.id, name: m.pokemonName! }));
 
   return (

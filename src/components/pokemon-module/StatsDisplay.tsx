@@ -52,7 +52,7 @@ export function StatsDisplay({ stats, moduleId }: Props) {
   }, [tabs, activeTabId]);
 
   const module = modules.find((m) => m.id === moduleId);
-  const statModifiers = module?.statModifiers;
+  const statModifiers = module?.moduleType === "pokemon" ? module.statModifiers : undefined;
 
   const calculatedStats = useMemo(() => {
     if (!statModifiers) return null;
