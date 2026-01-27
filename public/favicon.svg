@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Pokeball SVG -->
+  <!-- Top half (red) -->
+  <path d="M50 5 A45 45 0 0 1 95 50 H62.5 A12.5 12.5 0 0 0 37.5 50 H5 A45 45 0 0 1 50 5Z" fill="#EE1515"/>
+  <!-- Bottom half (white) -->
+  <path d="M50 95 A45 45 0 0 1 5 50 H37.5 A12.5 12.5 0 0 0 62.5 50 H95 A45 45 0 0 1 50 95Z" fill="#FFFFFF"/>
+  <!-- Center line -->
+  <rect x="5" y="47" width="90" height="6" fill="#222222"/>
+  <!-- Center button outer -->
+  <circle cx="50" cy="50" r="15" fill="#222222"/>
+  <!-- Center button inner -->
+  <circle cx="50" cy="50" r="10" fill="#FFFFFF"/>
+  <!-- Center button core -->
+  <circle cx="50" cy="50" r="5" fill="#222222"/>
+  <!-- Outline -->
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#222222" stroke-width="5"/>
+</svg>

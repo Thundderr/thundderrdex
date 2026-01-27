@@ -1,0 +1,21 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { fetchPokemon } from "@/lib/pokeapi/client";
+import { transformFullPokemon } from "@/lib/pokeapi/transformers";
+import { Pokemon } from "@/types/pokemon";
+
+export function usePokemon(nameOrId: string | number | null) {
+  return useQuery({
+    queryKey: ["pokemon", nameOrId],
+    queryFn: async (): Promise<Pokemon> => {
+      if (!nameOrId) throw new Error("No Pokemon specified");
+      const data = await fetchPokemon(nameOrId);
+      return transformFullPokemon(data);
+    },
+    enabled: !!nameOrId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1,
+  });
+}
