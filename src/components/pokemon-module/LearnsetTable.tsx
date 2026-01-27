@@ -249,7 +249,7 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
                   )}
                 </td>
                 <td className="py-1.5 px-2">
-                  <TypeBadge type={entry.move.type} size="xs" />
+                  <TypeBadge type={entry.move.type} size="xs" fixedWidth />
                 </td>
                 <td className="py-1.5 px-2 text-center">
                   <DamageClassIcon damageClass={entry.move.damageClass} />

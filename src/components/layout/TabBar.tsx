@@ -148,6 +148,7 @@ export function TabBar() {
 
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const pendingTab = pendingTabRemoval ? tabs.find((t) => t.id === pendingTabRemoval) : null;
@@ -162,6 +163,11 @@ export function TabBar() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Track mount state to avoid hydration mismatch with dnd-kit
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (editingTabId && inputRef.current) {
@@ -199,36 +205,76 @@ export function TabBar() {
     }
   };
 
+  // Static tab component for SSR (no drag-and-drop)
+  const renderStaticTab = (tab: WorkspaceTab) => (
+    <div
+      key={tab.id}
+      className={`group flex items-center gap-1 px-3 py-1.5 rounded-t-lg text-sm font-medium transition-colors cursor-pointer ${
+        activeTabId === tab.id
+          ? "bg-slate-900 text-white border-t border-x border-slate-700"
+          : "bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700"
+      }`}
+      onClick={() => setActiveWorkspaceTab(tab.id)}
+    >
+      <span className="truncate max-w-[120px] select-none" title={tab.name}>
+        {tab.name}
+      </span>
+      {tabs.length > 1 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            requestRemoveTab(tab.id);
+          }}
+          className={`p-0.5 rounded hover:bg-red-600/30 transition-colors ${
+            activeTabId === tab.id
+              ? "text-slate-400 hover:text-red-400"
+              : "text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100"
+          }`}
+          title="Close tab"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex items-center gap-1 px-4 py-2 bg-slate-800/50 border-b border-slate-700 overflow-x-auto">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={tabs.map((t) => t.id)}
-          strategy={horizontalListSortingStrategy}
+      {isMounted ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
         >
-          {tabs.map((tab) => (
-            <SortableTab
-              key={tab.id}
-              tab={tab}
-              isActive={activeTabId === tab.id}
-              isEditing={editingTabId === tab.id}
-              editValue={editValue}
-              tabsCount={tabs.length}
-              inputRef={inputRef}
-              onSelect={() => setActiveWorkspaceTab(tab.id)}
-              onStartEditing={() => startEditing(tab.id, tab.name)}
-              onFinishEditing={finishEditing}
-              onEditChange={setEditValue}
-              onEditKeyDown={handleKeyDown}
-              onRemove={() => requestRemoveTab(tab.id)}
-            />
-          ))}
-        </SortableContext>
-      </DndContext>
+          <SortableContext
+            items={tabs.map((t) => t.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {tabs.map((tab) => (
+              <SortableTab
+                key={tab.id}
+                tab={tab}
+                isActive={activeTabId === tab.id}
+                isEditing={editingTabId === tab.id}
+                editValue={editValue}
+                tabsCount={tabs.length}
+                inputRef={inputRef}
+                onSelect={() => setActiveWorkspaceTab(tab.id)}
+                onStartEditing={() => startEditing(tab.id, tab.name)}
+                onFinishEditing={finishEditing}
+                onEditChange={setEditValue}
+                onEditKeyDown={handleKeyDown}
+                onRemove={() => requestRemoveTab(tab.id)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        // Render static tabs during SSR to avoid hydration mismatch
+        tabs.map(renderStaticTab)
+      )}
 
       {/* Add Tab Button */}
       <button

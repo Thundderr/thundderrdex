@@ -1,14 +1,41 @@
 "use client";
 
-import { useMemo } from "react";
-import { PokemonStats } from "@/types/pokemon";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { PokemonStats, PokemonAbility } from "@/types/pokemon";
 import { useModuleStore } from "@/stores/moduleStore";
 import { calculateStats, getEvTotal, StatValues } from "@/lib/utils/statCalculator";
 import { getNatureByName, NATURES, STAT_DISPLAY_NAMES } from "@/data/natures";
+import { useLearnset } from "@/hooks/useLearnset";
+import { useGenerationStore } from "@/stores/generationStore";
+import { TYPE_COLORS } from "@/data/typeChart";
+import { formatPokemonName } from "@/lib/pokeapi/transformers";
+import { filterItems } from "@/data/items";
+import { TypeBadge } from "@/components/type-chart/TypeBadge";
+import { Move } from "@/types/moves";
+
+// Category icon matching LearnsetTable
+function DamageClassIcon({ damageClass }: { damageClass: string }) {
+  const config = {
+    physical: { color: "bg-orange-600", label: "P" },
+    special: { color: "bg-blue-600", label: "S" },
+    status: { color: "bg-slate-600", label: "-" },
+  }[damageClass] ?? { color: "bg-slate-600", label: "?" };
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold text-white ${config.color}`}
+      title={damageClass}
+    >
+      {config.label}
+    </span>
+  );
+}
 
 interface Props {
   stats: PokemonStats;
   moduleId: string;
+  abilities?: PokemonAbility[];
+  pokemonName?: string | null;
 }
 
 const STAT_KEYS: (keyof StatValues)[] = [
@@ -42,8 +69,26 @@ const EV_PRESETS = [
   { label: "HP/SpD", evs: { hp: 252, attack: 0, defense: 4, specialAttack: 0, specialDefense: 252, speed: 0 } },
 ];
 
-export function StatsDisplay({ stats, moduleId }: Props) {
-  const { tabs, activeTabId, setLevel, setIv, setEv, setNature, setAllIvs, setAllEvs } = useModuleStore();
+export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props) {
+  const { tabs, activeTabId, setLevel, setIv, setEv, setNature, setAllIvs, setAllEvs, setAbility, setItem, setModuleMove } = useModuleStore();
+  const { globalGeneration } = useGenerationStore();
+
+  // Fetch learnset for move selection
+  const { data: learnset } = useLearnset(pokemonName || null);
+
+  // Move search state
+  const [searchingMoveSlot, setSearchingMoveSlot] = useState<number | null>(null);
+  const [moveQuery, setMoveQuery] = useState("");
+  const [highlightedMoveIndex, setHighlightedMoveIndex] = useState(0);
+  const moveInputRef = useRef<HTMLInputElement>(null);
+  const moveListRef = useRef<HTMLUListElement>(null);
+
+  // Item search state
+  const [isSearchingItem, setIsSearchingItem] = useState(false);
+  const [itemQuery, setItemQuery] = useState("");
+  const [highlightedItemIndex, setHighlightedItemIndex] = useState(0);
+  const itemInputRef = useRef<HTMLInputElement>(null);
+  const itemListRef = useRef<HTMLUListElement>(null);
 
   // Get modules from active tab
   const modules = useMemo(() => {
@@ -62,6 +107,136 @@ export function StatsDisplay({ stats, moduleId }: Props) {
 
   const evTotal = statModifiers ? getEvTotal(statModifiers.evs) : 0;
   const selectedNature = statModifiers ? NATURES.find((n) => n.name === statModifiers.nature) : null;
+
+  // Filter moves for current generation and search query
+  const filteredMoves = useMemo(() => {
+    if (!learnset || !moveQuery.trim()) return [];
+    const lowerQuery = moveQuery.toLowerCase().trim();
+    const seen = new Set<string>();
+    return learnset
+      .filter((entry) => entry.generation === globalGeneration)
+      .filter((entry) => entry.move.name.toLowerCase().includes(lowerQuery))
+      .filter((entry) => {
+        // Deduplicate moves (same move can be learned via different methods)
+        if (seen.has(entry.move.name)) return false;
+        seen.add(entry.move.name);
+        return true;
+      })
+      .slice(0, 8)
+      .map((entry) => entry.move);
+  }, [learnset, moveQuery, globalGeneration]);
+
+  // Handle move selection
+  const handleMoveSelect = (slotIndex: number, moveName: string) => {
+    setModuleMove(moduleId, slotIndex, moveName);
+    setSearchingMoveSlot(null);
+    setMoveQuery("");
+    setHighlightedMoveIndex(0);
+  };
+
+  // Handle move keyboard navigation
+  const handleMoveKeyDown = (e: React.KeyboardEvent, slotIndex: number) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedMoveIndex((i) => Math.min(i + 1, filteredMoves.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedMoveIndex((i) => Math.max(i - 1, 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (filteredMoves[highlightedMoveIndex]) {
+          handleMoveSelect(slotIndex, filteredMoves[highlightedMoveIndex].name);
+        }
+        break;
+      case "Escape":
+        setSearchingMoveSlot(null);
+        setMoveQuery("");
+        break;
+    }
+  };
+
+  // Reset highlighted index when query changes
+  useEffect(() => {
+    setHighlightedMoveIndex(0);
+  }, [moveQuery]);
+
+  // Scroll to highlighted move
+  useEffect(() => {
+    if (moveListRef.current && filteredMoves.length > 0) {
+      const item = moveListRef.current.children[highlightedMoveIndex] as HTMLElement;
+      item?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedMoveIndex, filteredMoves.length]);
+
+  // Focus input when searching
+  useEffect(() => {
+    if (searchingMoveSlot !== null && moveInputRef.current) {
+      moveInputRef.current.focus();
+    }
+  }, [searchingMoveSlot]);
+
+  // Filter items for search query
+  const filteredItems = useMemo(() => {
+    return filterItems(itemQuery);
+  }, [itemQuery]);
+
+  // Handle item selection
+  const handleItemSelect = (itemName: string) => {
+    setItem(moduleId, itemName);
+    setIsSearchingItem(false);
+    setItemQuery("");
+    setHighlightedItemIndex(0);
+  };
+
+  // Handle item keyboard navigation
+  const handleItemKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedItemIndex((i) => Math.min(i + 1, filteredItems.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedItemIndex((i) => Math.max(i - 1, 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (filteredItems[highlightedItemIndex]) {
+          handleItemSelect(filteredItems[highlightedItemIndex]);
+        } else if (itemQuery.trim()) {
+          // Allow custom item names
+          handleItemSelect(itemQuery.trim());
+        }
+        break;
+      case "Escape":
+        setIsSearchingItem(false);
+        setItemQuery("");
+        break;
+    }
+  };
+
+  // Reset highlighted index when item query changes
+  useEffect(() => {
+    setHighlightedItemIndex(0);
+  }, [itemQuery]);
+
+  // Scroll to highlighted item
+  useEffect(() => {
+    if (itemListRef.current && filteredItems.length > 0) {
+      const item = itemListRef.current.children[highlightedItemIndex] as HTMLElement;
+      item?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedItemIndex, filteredItems.length]);
+
+  // Focus item input when searching
+  useEffect(() => {
+    if (isSearchingItem && itemInputRef.current) {
+      itemInputRef.current.focus();
+    }
+  }, [isSearchingItem]);
 
   if (!statModifiers || !calculatedStats) return null;
 
@@ -238,6 +413,178 @@ export function StatsDisplay({ stats, moduleId }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Ability and Item Row */}
+      <div className="flex items-center gap-3 pt-2 border-t border-slate-700">
+        {abilities && abilities.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-1">
+            <label className="text-[10px] text-slate-400">Ability</label>
+            <select
+              value={statModifiers.ability || ""}
+              onChange={(e) => setAbility(moduleId, e.target.value || null)}
+              className="flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="">-</option>
+              {abilities.map((ability) => (
+                <option key={ability.name} value={ability.name}>
+                  {formatPokemonName(ability.name)}{ability.isHidden ? " (H)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 flex-1 relative">
+          <label className="text-[10px] text-slate-400">Item</label>
+          {isSearchingItem ? (
+            <div className="flex-1 relative">
+              <input
+                ref={itemInputRef}
+                type="text"
+                value={itemQuery}
+                onChange={(e) => setItemQuery(e.target.value)}
+                onBlur={() => setTimeout(() => {
+                  setIsSearchingItem(false);
+                  setItemQuery("");
+                }, 200)}
+                onKeyDown={handleItemKeyDown}
+                placeholder="Search item..."
+                className="w-full bg-slate-800 border border-blue-500 rounded px-1.5 py-0.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+                autoFocus
+              />
+              {filteredItems.length > 0 && (
+                <ul
+                  ref={itemListRef}
+                  className="absolute z-50 w-full bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-40 overflow-auto"
+                >
+                  {filteredItems.map((item, index) => (
+                    <li
+                      key={item}
+                      onMouseEnter={() => setHighlightedItemIndex(index)}
+                      onClick={() => handleItemSelect(item)}
+                      className={`px-2 py-1 text-xs cursor-pointer ${
+                        index === highlightedItemIndex ? "bg-slate-700" : "hover:bg-slate-700/50"
+                      }`}
+                    >
+                      <span className="text-white">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsSearchingItem(true)}
+              className="flex-1 text-left bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white hover:bg-slate-700 transition-colors truncate"
+            >
+              {statModifiers.item || <span className="text-slate-500">None</span>}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Moves Grid (2x2) */}
+      {pokemonName && (
+        <div className="pt-2 border-t border-slate-700">
+          <label className="text-[10px] text-slate-400 mb-1.5 block">Moves</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[0, 1, 2, 3].map((slotIndex) => {
+              const moveName = statModifiers.moves?.[slotIndex] ?? null;
+              const isSearching = searchingMoveSlot === slotIndex;
+
+              return (
+                <div key={slotIndex} className="relative">
+                  {isSearching ? (
+                    <div className="relative">
+                      <input
+                        ref={moveInputRef}
+                        type="text"
+                        value={moveQuery}
+                        onChange={(e) => setMoveQuery(e.target.value)}
+                        onBlur={() => setTimeout(() => {
+                          setSearchingMoveSlot(null);
+                          setMoveQuery("");
+                        }, 200)}
+                        onKeyDown={(e) => handleMoveKeyDown(e, slotIndex)}
+                        placeholder="Search move..."
+                        className="w-full bg-slate-800 border border-blue-500 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none"
+                        autoFocus
+                      />
+                      {filteredMoves.length > 0 && (
+                        <ul
+                          ref={moveListRef}
+                          className="absolute z-50 w-[340px] right-0 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[200px] overflow-auto"
+                        >
+                          {/* Header row */}
+                          <li className="flex items-center gap-1 px-2 py-1 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/90 sticky top-0">
+                            <span className="flex-1">Move</span>
+                            <span className="w-[52px] text-center">Type</span>
+                            <span className="w-4 text-center">Cat</span>
+                            <span className="w-7 text-right">Pwr</span>
+                            <span className="w-7 text-right">Acc</span>
+                            <span className="w-6 text-right">PP</span>
+                          </li>
+                          {filteredMoves.map((move, index) => (
+                            <li
+                              key={move.name}
+                              onMouseEnter={() => setHighlightedMoveIndex(index)}
+                              onClick={() => handleMoveSelect(slotIndex, move.name)}
+                              className={`flex items-center gap-1 px-2 py-1.5 text-[11px] cursor-pointer ${
+                                index === highlightedMoveIndex ? "bg-slate-700" : "hover:bg-slate-700/50"
+                              }`}
+                            >
+                              <span className="flex-1 text-white truncate">{formatPokemonName(move.name)}</span>
+                              <span className="w-[52px] flex justify-center">
+                                <TypeBadge type={move.type} size="xs" fixedWidth />
+                              </span>
+                              <span className="w-4 flex justify-center">
+                                <DamageClassIcon damageClass={move.damageClass} />
+                              </span>
+                              <span className="w-7 text-right text-slate-300 font-mono text-[10px]">
+                                {move.power ?? "-"}
+                              </span>
+                              <span className="w-7 text-right text-slate-300 font-mono text-[10px]">
+                                {move.accuracy ?? "-"}
+                              </span>
+                              <span className="w-6 text-right text-slate-400 font-mono text-[10px]">
+                                {move.pp}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSearchingMoveSlot(slotIndex)}
+                      className="w-full flex items-center gap-1.5 px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-left hover:bg-slate-700 transition-colors"
+                    >
+                      {moveName ? (
+                        <>
+                          {(() => {
+                            const moveEntry = learnset?.find((e) => e.move.name === moveName);
+                            const moveType = moveEntry?.move.type;
+                            return (
+                              <>
+                                <span
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: moveType ? TYPE_COLORS[moveType] : "#666" }}
+                                />
+                                <span className="text-white truncate">{formatPokemonName(moveName)}</span>
+                              </>
+                            );
+                          })()}
+                        </>
+                      ) : (
+                        <span className="text-slate-500">Move {slotIndex + 1}</span>
+                      )}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

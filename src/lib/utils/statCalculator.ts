@@ -6,6 +6,9 @@ export interface StatModifiers {
   ivs: StatValues;
   evs: StatValues;
   nature: string;
+  ability: string | null;
+  item: string | null;
+  moves: (string | null)[];
 }
 
 export interface StatValues {
@@ -37,6 +40,9 @@ export const DEFAULT_STAT_MODIFIERS: StatModifiers = {
     speed: 0,
   },
   nature: "Hardy",
+  ability: null,
+  item: null,
+  moves: [null, null, null, null],
 };
 
 // Calculate HP stat (different formula)
@@ -71,10 +77,18 @@ function calculateOtherStat(
   );
 }
 
+// Input type for stat calculation (only needs core stat fields)
+export interface StatCalcInput {
+  level: number;
+  ivs: StatValues;
+  evs: StatValues;
+  nature: string;
+}
+
 // Calculate all stats with modifiers
 export function calculateStats(
   baseStats: PokemonStats,
-  modifiers: StatModifiers,
+  modifiers: StatCalcInput,
   nature: Nature
 ): PokemonStats {
   const { level, ivs, evs } = modifiers;

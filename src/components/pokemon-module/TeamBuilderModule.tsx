@@ -475,7 +475,7 @@ export function TeamBuilderModule({ module, isOverlay = false }: Props) {
         </div>
 
         <div className="flex-1 mx-2 text-sm font-medium text-white">
-          Team Builder
+          Team Coverage
         </div>
 
         <div className="flex items-center gap-1">

@@ -16,6 +16,8 @@ import { TypeEffectivenessDisplay } from "./TypeEffectivenessDisplay";
 import { LearnsetTable } from "./LearnsetTable";
 import { LocationsPanel } from "./LocationsPanel";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
+import { NATURES } from "@/data/natures";
+import { StatValues } from "@/lib/utils/statCalculator";
 import Image from "next/image";
 
 interface Props {
@@ -45,7 +47,7 @@ function getPokemonGeneration(pokedexId: number): number {
 }
 
 export function PokemonModule({ module, isOverlay = false }: Props) {
-  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule } =
+  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule, setStatModifiers } =
     useModuleStore();
   const isSelected = selectedModuleId === module.id;
   const moduleContainerRef = useRef<HTMLDivElement>(null);
@@ -101,6 +103,306 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const { data: pokemonList, isLoading: listLoading } = usePokemonList();
+
+  // Import/Export state
+  const [showImportExport, setShowImportExport] = useState<"import" | "export" | null>(null);
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // Serialize to Showdown format
+  const serializeToShowdown = () => {
+    if (!pokemon) return "";
+
+    const lines: string[] = [];
+    const { statModifiers } = module;
+
+    // Pokemon name @ Item
+    let firstLine = pokemon.displayName;
+    if (statModifiers.item) {
+      firstLine += ` @ ${statModifiers.item}`;
+    }
+    lines.push(firstLine);
+
+    // Ability
+    if (statModifiers.ability) {
+      const abilityName = statModifiers.ability
+        .split("-")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+      lines.push(`Ability: ${abilityName}`);
+    }
+
+    // Level (only if not 100)
+    if (statModifiers.level !== 100) {
+      lines.push(`Level: ${statModifiers.level}`);
+    }
+
+    // Nature (only if not neutral)
+    const nature = NATURES.find((n) => n.name === statModifiers.nature);
+    if (nature && (nature.increasedStat || nature.decreasedStat)) {
+      lines.push(`${statModifiers.nature} Nature`);
+    }
+
+    // IVs (only if not all 31)
+    const ivParts: string[] = [];
+    const ivMap: Record<keyof StatValues, string> = {
+      hp: "HP",
+      attack: "Atk",
+      defense: "Def",
+      specialAttack: "SpA",
+      specialDefense: "SpD",
+      speed: "Spe",
+    };
+    for (const [key, label] of Object.entries(ivMap)) {
+      const iv = statModifiers.ivs[key as keyof StatValues];
+      if (iv !== 31) {
+        ivParts.push(`${iv} ${label}`);
+      }
+    }
+    if (ivParts.length > 0) {
+      lines.push(`IVs: ${ivParts.join(" / ")}`);
+    }
+
+    // EVs (only if any are non-zero)
+    const evParts: string[] = [];
+    for (const [key, label] of Object.entries(ivMap)) {
+      const ev = statModifiers.evs[key as keyof StatValues];
+      if (ev > 0) {
+        evParts.push(`${ev} ${label}`);
+      }
+    }
+    if (evParts.length > 0) {
+      lines.push(`EVs: ${evParts.join(" / ")}`);
+    }
+
+    // Moves
+    const moves = statModifiers.moves ?? [null, null, null, null];
+    for (const move of moves) {
+      if (move) {
+        const moveName = move
+          .split("-")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+        lines.push(`- ${moveName}`);
+      }
+    }
+
+    return lines.join("\n");
+  };
+
+  // Parse Showdown format
+  const parseShowdown = (text: string): { error: string } | { pokemonName: string; level?: number; nature?: string; ability?: string; item?: string; ivs?: Partial<StatValues>; evs?: Partial<StatValues>; moves?: string[] } => {
+    const normalizedText = text.replace(/\t/g, " ").replace(/ +/g, " ");
+    const lines = normalizedText.trim().split("\n").map((l) => l.trim()).filter((l) => l);
+    if (lines.length === 0) {
+      return { error: "No text to parse" };
+    }
+
+    // Parse first line: Pokemon @ Item or Pokemon (nickname) @ Item
+    const firstLine = lines[0];
+    let pokemonName: string;
+    let item: string | undefined;
+
+    if (firstLine.includes("@")) {
+      const parts = firstLine.split("@");
+      pokemonName = parts[0].trim();
+      item = parts[1].trim();
+    } else {
+      pokemonName = firstLine.trim();
+    }
+
+    // Handle nickname format: Nickname (Pokemon)
+    const nicknameMatch = pokemonName.match(/^.+\s*\(([^)]+)\)$/);
+    if (nicknameMatch) {
+      pokemonName = nicknameMatch[1].trim();
+    }
+
+    // Normalize pokemon name for API lookup
+    const normalizedName = pokemonName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    const simpleName = pokemonName.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    // Check if Pokemon exists
+    const foundPokemon = pokemonList?.find((p) => {
+      if (p.name === normalizedName) return true;
+      if (p.displayName.toLowerCase() === pokemonName.toLowerCase()) return true;
+      const pSimple = p.displayName.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (pSimple === simpleName) return true;
+      return false;
+    });
+
+    if (!foundPokemon) {
+      return { error: `Pokemon "${pokemonName}" not found` };
+    }
+
+    const pokeGen = getPokemonGeneration(foundPokemon.id);
+    if (pokeGen > globalGeneration) {
+      return { error: `${foundPokemon.displayName} is from Gen ${pokeGen}, but current generation is Gen ${globalGeneration}` };
+    }
+
+    const result: { pokemonName: string; level?: number; nature?: string; ability?: string; item?: string; ivs?: Partial<StatValues>; evs?: Partial<StatValues>; moves?: string[] } = {
+      pokemonName: foundPokemon.name,
+    };
+
+    if (item) {
+      result.item = item;
+    }
+
+    const moves: string[] = [];
+
+    // Parse remaining lines
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Move (starts with -)
+      if (line.startsWith("-")) {
+        const moveName = line.slice(1).trim().toLowerCase().replace(/\s+/g, "-");
+        moves.push(moveName);
+        continue;
+      }
+
+      // Ability
+      const abilityMatch = line.match(/^Ability:\s*(.+)/i);
+      if (abilityMatch) {
+        result.ability = abilityMatch[1].trim().toLowerCase().replace(/\s+/g, "-");
+        continue;
+      }
+
+      // Level
+      const levelMatch = line.match(/^Level:\s*(\d+)/i);
+      if (levelMatch) {
+        result.level = Math.max(1, Math.min(100, parseInt(levelMatch[1])));
+        continue;
+      }
+
+      // Nature
+      const natureMatch = line.match(/^(\w+)\s+Nature/i);
+      if (natureMatch) {
+        const natureName = natureMatch[1];
+        const foundNature = NATURES.find((n) => n.name.toLowerCase() === natureName.toLowerCase());
+        if (foundNature) {
+          result.nature = foundNature.name;
+        }
+        continue;
+      }
+
+      // EVs
+      const evMatch = line.match(/^EVs:\s*(.+)/i);
+      if (evMatch) {
+        result.evs = parseStatLine(evMatch[1]);
+        continue;
+      }
+
+      // IVs
+      const ivMatch = line.match(/^IVs:\s*(.+)/i);
+      if (ivMatch) {
+        result.ivs = parseStatLine(ivMatch[1]);
+        continue;
+      }
+    }
+
+    if (moves.length > 0) {
+      result.moves = moves.slice(0, 4); // Max 4 moves
+    }
+
+    return result;
+  };
+
+  // Helper to parse stat lines like "252 Atk / 4 SpD / 252 Spe"
+  const parseStatLine = (line: string): Partial<StatValues> => {
+    const result: Partial<StatValues> = {};
+    const statMap: Record<string, keyof StatValues> = {
+      hp: "hp",
+      atk: "attack",
+      def: "defense",
+      spa: "specialAttack",
+      spd: "specialDefense",
+      spe: "speed",
+    };
+
+    const parts = line.split("/").map((p) => p.trim());
+    for (const part of parts) {
+      const match = part.match(/^(\d+)\s+(\w+)/i);
+      if (match) {
+        const value = parseInt(match[1]);
+        const statAbbr = match[2].toLowerCase();
+        const statKey = statMap[statAbbr];
+        if (statKey) {
+          result[statKey] = value;
+        }
+      }
+    }
+    return result;
+  };
+
+  // Handle import
+  const handleImport = () => {
+    const parseResult = parseShowdown(importText);
+    if ("error" in parseResult) {
+      setImportError(parseResult.error);
+      return;
+    }
+
+    // Set the Pokemon
+    setPokemon(module.id, parseResult.pokemonName);
+
+    // Build stat modifiers update
+    const updates: { level?: number; nature?: string; ability?: string | null; item?: string | null; ivs?: StatValues; evs?: StatValues; moves?: (string | null)[] } = {};
+
+    if (parseResult.level !== undefined) {
+      updates.level = parseResult.level;
+    }
+
+    if (parseResult.nature) {
+      updates.nature = parseResult.nature;
+    }
+
+    if (parseResult.ability) {
+      updates.ability = parseResult.ability;
+    }
+
+    if (parseResult.item) {
+      updates.item = parseResult.item;
+    }
+
+    if (parseResult.ivs) {
+      updates.ivs = {
+        hp: parseResult.ivs.hp ?? 31,
+        attack: parseResult.ivs.attack ?? 31,
+        defense: parseResult.ivs.defense ?? 31,
+        specialAttack: parseResult.ivs.specialAttack ?? 31,
+        specialDefense: parseResult.ivs.specialDefense ?? 31,
+        speed: parseResult.ivs.speed ?? 31,
+      };
+    }
+
+    if (parseResult.evs) {
+      updates.evs = {
+        hp: parseResult.evs.hp ?? 0,
+        attack: parseResult.evs.attack ?? 0,
+        defense: parseResult.evs.defense ?? 0,
+        specialAttack: parseResult.evs.specialAttack ?? 0,
+        specialDefense: parseResult.evs.specialDefense ?? 0,
+        speed: parseResult.evs.speed ?? 0,
+      };
+    }
+
+    if (parseResult.moves) {
+      // Fill with nulls if less than 4 moves
+      const moves: (string | null)[] = [...parseResult.moves];
+      while (moves.length < 4) {
+        moves.push(null);
+      }
+      updates.moves = moves;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setStatModifiers(module.id, updates);
+    }
+
+    setShowImportExport(null);
+    setImportText("");
+    setImportError(null);
+  };
 
   const filteredResults = useMemo(() => {
     if (!query || !pokemonList) return [];
@@ -356,6 +658,28 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
+          {pokemon && (
+            <>
+              <button
+                onClick={() => setShowImportExport("import")}
+                className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+                title="Import from Showdown"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setShowImportExport("export")}
+                className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+                title="Export to Showdown"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l4 4m0 0l4-4m-4 4V4" />
+                </svg>
+              </button>
+            </>
+          )}
           <button
             onClick={() => removeModule(module.id)}
             className="p-1.5 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
@@ -488,7 +812,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               {/* Tab Content */}
               <div>
                 {module.activeTab === "stats" && (
-                  <StatsDisplay stats={pokemon.stats} moduleId={module.id} />
+                  <StatsDisplay stats={pokemon.stats} moduleId={module.id} abilities={pokemon.abilities} pokemonName={module.pokemonName} />
                 )}
                 {module.activeTab === "abilities" && (
                   <AbilitiesPanel abilities={pokemon.abilities} />
@@ -515,6 +839,83 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
             </div>
           )}
         </div>
+
+      {/* Import/Export Modal */}
+      {showImportExport && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(null)}>
+          <div
+            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-[400px] max-w-[90vw]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+              <h3 className="text-sm font-medium text-white">
+                {showImportExport === "import" ? "Import Pokemon" : "Export Pokemon"}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowImportExport(null);
+                  setImportText("");
+                  setImportError(null);
+                }}
+                className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              {showImportExport === "export" ? (
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Copy this text to use in Pokemon Showdown or other tools:</p>
+                  <textarea
+                    readOnly
+                    value={serializeToShowdown()}
+                    className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono focus:outline-none focus:border-blue-500 resize-none"
+                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(serializeToShowdown());
+                    }}
+                    className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm text-white font-medium transition-colors"
+                  >
+                    Copy to Clipboard
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Paste a Pokemon set from Showdown format:</p>
+                  <textarea
+                    autoFocus
+                    value={importText}
+                    onChange={(e) => {
+                      setImportText(e.target.value);
+                      setImportError(null);
+                    }}
+                    placeholder={`Pikachu @ Light Ball
+Level: 50
+Adamant Nature
+EVs: 252 Atk / 4 SpD / 252 Spe
+IVs: 0 SpA`}
+                    className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
+                  />
+                  {importError && (
+                    <p className="mt-2 text-xs text-red-400">{importError}</p>
+                  )}
+                  <button
+                    onClick={handleImport}
+                    disabled={!importText.trim()}
+                    className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
+                  >
+                    Import
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

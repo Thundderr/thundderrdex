@@ -133,6 +133,9 @@ interface ModuleStore {
   setAllIvs: (id: string, value: number) => void;
   setAllEvs: (id: string, evs: StatValues) => void;
   setNature: (id: string, nature: string) => void;
+  setAbility: (id: string, ability: string | null) => void;
+  setItem: (id: string, item: string | null) => void;
+  setModuleMove: (id: string, slotIndex: number, moveName: string | null) => void;
   toggleCalculatedStats: (id: string) => void;
   resetStatModifiers: (id: string) => void;
   // Recent searches
@@ -772,6 +775,48 @@ export const useModuleStore = create<ModuleStore>()(
             modules.map((m) => {
               if (m.id === id && m.moduleType === "pokemon") {
                 return { ...m, statModifiers: { ...m.statModifiers, nature } } as PokemonModule;
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      setAbility: (id, ability) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, statModifiers: { ...m.statModifiers, ability } } as PokemonModule;
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      setItem: (id, item) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                return { ...m, statModifiers: { ...m.statModifiers, item } } as PokemonModule;
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      setModuleMove: (id, slotIndex, moveName) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === id && m.moduleType === "pokemon") {
+                const currentMoves = m.statModifiers.moves ?? [null, null, null, null];
+                const newMoves = [...currentMoves];
+                newMoves[slotIndex] = moveName;
+                return { ...m, statModifiers: { ...m.statModifiers, moves: newMoves } } as PokemonModule;
               }
               return m;
             })

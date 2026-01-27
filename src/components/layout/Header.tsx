@@ -55,7 +55,7 @@ export function Header() {
             onClick={addTeamBuilderModule}
             className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            + Team Builder
+            + Team Coverage
           </button>
           <button
             onClick={addDamageCalcModule}

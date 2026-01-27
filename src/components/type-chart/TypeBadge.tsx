@@ -7,9 +7,10 @@ interface Props {
   type: PokemonTypeName;
   size?: "xs" | "sm" | "md";
   showLabel?: boolean;
+  fixedWidth?: boolean;
 }
 
-export function TypeBadge({ type, size = "sm", showLabel = true }: Props) {
+export function TypeBadge({ type, size = "sm", showLabel = true, fixedWidth = false }: Props) {
   const color = TYPE_COLORS[type];
 
   const sizeClasses = {
@@ -18,9 +19,16 @@ export function TypeBadge({ type, size = "sm", showLabel = true }: Props) {
     md: "text-sm px-3 py-1.5",
   };
 
+  // Fixed widths to accommodate longest type names ("Electric", "Fighting")
+  const fixedWidthClasses = {
+    xs: "min-w-[52px]",
+    sm: "min-w-[64px]",
+    md: "min-w-[80px]",
+  };
+
   return (
     <span
-      className={`inline-flex items-center justify-center rounded font-medium uppercase tracking-wide ${sizeClasses[size]}`}
+      className={`inline-flex items-center justify-center rounded font-medium uppercase tracking-wide ${sizeClasses[size]} ${fixedWidth ? fixedWidthClasses[size] : ""}`}
       style={{
         backgroundColor: color,
         color: getContrastColor(color),
