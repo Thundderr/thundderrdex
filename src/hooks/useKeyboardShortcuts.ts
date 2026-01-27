@@ -109,6 +109,12 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
               setActiveTab(selectedModuleId, "moves" as ModuleTab);
             }
             break;
+          case "l":
+            if (selectedModuleId && isPokemonModule) {
+              e.preventDefault();
+              setActiveTab(selectedModuleId, "locations" as ModuleTab);
+            }
+            break;
         }
         return;
       }

@@ -157,3 +157,35 @@ export interface PokeAPIMachine {
     url: string;
   };
 }
+
+// Encounter API types
+export interface PokeAPIEncounterDetail {
+  chance: number;
+  condition_values: {
+    name: string;
+    url: string;
+  }[];
+  max_level: number;
+  min_level: number;
+  method: {
+    name: string;
+    url: string;
+  };
+}
+
+export interface PokeAPIVersionEncounter {
+  encounter_details: PokeAPIEncounterDetail[];
+  max_chance: number;
+  version: {
+    name: string;
+    url: string;
+  };
+}
+
+export interface PokeAPILocationEncounter {
+  location_area: {
+    name: string;
+    url: string;
+  };
+  version_details: PokeAPIVersionEncounter[];
+}

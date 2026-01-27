@@ -4,6 +4,7 @@ import {
   PokeAPIAbility,
   PokeAPIMoveDetail,
   PokeAPIMachine,
+  PokeAPILocationEncounter,
 } from "@/types/api";
 
 const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -71,6 +72,14 @@ export async function fetchMove(
 
 export async function fetchMachine(url: string): Promise<PokeAPIMachine> {
   return fetchWithCache<PokeAPIMachine>(url);
+}
+
+export async function fetchEncounters(
+  nameOrId: string | number
+): Promise<PokeAPILocationEncounter[]> {
+  return fetchWithCache<PokeAPILocationEncounter[]>(
+    `${POKEAPI_BASE}/pokemon/${nameOrId}/encounters`
+  );
 }
 
 // Get sprite URL helper - uses raw.githubusercontent for reliability

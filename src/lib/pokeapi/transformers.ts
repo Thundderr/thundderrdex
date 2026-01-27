@@ -363,3 +363,133 @@ export async function transformLearnset(
 
   return entries;
 }
+
+// Version to generation mapping for encounters
+const VERSION_GENERATIONS: Record<string, number> = {
+  red: 1,
+  blue: 1,
+  yellow: 1,
+  gold: 2,
+  silver: 2,
+  crystal: 2,
+  ruby: 3,
+  sapphire: 3,
+  emerald: 3,
+  firered: 3,
+  leafgreen: 3,
+  diamond: 4,
+  pearl: 4,
+  platinum: 4,
+  heartgold: 4,
+  soulsilver: 4,
+  black: 5,
+  white: 5,
+  "black-2": 5,
+  "white-2": 5,
+  x: 6,
+  y: 6,
+  "omega-ruby": 6,
+  "alpha-sapphire": 6,
+  sun: 7,
+  moon: 7,
+  "ultra-sun": 7,
+  "ultra-moon": 7,
+  "lets-go-pikachu": 7,
+  "lets-go-eevee": 7,
+  sword: 8,
+  shield: 8,
+  "brilliant-diamond": 8,
+  "shining-pearl": 8,
+  "legends-arceus": 8,
+  scarlet: 9,
+  violet: 9,
+};
+
+export function getVersionGeneration(version: string): number {
+  return VERSION_GENERATIONS[version] || 0;
+}
+
+export function formatLocationName(name: string): string {
+  return name
+    .replace(/-area$/, "")
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export function formatVersionName(name: string): string {
+  const VERSION_DISPLAY: Record<string, string> = {
+    red: "Red",
+    blue: "Blue",
+    yellow: "Yellow",
+    gold: "Gold",
+    silver: "Silver",
+    crystal: "Crystal",
+    ruby: "Ruby",
+    sapphire: "Sapphire",
+    emerald: "Emerald",
+    firered: "FireRed",
+    leafgreen: "LeafGreen",
+    diamond: "Diamond",
+    pearl: "Pearl",
+    platinum: "Platinum",
+    heartgold: "HeartGold",
+    soulsilver: "SoulSilver",
+    black: "Black",
+    white: "White",
+    "black-2": "Black 2",
+    "white-2": "White 2",
+    x: "X",
+    y: "Y",
+    "omega-ruby": "Omega Ruby",
+    "alpha-sapphire": "Alpha Sapphire",
+    sun: "Sun",
+    moon: "Moon",
+    "ultra-sun": "Ultra Sun",
+    "ultra-moon": "Ultra Moon",
+    "lets-go-pikachu": "Let's Go Pikachu",
+    "lets-go-eevee": "Let's Go Eevee",
+    sword: "Sword",
+    shield: "Shield",
+    "brilliant-diamond": "Brilliant Diamond",
+    "shining-pearl": "Shining Pearl",
+    "legends-arceus": "Legends: Arceus",
+    scarlet: "Scarlet",
+    violet: "Violet",
+  };
+  return VERSION_DISPLAY[name] || formatPokemonName(name);
+}
+
+export function formatEncounterMethod(method: string): string {
+  const METHOD_DISPLAY: Record<string, string> = {
+    walk: "Walking",
+    "old-rod": "Old Rod",
+    "good-rod": "Good Rod",
+    "super-rod": "Super Rod",
+    surf: "Surfing",
+    "rock-smash": "Rock Smash",
+    headbutt: "Headbutt",
+    "dark-grass": "Dark Grass",
+    "grass-spots": "Rustling Grass",
+    "cave-spots": "Dust Cloud",
+    "bridge-spots": "Bridge Shadow",
+    "super-rod-spots": "Fishing Spot",
+    "surf-spots": "Rippling Water",
+    "yellow-flowers": "Yellow Flowers",
+    "purple-flowers": "Purple Flowers",
+    "red-flowers": "Red Flowers",
+    "rough-terrain": "Rough Terrain",
+    gift: "Gift",
+    "gift-egg": "Gift Egg",
+    "only-one": "Static Encounter",
+    "pokeflute": "Poké Flute",
+    "squirt-bottle": "Squirt Bottle",
+    "wailmer-pail": "Wailmer Pail",
+    seaweed: "Seaweed",
+    "sos-encounter": "SOS Battle",
+    "bubbling-spots": "Bubbling Spots",
+    "roaming-grass": "Roaming (Grass)",
+    "roaming-water": "Roaming (Water)",
+  };
+  return METHOD_DISPLAY[method] || formatPokemonName(method);
+}

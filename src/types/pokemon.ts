@@ -78,3 +78,25 @@ export interface PokemonListItem {
   displayName: string;
   spriteUrl: string;
 }
+
+// Encounter/Location types
+export interface EncounterDetail {
+  chance: number;
+  method: string;
+  minLevel: number;
+  maxLevel: number;
+  conditions: string[];
+}
+
+export interface VersionEncounter {
+  version: string;
+  generation: number;
+  maxChance: number;
+  encounters: EncounterDetail[];
+}
+
+export interface LocationEncounter {
+  locationName: string;
+  locationDisplayName: string;
+  versionDetails: VersionEncounter[];
+}

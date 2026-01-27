@@ -14,6 +14,7 @@ import { StatsDisplay } from "./StatsDisplay";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { TypeEffectivenessDisplay } from "./TypeEffectivenessDisplay";
 import { LearnsetTable } from "./LearnsetTable";
+import { LocationsPanel } from "./LocationsPanel";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import Image from "next/image";
 
@@ -27,6 +28,7 @@ const TABS: { id: ModuleTab; label: string }[] = [
   { id: "abilities", label: "Abilities" },
   { id: "types", label: "Defenses" },
   { id: "moves", label: "Moves" },
+  { id: "locations", label: "Locations" },
 ];
 
 // Pokemon generation ranges by Pokedex number
@@ -499,6 +501,9 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                     pokemonName={module.pokemonName}
                     pokemonTypes={genTypes}
                   />
+                )}
+                {module.activeTab === "locations" && module.pokemonName && (
+                  <LocationsPanel pokemonName={module.pokemonName} />
                 )}
               </div>
             </>

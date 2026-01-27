@@ -26,6 +26,7 @@ const MODULE_SHORTCUTS = [
   { key: "Shift + A", description: "Abilities tab" },
   { key: "Shift + D", description: "Defenses tab" },
   { key: "Shift + M", description: "Moves tab" },
+  { key: "Shift + L", description: "Locations tab" },
 ];
 
 export function KeybindsModal({ isOpen, onClose }: Props) {

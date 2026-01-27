@@ -1,6 +1,6 @@
 import { StatModifiers } from "@/lib/utils/statCalculator";
 
-export type ModuleTab = "stats" | "abilities" | "types" | "moves";
+export type ModuleTab = "stats" | "abilities" | "types" | "moves" | "locations";
 export type ModuleType = "pokemon" | "type-chart" | "team-builder";
 
 // Base module interface
