@@ -12,7 +12,7 @@ interface Props {
   pokemonTypes: PokemonType[];
 }
 
-type SortKey = "level" | "name" | "type" | "category" | "power" | "accuracy";
+type SortKey = "level" | "tm" | "name" | "type" | "category" | "power" | "accuracy";
 type SortDirection = "asc" | "desc";
 
 // Order values for descending sort: special (2) > physical (1) > status (0)
@@ -39,13 +39,12 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
   const filteredLearnset = useMemo(() => {
     if (!learnset) return [];
 
-    // Filter by generation
-    let filtered = learnset.filter((entry) =>
-      entry.generations.includes(globalGeneration)
+    // Filter by generation and learn method
+    const filtered = learnset.filter(
+      (entry) =>
+        entry.generation === globalGeneration &&
+        entry.learnMethod === activeMethod
     );
-
-    // Filter by learn method
-    filtered = filtered.filter((entry) => entry.learnMethod === activeMethod);
 
     // Sort
     return [...filtered].sort((a, b) => {
@@ -55,6 +54,18 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
         case "level":
           comparison = (a.levelLearned ?? 999) - (b.levelLearned ?? 999);
           break;
+        case "tm": {
+          // Sort TMs first (1-999), then HMs (1000+)
+          // TM01 = 1, TM99 = 99, HM01 = 1001, HM07 = 1007
+          const getMachineOrder = (mn: string | null): number => {
+            if (!mn) return 9999;
+            const isHM = mn.startsWith("HM");
+            const num = parseInt(mn.replace(/\D/g, ""), 10);
+            return isHM ? 1000 + num : num;
+          };
+          comparison = getMachineOrder(a.machineNumber) - getMachineOrder(b.machineNumber);
+          break;
+        }
         case "name":
           comparison = a.move.displayName.localeCompare(b.move.displayName);
           break;
@@ -87,8 +98,9 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
 
     if (!learnset) return defaultCounts;
 
-    const genFiltered = learnset.filter((entry) =>
-      entry.generations.includes(globalGeneration)
+    // Filter by generation first, then count per method
+    const genFiltered = learnset.filter(
+      (entry) => entry.generation === globalGeneration
     );
 
     return METHOD_TABS.reduce((acc, tab) => {
@@ -106,6 +118,21 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
       // Category defaults to descending (special first, since we'll invert the comparison)
       const defaultDesc = key === "power" || key === "accuracy" || key === "category";
       setSortDirection(defaultDesc ? "desc" : "asc");
+    }
+  };
+
+  const handleMethodChange = (method: LearnMethod) => {
+    setActiveMethod(method);
+    // Reset sort to appropriate default for the method
+    if (method === "level-up") {
+      setSortKey("level");
+      setSortDirection("asc");
+    } else if (method === "machine") {
+      setSortKey("tm");
+      setSortDirection("asc");
+    } else {
+      setSortKey("name");
+      setSortDirection("asc");
     }
   };
 
@@ -160,7 +187,7 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
         {METHOD_TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveMethod(tab.id)}
+            onClick={() => handleMethodChange(tab.id)}
             className={`px-3 py-1.5 text-xs font-medium transition-colors ${
               activeMethod === tab.id
                 ? "text-blue-400 border-b-2 border-blue-400 -mb-px"
@@ -185,6 +212,9 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
               {activeMethod === "level-up" && (
                 <SortHeader label="Lv" sortKeyValue="level" className="w-12" />
               )}
+              {activeMethod === "machine" && (
+                <SortHeader label="TM" sortKeyValue="tm" className="w-14" />
+              )}
               <SortHeader label="Move" sortKeyValue="name" />
               <SortHeader label="Type" sortKeyValue="type" className="w-20" />
               <SortHeader label="Cat" sortKeyValue="category" className="w-10 text-center" />
@@ -203,6 +233,11 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
                 {activeMethod === "level-up" && (
                   <td className="py-1.5 px-2 text-slate-400">
                     {entry.levelLearned ?? "-"}
+                  </td>
+                )}
+                {activeMethod === "machine" && (
+                  <td className="py-1.5 px-2 text-slate-400 font-mono text-[10px]">
+                    {entry.machineNumber ?? "-"}
                   </td>
                 )}
                 <td className="py-1.5 px-2 text-white">
@@ -233,7 +268,16 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
 
       {filteredLearnset.length === 0 && (
         <div className="text-center py-6 text-slate-400 text-sm">
-          No moves found for this method in Gen {globalGeneration}
+          {activeMethod === "egg" ? (
+            <>
+              <p>No egg move data available</p>
+              <p className="text-xs text-slate-500 mt-1">
+                PokeAPI doesn&apos;t have historical breeding data for most Pokemon
+              </p>
+            </>
+          ) : (
+            <p>No moves found for this method in Gen {globalGeneration}</p>
+          )}
         </div>
       )}
     </div>

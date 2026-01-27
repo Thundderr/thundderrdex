@@ -21,5 +21,6 @@ export interface LearnsetEntry {
   move: Move;
   learnMethod: LearnMethod;
   levelLearned: number | null;
-  generations: number[];
+  generation: number;  // Single generation this entry applies to
+  machineNumber: string | null;  // TM/HM number like "TM35" or "HM02"
 }

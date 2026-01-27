@@ -3,6 +3,7 @@ import {
   PokeAPIPokemonList,
   PokeAPIAbility,
   PokeAPIMoveDetail,
+  PokeAPIMachine,
 } from "@/types/api";
 
 const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -66,6 +67,10 @@ export async function fetchMove(
   return fetchWithCache<PokeAPIMoveDetail>(
     `${POKEAPI_BASE}/move/${nameOrId}`
   );
+}
+
+export async function fetchMachine(url: string): Promise<PokeAPIMachine> {
+  return fetchWithCache<PokeAPIMachine>(url);
 }
 
 // Get sprite URL helper - uses raw.githubusercontent for reliability

@@ -12,6 +12,7 @@ import { LearnsetEntry, Move, LearnMethod, DamageClass } from "@/types/moves";
 import { PokeAPIPokemon, PokeAPIAbility, PokeAPIMoveDetail, PokeAPIMove } from "@/types/api";
 import { TYPE_COLORS } from "@/data/typeChart";
 import { getGenerationFromId, getGenerationFromVersionGroup } from "@/data/generations";
+import { getTMNumber } from "@/data/tmLookup";
 import { getSpriteUrl, getOfficialArtworkUrl, fetchAbility, fetchMove } from "./client";
 
 // Pokemon name formatting with special cases
@@ -302,24 +303,12 @@ export async function transformMove(
   };
 }
 
-function getPreferredLearnMethod(
-  details: PokeAPIMove["version_group_details"]
-): LearnMethod {
-  const methods = details.map((d) => d.move_learn_method.name);
-  if (methods.includes("level-up")) return "level-up";
-  if (methods.includes("machine")) return "machine";
-  if (methods.includes("egg")) return "egg";
+// Normalize learn method names from PokeAPI to our LearnMethod type
+function normalizeLearnMethod(method: string): LearnMethod {
+  if (method === "level-up") return "level-up";
+  if (method === "machine") return "machine";
+  if (method === "egg") return "egg";
   return "tutor";
-}
-
-function getEarliestLevel(
-  details: PokeAPIMove["version_group_details"]
-): number | null {
-  const levels = details
-    .filter((d) => d.move_learn_method.name === "level-up")
-    .map((d) => d.level_learned_at);
-
-  return levels.length > 0 ? Math.min(...levels) : null;
 }
 
 export async function transformLearnset(
@@ -339,20 +328,33 @@ export async function transformLearnset(
         moveCache.set(moveName, move);
       }
 
-      const generations = [
-        ...new Set(
-          moveEntry.version_group_details.map((d) =>
-            getGenerationFromVersionGroup(d.version_group.name)
-          )
-        ),
-      ].filter((g) => g > 0);
+      // Create entries per (generation, learnMethod) combination
+      // Track seen combos to avoid duplicates (multiple version groups in same gen)
+      const seenCombos = new Set<string>();
 
-      entries.push({
-        move,
-        learnMethod: getPreferredLearnMethod(moveEntry.version_group_details),
-        levelLearned: getEarliestLevel(moveEntry.version_group_details),
-        generations,
-      });
+      for (const detail of moveEntry.version_group_details) {
+        const gen = getGenerationFromVersionGroup(detail.version_group.name);
+        if (gen === 0) continue;
+
+        const method = normalizeLearnMethod(detail.move_learn_method.name);
+        const comboKey = `${gen}-${method}`;
+
+        if (seenCombos.has(comboKey)) {
+          continue;
+        }
+        seenCombos.add(comboKey);
+
+        const levelLearned = method === "level-up" ? detail.level_learned_at : null;
+        const machineNumber = method === "machine" ? getTMNumber(moveName, gen) : null;
+
+        entries.push({
+          move,
+          learnMethod: method,
+          levelLearned,
+          generation: gen,
+          machineNumber,
+        });
+      }
     } catch {
       // Skip moves that fail to load
       console.warn(`Failed to load move: ${moveName}`);
