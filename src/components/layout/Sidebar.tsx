@@ -22,7 +22,8 @@ function getPokemonGeneration(pokedexId: number): number {
 
 export function Sidebar() {
   const { globalGeneration, setGeneration } = useGenerationStore();
-  const { modules, recentSearches, restoreFromRecent, clearRecentSearches, bringModuleToFront } = useModuleStore();
+  const { tabs, activeTabId, getRecentSearches, restoreFromRecent, clearRecentSearches, bringModuleToFront } = useModuleStore();
+  const recentSearches = getRecentSearches();
   const { data: pokemonList } = usePokemonList();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -31,6 +32,12 @@ export function Sidebar() {
   }, []);
 
   const currentGen = GENERATIONS.find((g) => g.id === globalGeneration);
+
+  // Get modules from active tab
+  const modules = useMemo(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    return activeTab?.modules || [];
+  }, [tabs, activeTabId]);
 
   // Create a lookup map from Pokemon name to ID
   const pokemonIdMap = useMemo(() => {

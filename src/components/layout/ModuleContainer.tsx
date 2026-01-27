@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -23,8 +23,14 @@ import { TypeChartModule } from "@/components/pokemon-module/TypeChartModule";
 import { PokemonModule as PokemonModuleType } from "@/types/module";
 
 export function ModuleContainer() {
-  const { modules, reorderModules } = useModuleStore();
+  const { tabs, activeTabId, reorderModules } = useModuleStore();
   const [isMounted, setIsMounted] = useState(false);
+
+  // Get modules from active tab
+  const modules = useMemo(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    return activeTab?.modules || [];
+  }, [tabs, activeTabId]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {

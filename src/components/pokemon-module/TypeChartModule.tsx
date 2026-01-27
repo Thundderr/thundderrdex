@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
@@ -12,7 +13,9 @@ interface Props {
 }
 
 export function TypeChartModule({ module, isOverlay = false }: Props) {
-  const { toggleMinimize, removeModule } = useModuleStore();
+  const { toggleMinimize, removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
+  const moduleContainerRef = useRef<HTMLDivElement>(null);
+  const isSelected = selectedModuleId === module.id;
 
   const {
     attributes,
@@ -31,12 +34,31 @@ export function TypeChartModule({ module, isOverlay = false }: Props) {
         opacity: isDragging ? 0 : 1,
       };
 
+  // Auto-scroll for newly created modules
+  useEffect(() => {
+    if (newlyCreatedModuleId === module.id && !isOverlay) {
+      clearNewlyCreatedModule();
+      setTimeout(() => {
+        moduleContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 50);
+    }
+  }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
+
+  // Combine refs for both dnd-kit and scroll functionality
+  const setRefs = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       style={style}
-      className={`md:col-span-2 xl:col-span-2 bg-slate-900 rounded-lg border border-slate-700 shadow-lg overflow-hidden ${
-        isDragging ? "ring-2 ring-blue-500" : ""
+      onClick={() => selectModule(module.id)}
+      className={`md:col-span-2 xl:col-span-2 bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+        isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
+      } ${
+        isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
       }`}
     >
       {/* Header */}

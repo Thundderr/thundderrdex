@@ -25,7 +25,7 @@ interface Props {
 const TABS: { id: ModuleTab; label: string }[] = [
   { id: "stats", label: "Stats" },
   { id: "abilities", label: "Abilities" },
-  { id: "types", label: "Matchups" },
+  { id: "types", label: "Defenses" },
   { id: "moves", label: "Moves" },
 ];
 
@@ -43,8 +43,9 @@ function getPokemonGeneration(pokedexId: number): number {
 }
 
 export function PokemonModule({ module, isOverlay = false }: Props) {
-  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule } =
+  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule } =
     useModuleStore();
+  const isSelected = selectedModuleId === module.id;
   const moduleContainerRef = useRef<HTMLDivElement>(null);
   const { globalGeneration, setGeneration } = useGenerationStore();
   const {
@@ -197,8 +198,11 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     <div
       ref={setRefs}
       style={style}
-      className={`bg-slate-900 rounded-lg border border-slate-700 shadow-lg overflow-hidden ${
-        isDragging ? "ring-2 ring-blue-500" : ""
+      onClick={() => selectModule(module.id)}
+      className={`bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+        isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
+      } ${
+        isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
       }`}
     >
       {/* Unified Header with Search */}

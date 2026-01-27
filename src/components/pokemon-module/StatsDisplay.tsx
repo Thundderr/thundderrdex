@@ -43,7 +43,13 @@ const EV_PRESETS = [
 ];
 
 export function StatsDisplay({ stats, moduleId }: Props) {
-  const { modules, setLevel, setIv, setEv, setNature, setAllIvs, setAllEvs } = useModuleStore();
+  const { tabs, activeTabId, setLevel, setIv, setEv, setNature, setAllIvs, setAllEvs } = useModuleStore();
+
+  // Get modules from active tab
+  const modules = useMemo(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    return activeTab?.modules || [];
+  }, [tabs, activeTabId]);
 
   const module = modules.find((m) => m.id === moduleId);
   const statModifiers = module?.statModifiers;

@@ -1,19 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { GENERATIONS } from "@/data/generations";
 
 export function Header() {
-  const { addModule, addTypeChartModule, modules } = useModuleStore();
+  const { addModule, addTypeChartModule, tabs, activeTabId } = useModuleStore();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Get modules from active tab
+  const modules = useMemo(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    return activeTab?.modules || [];
+  }, [tabs, activeTabId]);
 
   const pokemonModules = modules.filter((m) => m.moduleType === "pokemon");
 

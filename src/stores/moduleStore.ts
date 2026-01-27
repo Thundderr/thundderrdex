@@ -1,15 +1,52 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, ModuleTab, ModuleType, RecentSearch } from "@/types/module";
+import { PokemonModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
 
+const createDefaultModule = (type: ModuleType = "pokemon"): PokemonModule => ({
+  id: uuidv4(),
+  moduleType: type,
+  pokemonName: null,
+  isMinimized: false,
+  activeTab: "stats",
+  statModifiers: { ...DEFAULT_STAT_MODIFIERS },
+  showCalculatedStats: false,
+});
+
+const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
+  id: uuidv4(),
+  name,
+  modules: [createDefaultModule()],
+  recentSearches: [],
+});
+
 interface ModuleStore {
-  modules: PokemonModule[];
-  recentSearches: RecentSearch[];
+  // Tab state
+  tabs: WorkspaceTab[];
+  activeTabId: string;
+  selectedModuleId: string | null;
+  pendingTabRemoval: string | null;
+  // Tab methods
+  addWorkspaceTab: () => void;
+  removeWorkspaceTab: (id: string) => void;
+  requestRemoveTab: (id: string) => void;
+  cancelRemoveTab: () => void;
+  confirmRemoveTab: () => void;
+  renameWorkspaceTab: (id: string, name: string) => void;
+  setActiveWorkspaceTab: (id: string) => void;
+  goToPreviousTab: () => void;
+  goToNextTab: () => void;
+  reorderTabs: (activeId: string, overId: string) => void;
+  // Module state
   newlyCreatedModuleId: string | null;
+  // Computed getter for active tab's recent searches
+  getRecentSearches: () => RecentSearch[];
+  // Selection methods
+  selectModule: (id: string) => void;
+  // Module methods
   addModule: (type?: ModuleType) => void;
   clearNewlyCreatedModule: () => void;
   addTypeChartModule: () => void;
@@ -35,28 +72,172 @@ interface ModuleStore {
   clearRecentSearches: () => void;
 }
 
-const createDefaultModule = (type: ModuleType = "pokemon"): PokemonModule => ({
-  id: uuidv4(),
-  moduleType: type,
-  pokemonName: null,
-  isMinimized: false,
-  activeTab: "stats",
-  statModifiers: { ...DEFAULT_STAT_MODIFIERS },
-  showCalculatedStats: false,
-});
+// Helper to get active tab
+const getActiveTab = (state: { tabs: WorkspaceTab[]; activeTabId: string }): WorkspaceTab | undefined => {
+  return state.tabs.find((t) => t.id === state.activeTabId);
+};
+
+// Helper to update modules in active tab
+const updateActiveTabModules = (
+  state: { tabs: WorkspaceTab[]; activeTabId: string },
+  updater: (modules: PokemonModule[]) => PokemonModule[]
+): WorkspaceTab[] => {
+  return state.tabs.map((tab) =>
+    tab.id === state.activeTabId
+      ? { ...tab, modules: updater(tab.modules) }
+      : tab
+  );
+};
+
+// Helper to update recent searches in active tab
+const updateActiveTabRecents = (
+  state: { tabs: WorkspaceTab[]; activeTabId: string },
+  updater: (recents: RecentSearch[]) => RecentSearch[]
+): WorkspaceTab[] => {
+  return state.tabs.map((tab) =>
+    tab.id === state.activeTabId
+      ? { ...tab, recentSearches: updater(tab.recentSearches) }
+      : tab
+  );
+};
+
+const defaultTab = createDefaultTab();
 
 export const useModuleStore = create<ModuleStore>()(
   persist(
     (set, get) => ({
-      modules: [createDefaultModule()],
-      recentSearches: [],
+      tabs: [defaultTab],
+      activeTabId: defaultTab.id,
+      selectedModuleId: defaultTab.modules[0]?.id || null,
+      pendingTabRemoval: null,
       newlyCreatedModuleId: null,
 
+      // Computed getter for active tab's recent searches
+      getRecentSearches: () => {
+        const state = get();
+        const activeTab = state.tabs.find((t) => t.id === state.activeTabId);
+        return activeTab?.recentSearches || [];
+      },
+
+      // Selection methods
+      selectModule: (id) => {
+        set({ selectedModuleId: id });
+      },
+
+      // Tab removal with confirmation
+      requestRemoveTab: (id) => {
+        set({ pendingTabRemoval: id });
+      },
+
+      cancelRemoveTab: () => {
+        set({ pendingTabRemoval: null });
+      },
+
+      confirmRemoveTab: () => {
+        const state = get();
+        if (state.pendingTabRemoval && state.tabs.length > 1) {
+          const id = state.pendingTabRemoval;
+          const newTabs = state.tabs.filter((t) => t.id !== id);
+          const newActiveId = state.activeTabId === id
+            ? newTabs[0].id
+            : state.activeTabId;
+          const newActiveTab = newTabs.find((t) => t.id === newActiveId);
+          const firstModuleId = newActiveTab?.modules[0]?.id || null;
+
+          set({
+            tabs: newTabs,
+            activeTabId: newActiveId,
+            selectedModuleId: firstModuleId,
+            pendingTabRemoval: null,
+          });
+        } else {
+          set({ pendingTabRemoval: null });
+        }
+      },
+
+      // Tab methods
+      addWorkspaceTab: () => {
+        const newTab = createDefaultTab(`Tab ${get().tabs.length + 1}`);
+        set((state) => ({
+          tabs: [...state.tabs, newTab],
+          activeTabId: newTab.id,
+          selectedModuleId: newTab.modules[0]?.id || null,
+          newlyCreatedModuleId: newTab.modules[0]?.id || null,
+        }));
+      },
+
+      removeWorkspaceTab: (id) => {
+        const state = get();
+        if (state.tabs.length <= 1) return; // Don't remove last tab
+
+        const newTabs = state.tabs.filter((t) => t.id !== id);
+        const newActiveId = state.activeTabId === id
+          ? newTabs[0].id
+          : state.activeTabId;
+
+        set({
+          tabs: newTabs,
+          activeTabId: newActiveId,
+        });
+      },
+
+      renameWorkspaceTab: (id, name) => {
+        set((state) => ({
+          tabs: state.tabs.map((tab) =>
+            tab.id === id ? { ...tab, name } : tab
+          ),
+        }));
+      },
+
+      setActiveWorkspaceTab: (id) => {
+        const state = get();
+        const newTab = state.tabs.find((t) => t.id === id);
+        const firstModuleId = newTab?.modules[0]?.id || null;
+        set({ activeTabId: id, selectedModuleId: firstModuleId });
+      },
+
+      goToPreviousTab: () => {
+        const state = get();
+        const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId);
+        if (currentIndex > 0) {
+          const prevTab = state.tabs[currentIndex - 1];
+          const firstModuleId = prevTab?.modules[0]?.id || null;
+          set({ activeTabId: prevTab.id, selectedModuleId: firstModuleId });
+        }
+      },
+
+      goToNextTab: () => {
+        const state = get();
+        const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId);
+        if (currentIndex < state.tabs.length - 1) {
+          const nextTab = state.tabs[currentIndex + 1];
+          const firstModuleId = nextTab?.modules[0]?.id || null;
+          set({ activeTabId: nextTab.id, selectedModuleId: firstModuleId });
+        }
+      },
+
+      reorderTabs: (activeId, overId) => {
+        set((state) => {
+          const oldIndex = state.tabs.findIndex((t) => t.id === activeId);
+          const newIndex = state.tabs.findIndex((t) => t.id === overId);
+
+          if (oldIndex === -1 || newIndex === -1) return state;
+
+          const newTabs = [...state.tabs];
+          const [removed] = newTabs.splice(oldIndex, 1);
+          newTabs.splice(newIndex, 0, removed);
+
+          return { tabs: newTabs };
+        });
+      },
+
+      // Module methods (operate on active tab)
       addModule: (type: ModuleType = "pokemon") => {
         const newModule = createDefaultModule(type);
         set((state) => ({
-          modules: [...state.modules, newModule],
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
           newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
         }));
       },
 
@@ -65,70 +246,96 @@ export const useModuleStore = create<ModuleStore>()(
       },
 
       addTypeChartModule: () => {
+        const newModule = createDefaultModule("type-chart");
         set((state) => ({
-          modules: [...state.modules, createDefaultModule("type-chart")],
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
         }));
       },
 
       removeModule: (id) => {
         const state = get();
-        const module = state.modules.find((m) => m.id === id);
+        const activeTab = getActiveTab(state);
+        const module = activeTab?.modules.find((m) => m.id === id);
 
-        // Save to recent searches if it has a Pokemon
+        // Calculate new selected module if we're removing the selected one
+        let newSelectedModuleId = state.selectedModuleId;
+        if (state.selectedModuleId === id && activeTab) {
+          const moduleIndex = activeTab.modules.findIndex((m) => m.id === id);
+          const remainingModules = activeTab.modules.filter((m) => m.id !== id);
+          if (remainingModules.length > 0) {
+            // Select the next module, or the previous one if we removed the last
+            const newIndex = Math.min(moduleIndex, remainingModules.length - 1);
+            newSelectedModuleId = remainingModules[newIndex].id;
+          } else {
+            newSelectedModuleId = null;
+          }
+        }
+
+        // Save to recent searches (in the active tab) if it has a Pokemon
         if (module && module.moduleType === "pokemon" && module.pokemonName) {
           const { id: _id, moduleType: _type, ...moduleState } = module;
-          const existingIndex = state.recentSearches.findIndex(
+          const currentRecents = activeTab?.recentSearches || [];
+          const existingIndex = currentRecents.findIndex(
             (r) => r.pokemonName === module.pokemonName
           );
 
-          let newRecentSearches = [...state.recentSearches];
+          let newRecentSearches = [...currentRecents];
 
-          // Remove existing entry if present
           if (existingIndex !== -1) {
             newRecentSearches.splice(existingIndex, 1);
           }
 
-          // Add to front
           newRecentSearches.unshift({
             pokemonName: module.pokemonName,
             moduleState,
             timestamp: Date.now(),
           });
 
-          // Limit to MAX_RECENT_SEARCHES
           newRecentSearches = newRecentSearches.slice(0, MAX_RECENT_SEARCHES);
 
           set({
-            modules: state.modules.filter((m) => m.id !== id),
-            recentSearches: newRecentSearches,
+            tabs: state.tabs.map((tab) =>
+              tab.id === state.activeTabId
+                ? {
+                    ...tab,
+                    modules: tab.modules.filter((m) => m.id !== id),
+                    recentSearches: newRecentSearches,
+                  }
+                : tab
+            ),
+            selectedModuleId: newSelectedModuleId,
           });
         } else {
           set({
-            modules: state.modules.filter((m) => m.id !== id),
+            tabs: updateActiveTabModules(state, (modules) => modules.filter((m) => m.id !== id)),
+            selectedModuleId: newSelectedModuleId,
           });
         }
       },
 
       updateModule: (id, updates) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id ? { ...m, ...updates } : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => (m.id === id ? { ...m, ...updates } : m))
           ),
         }));
       },
 
       setPokemon: (id, pokemonName) => {
         const state = get();
-        const module = state.modules.find((m) => m.id === id);
+        const activeTab = getActiveTab(state);
+        const module = activeTab?.modules.find((m) => m.id === id);
 
-        // Save current Pokemon to recent before switching (if exists)
         if (module && module.moduleType === "pokemon" && module.pokemonName && module.pokemonName !== pokemonName) {
           const { id: _id, moduleType: _type, ...moduleState } = module;
-          const existingIndex = state.recentSearches.findIndex(
+          const currentRecents = activeTab?.recentSearches || [];
+          const existingIndex = currentRecents.findIndex(
             (r) => r.pokemonName === module.pokemonName
           );
 
-          let newRecentSearches = [...state.recentSearches];
+          let newRecentSearches = [...currentRecents];
 
           if (existingIndex !== -1) {
             newRecentSearches.splice(existingIndex, 1);
@@ -143,15 +350,20 @@ export const useModuleStore = create<ModuleStore>()(
           newRecentSearches = newRecentSearches.slice(0, MAX_RECENT_SEARCHES);
 
           set({
-            modules: state.modules.map((m) =>
-              m.id === id ? { ...m, pokemonName } : m
+            tabs: state.tabs.map((tab) =>
+              tab.id === state.activeTabId
+                ? {
+                    ...tab,
+                    modules: tab.modules.map((m) => (m.id === id ? { ...m, pokemonName } : m)),
+                    recentSearches: newRecentSearches,
+                  }
+                : tab
             ),
-            recentSearches: newRecentSearches,
           });
         } else {
           set({
-            modules: state.modules.map((m) =>
-              m.id === id ? { ...m, pokemonName } : m
+            tabs: updateActiveTabModules(state, (modules) =>
+              modules.map((m) => (m.id === id ? { ...m, pokemonName } : m))
             ),
           });
         }
@@ -159,195 +371,216 @@ export const useModuleStore = create<ModuleStore>()(
 
       setActiveTab: (id, tab) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id ? { ...m, activeTab: tab } : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => (m.id === id ? { ...m, activeTab: tab } : m))
           ),
         }));
       },
 
       toggleMinimize: (id) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id ? { ...m, isMinimized: !m.isMinimized } : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => (m.id === id ? { ...m, isMinimized: !m.isMinimized } : m))
           ),
         }));
       },
 
       reorderModules: (activeId, overId) => {
         set((state) => {
-          const oldIndex = state.modules.findIndex((m) => m.id === activeId);
-          const newIndex = state.modules.findIndex((m) => m.id === overId);
+          const activeTab = getActiveTab(state);
+          if (!activeTab) return state;
+
+          const oldIndex = activeTab.modules.findIndex((m) => m.id === activeId);
+          const newIndex = activeTab.modules.findIndex((m) => m.id === overId);
 
           if (oldIndex === -1 || newIndex === -1) return state;
 
-          const newModules = [...state.modules];
+          const newModules = [...activeTab.modules];
           const [removed] = newModules.splice(oldIndex, 1);
           newModules.splice(newIndex, 0, removed);
 
-          return { modules: newModules };
+          return {
+            tabs: state.tabs.map((tab) =>
+              tab.id === state.activeTabId ? { ...tab, modules: newModules } : tab
+            ),
+          };
         });
       },
 
       bringModuleToFront: (id) => {
         set((state) => {
-          const index = state.modules.findIndex((m) => m.id === id);
+          const activeTab = getActiveTab(state);
+          if (!activeTab) return state;
+
+          const index = activeTab.modules.findIndex((m) => m.id === id);
           if (index === -1 || index === 0) return state;
 
-          const newModules = [...state.modules];
+          const newModules = [...activeTab.modules];
           const [removed] = newModules.splice(index, 1);
           newModules.unshift(removed);
 
-          return { modules: newModules };
+          return {
+            tabs: state.tabs.map((tab) =>
+              tab.id === state.activeTabId ? { ...tab, modules: newModules } : tab
+            ),
+          };
         });
       },
 
       setStatModifiers: (id, modifiers) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? { ...m, statModifiers: { ...m.statModifiers, ...modifiers } }
-              : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id
+                ? { ...m, statModifiers: { ...m.statModifiers, ...modifiers } }
+                : m
+            )
           ),
         }));
       },
 
       setLevel: (id, level) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? {
-                  ...m,
-                  statModifiers: {
-                    ...m.statModifiers,
-                    level: clampLevel(level),
-                  },
-                }
-              : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id
+                ? { ...m, statModifiers: { ...m.statModifiers, level: clampLevel(level) } }
+                : m
+            )
           ),
         }));
       },
 
       setIv: (id, stat, value) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? {
-                  ...m,
-                  statModifiers: {
-                    ...m.statModifiers,
-                    ivs: { ...m.statModifiers.ivs, [stat]: clampIv(value) },
-                  },
-                }
-              : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id
+                ? {
+                    ...m,
+                    statModifiers: {
+                      ...m.statModifiers,
+                      ivs: { ...m.statModifiers.ivs, [stat]: clampIv(value) },
+                    },
+                  }
+                : m
+            )
           ),
         }));
       },
 
       setEv: (id, stat, value) => {
         set((state) => ({
-          modules: state.modules.map((m) => {
-            if (m.id !== id) return m;
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== id) return m;
 
-            const clampedValue = clampEv(value);
-            const newEvs = { ...m.statModifiers.evs, [stat]: clampedValue };
-            const total = getEvTotal(newEvs);
+              const clampedValue = clampEv(value);
+              const newEvs = { ...m.statModifiers.evs, [stat]: clampedValue };
+              const total = getEvTotal(newEvs);
 
-            if (total > 510) {
-              const excess = total - 510;
-              newEvs[stat] = Math.max(0, clampedValue - excess);
-            }
+              if (total > 510) {
+                const excess = total - 510;
+                newEvs[stat] = Math.max(0, clampedValue - excess);
+              }
 
-            return {
-              ...m,
-              statModifiers: {
-                ...m.statModifiers,
-                evs: newEvs,
-              },
-            };
-          }),
+              return {
+                ...m,
+                statModifiers: { ...m.statModifiers, evs: newEvs },
+              };
+            })
+          ),
         }));
       },
 
       setAllIvs: (id, value) => {
         const clampedValue = clampIv(value);
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? {
-                  ...m,
-                  statModifiers: {
-                    ...m.statModifiers,
-                    ivs: {
-                      hp: clampedValue,
-                      attack: clampedValue,
-                      defense: clampedValue,
-                      specialAttack: clampedValue,
-                      specialDefense: clampedValue,
-                      speed: clampedValue,
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id
+                ? {
+                    ...m,
+                    statModifiers: {
+                      ...m.statModifiers,
+                      ivs: {
+                        hp: clampedValue,
+                        attack: clampedValue,
+                        defense: clampedValue,
+                        specialAttack: clampedValue,
+                        specialDefense: clampedValue,
+                        speed: clampedValue,
+                      },
                     },
-                  },
-                }
-              : m
+                  }
+                : m
+            )
           ),
         }));
       },
 
       setAllEvs: (id, evs) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? {
-                  ...m,
-                  statModifiers: {
-                    ...m.statModifiers,
-                    evs: {
-                      hp: clampEv(evs.hp),
-                      attack: clampEv(evs.attack),
-                      defense: clampEv(evs.defense),
-                      specialAttack: clampEv(evs.specialAttack),
-                      specialDefense: clampEv(evs.specialDefense),
-                      speed: clampEv(evs.speed),
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id
+                ? {
+                    ...m,
+                    statModifiers: {
+                      ...m.statModifiers,
+                      evs: {
+                        hp: clampEv(evs.hp),
+                        attack: clampEv(evs.attack),
+                        defense: clampEv(evs.defense),
+                        specialAttack: clampEv(evs.specialAttack),
+                        specialDefense: clampEv(evs.specialDefense),
+                        speed: clampEv(evs.speed),
+                      },
                     },
-                  },
-                }
-              : m
+                  }
+                : m
+            )
           ),
         }));
       },
 
       setNature: (id, nature) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? { ...m, statModifiers: { ...m.statModifiers, nature } }
-              : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id
+                ? { ...m, statModifiers: { ...m.statModifiers, nature } }
+                : m
+            )
           ),
         }));
       },
 
       toggleCalculatedStats: (id) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? { ...m, showCalculatedStats: !m.showCalculatedStats }
-              : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id ? { ...m, showCalculatedStats: !m.showCalculatedStats } : m
+            )
           ),
         }));
       },
 
       resetStatModifiers: (id) => {
         set((state) => ({
-          modules: state.modules.map((m) =>
-            m.id === id
-              ? { ...m, statModifiers: { ...DEFAULT_STAT_MODIFIERS } }
-              : m
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === id ? { ...m, statModifiers: { ...DEFAULT_STAT_MODIFIERS } } : m
+            )
           ),
         }));
       },
 
       restoreFromRecent: (pokemonName) => {
         const state = get();
-        const recent = state.recentSearches.find((r) => r.pokemonName === pokemonName);
+        const activeTab = getActiveTab(state);
+        const currentRecents = activeTab?.recentSearches || [];
+        const recent = currentRecents.find((r) => r.pokemonName === pokemonName);
 
         if (recent) {
           const newModule: PokemonModule = {
@@ -356,27 +589,72 @@ export const useModuleStore = create<ModuleStore>()(
             ...recent.moduleState,
           };
 
-          const newRecentSearches = state.recentSearches.filter(
+          const newRecentSearches = currentRecents.filter(
             (r) => r.pokemonName !== pokemonName
           );
 
           set({
-            modules: [...state.modules, newModule],
-            recentSearches: newRecentSearches,
+            tabs: state.tabs.map((tab) =>
+              tab.id === state.activeTabId
+                ? {
+                    ...tab,
+                    modules: [...tab.modules, newModule],
+                    recentSearches: newRecentSearches,
+                  }
+                : tab
+            ),
           });
         }
       },
 
       clearRecentSearches: () => {
-        set({ recentSearches: [] });
+        set((state) => ({
+          tabs: updateActiveTabRecents(state, () => []),
+        }));
       },
     }),
     {
       name: "thundderrdex-modules",
+      version: 3,
       partialize: (state) => ({
-        modules: state.modules,
-        recentSearches: state.recentSearches,
+        tabs: state.tabs,
+        activeTabId: state.activeTabId,
+        selectedModuleId: state.selectedModuleId,
       }),
+      // Migration from old formats to new format with tab-specific recents
+      migrate: (persistedState: unknown, version: number) => {
+        if (version === 0 || version === 1) {
+          // Old format had modules array directly
+          const oldState = persistedState as { modules?: PokemonModule[]; recentSearches?: RecentSearch[] };
+          if (oldState.modules && Array.isArray(oldState.modules)) {
+            const newTab: WorkspaceTab = {
+              id: uuidv4(),
+              name: "Main",
+              modules: oldState.modules,
+              recentSearches: oldState.recentSearches || [],
+            };
+            return {
+              tabs: [newTab],
+              activeTabId: newTab.id,
+            };
+          }
+        }
+        if (version === 2) {
+          // Version 2 had global recentSearches, move them to active tab
+          const oldState = persistedState as { tabs?: WorkspaceTab[]; activeTabId?: string; recentSearches?: RecentSearch[] };
+          if (oldState.tabs && Array.isArray(oldState.tabs)) {
+            const updatedTabs = oldState.tabs.map((tab, index) => ({
+              ...tab,
+              recentSearches: index === 0 ? (oldState.recentSearches || []) : (tab.recentSearches || []),
+            }));
+            return {
+              tabs: updatedTabs,
+              activeTabId: oldState.activeTabId,
+            };
+          }
+        }
+        return persistedState;
+      },
     }
   )
 );
