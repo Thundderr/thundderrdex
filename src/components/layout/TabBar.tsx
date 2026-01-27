@@ -85,7 +85,13 @@ function SortableTab({
           value={editValue}
           onChange={(e) => onEditChange(e.target.value)}
           onBlur={onFinishEditing}
-          onKeyDown={onEditKeyDown}
+          onKeyDown={(e) => {
+            // Stop propagation for all keys except Enter/Escape to prevent dnd-kit from capturing them
+            if (e.key !== "Enter" && e.key !== "Escape") {
+              e.stopPropagation();
+            }
+            onEditKeyDown(e);
+          }}
           className="bg-transparent border-none outline-none w-20 text-white text-sm"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}

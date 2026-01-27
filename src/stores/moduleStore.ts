@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, TeamBuilderModule, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, DamageCalcModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
@@ -21,6 +21,55 @@ const createTeamBuilderModule = (): TeamBuilderModule => ({
   moduleType: "team-builder",
   isMinimized: false,
   teamSlots: [null, null, null, null, null, null],
+});
+
+const DEFAULT_DAMAGE_CALC_POKEMON: DamageCalcPokemonConfig = {
+  pokemonName: null,
+  level: 50,
+  nature: "Hardy",
+  ability: null,
+  item: null,
+  ivs: { hp: 31, attack: 31, defense: 31, specialAttack: 31, specialDefense: 31, speed: 31 },
+  evs: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 },
+  boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+  status: "Healthy",
+  currentHpPercent: 100,
+  teraType: null,
+  moves: [null, null, null, null],
+};
+
+const DEFAULT_SIDE_CONFIG = {
+  isReflect: false,
+  isLightScreen: false,
+  isAuroraVeil: false,
+  isTailwind: false,
+  helpingHandCount: 0,
+  isFriendGuard: false,
+  isFlowerGift: false,
+  isPowerSpot: false,
+  isBattery: false,
+};
+
+const DEFAULT_DAMAGE_CALC_FIELD: DamageCalcFieldConfig = {
+  gameType: "Singles",
+  weather: "None",
+  terrain: "None",
+  isGravity: false,
+  isMagicRoom: false,
+  isWonderRoom: false,
+  attackerSide: { ...DEFAULT_SIDE_CONFIG },
+  defenderSide: { ...DEFAULT_SIDE_CONFIG },
+  isCritical: false,
+};
+
+const createDamageCalcModule = (): DamageCalcModule => ({
+  id: uuidv4(),
+  moduleType: "damage-calc",
+  isMinimized: false,
+  attacker: { ...DEFAULT_DAMAGE_CALC_POKEMON },
+  defender: { ...DEFAULT_DAMAGE_CALC_POKEMON },
+  selectedMove: null,
+  field: { ...DEFAULT_DAMAGE_CALC_FIELD },
 });
 
 const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
@@ -63,6 +112,14 @@ interface ModuleStore {
   // Team Builder methods
   setTeamSlot: (moduleId: string, slotIndex: number, pokemonName: string | null) => void;
   clearTeamSlot: (moduleId: string, slotIndex: number) => void;
+  // Damage Calculator methods
+  addDamageCalcModule: () => void;
+  setDamageCalcAttacker: (moduleId: string, config: Partial<DamageCalcPokemonConfig>) => void;
+  setDamageCalcDefender: (moduleId: string, config: Partial<DamageCalcPokemonConfig>) => void;
+  setDamageCalcMove: (moduleId: string, moveName: string | null) => void;
+  setDamageCalcField: (moduleId: string, field: Partial<DamageCalcFieldConfig>) => void;
+  setDamageCalcBothLevels: (moduleId: string, level: number) => void;
+  swapDamageCalcPokemon: (moduleId: string) => void;
   setPokemon: (id: string, pokemonName: string) => void;
   setActiveTab: (id: string, tab: ModuleTab) => void;
   toggleMinimize: (id: string) => void;
@@ -299,6 +356,109 @@ export const useModuleStore = create<ModuleStore>()(
                 const newSlots = [...teamModule.teamSlots];
                 newSlots[slotIndex] = null;
                 return { ...teamModule, teamSlots: newSlots };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      // Damage Calculator methods
+      addDamageCalcModule: () => {
+        const newModule = createDamageCalcModule();
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      setDamageCalcAttacker: (moduleId, config) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "damage-calc") {
+                const dmgModule = m as DamageCalcModule;
+                return { ...dmgModule, attacker: { ...dmgModule.attacker, ...config } };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      setDamageCalcDefender: (moduleId, config) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "damage-calc") {
+                const dmgModule = m as DamageCalcModule;
+                return { ...dmgModule, defender: { ...dmgModule.defender, ...config } };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      setDamageCalcMove: (moduleId, moveName) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "damage-calc") {
+                return { ...m, selectedMove: moveName };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      setDamageCalcField: (moduleId, field) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "damage-calc") {
+                const dmgModule = m as DamageCalcModule;
+                return { ...dmgModule, field: { ...dmgModule.field, ...field } };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      setDamageCalcBothLevels: (moduleId, level) => {
+        const clampedLevel = Math.max(1, Math.min(100, level));
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "damage-calc") {
+                const dmgModule = m as DamageCalcModule;
+                return {
+                  ...dmgModule,
+                  attacker: { ...dmgModule.attacker, level: clampedLevel },
+                  defender: { ...dmgModule.defender, level: clampedLevel },
+                };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      swapDamageCalcPokemon: (moduleId) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "damage-calc") {
+                const dmgModule = m as DamageCalcModule;
+                return {
+                  ...dmgModule,
+                  attacker: { ...dmgModule.defender },
+                  defender: { ...dmgModule.attacker },
+                  selectedMove: null, // Reset move when swapping
+                };
               }
               return m;
             })
