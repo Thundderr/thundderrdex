@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { useModuleStore } from "@/stores/moduleStore";
+import { useGenerationStore } from "@/stores/generationStore";
 import { ModuleTab } from "@/types/module";
 
 interface KeyboardShortcutsOptions {
@@ -8,6 +9,7 @@ interface KeyboardShortcutsOptions {
 
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
   const { onOpenKeybinds } = options;
+  const { setGeneration } = useGenerationStore();
   const {
     tabs,
     activeTabId,
@@ -46,6 +48,14 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       const modules = activeTab?.modules || [];
 
       const key = e.key.toLowerCase();
+
+      // Generation shortcuts: Shift + 1-9 (use e.code since Shift changes the key to !@# etc.)
+      if (e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+        e.preventDefault();
+        const genNum = parseInt(e.code.replace("Digit", ""), 10);
+        setGeneration(genNum);
+        return;
+      }
 
       // Letter shortcuts require Shift
       if (/^[a-z]$/.test(key)) {
@@ -178,6 +188,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       goToPreviousTab,
       goToNextTab,
       onOpenKeybinds,
+      setGeneration,
     ]
   );
 

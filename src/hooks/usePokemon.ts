@@ -15,7 +15,7 @@ export function usePokemon(nameOrId: string | number | null) {
     },
     enabled: !!nameOrId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days - Pokemon data is static
     retry: 1,
   });
 }

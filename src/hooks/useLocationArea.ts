@@ -255,7 +255,7 @@ export function useLocationArea(locationAreaName: string | null) {
     },
     enabled: !!locationAreaName,
     staleTime: 10 * 60 * 1000, // 10 minutes - location data doesn't change
-    gcTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days - location data is static
     retry: 1,
   });
 }

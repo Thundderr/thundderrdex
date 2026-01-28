@@ -15,7 +15,7 @@ export function useLearnset(pokemonName: string | null) {
     },
     enabled: !!pokemonName,
     staleTime: 30 * 60 * 1000, // 30 minutes - learnsets take time to load
-    gcTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days - learnset data is static
     retry: 1,
   });
 }

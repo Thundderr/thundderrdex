@@ -1,7 +1,12 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { useState, useEffect } from "react";
+import { createIDBPersister } from "@/lib/queryPersister";
+
+// 7 days in milliseconds
+const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -9,8 +14,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000, // 5 minutes
-            gcTime: 30 * 60 * 1000, // 30 minutes
+            staleTime: 5 * 60 * 1000, // 5 minutes before data is stale
+            gcTime: SEVEN_DAYS, // Keep data for 7 days (must be >= maxAge for persistence)
             retry: 1,
             refetchOnWindowFocus: false,
           },
@@ -18,7 +23,28 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  const [persister] = useState(() => createIDBPersister());
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Only use persistence on client side
+  if (!isClient) {
+    return null;
+  }
+
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: SEVEN_DAYS, // Cache expires after 7 days
+        buster: "v1", // Change this to invalidate all cached data
+      }}
+    >
+      {children}
+    </PersistQueryClientProvider>
   );
 }
