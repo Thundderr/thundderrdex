@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ThundderrDex - Pokemon Reference",
-  description: "Efficient Pokemon reference with modular lookups",
+  title: "ThundderrDex - Pokemon Tool",
+  description: "Modular Pokemon Resource",
   icons: {
     icon: "/favicon.svg",
   },
