@@ -46,16 +46,16 @@ function convertToSmogonPokemon(
   if (!config.pokemonName) return null;
 
   try {
-    // Convert Pokemon name to proper format (capitalize first letter)
+    // Clean and convert Pokemon name to proper format (capitalize first letter)
     const pokemonName = config.pokemonName
+      .trim()
+      .toLowerCase()
       .split("-")
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join("-");
 
-    // Verify the Pokemon exists in this generation's dex
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const species = gen.species.get(pokemonName as any);
-    if (!species) return null;
+    // @smogon/calc is lenient with Pokemon names - it will find them even if they're
+    // not "officially" in that gen's dex. Just pass the name directly.
 
     // Build options object, only including defined values
     const ivs = {
@@ -116,8 +116,7 @@ function convertToSmogonPokemon(
     const pokemon = new Pokemon(gen, pokemonName, options as any);
 
     return pokemon;
-  } catch (error) {
-    console.error("Error creating Pokemon for damage calc:", error);
+  } catch {
     return null;
   }
 }
@@ -199,17 +198,32 @@ export function useDamageCalc(
       const attacker = convertToSmogonPokemon(gen, attackerConfig);
       const defender = convertToSmogonPokemon(gen, defenderConfig);
 
-      if (!attacker || !defender) return null;
+      if (!attacker || !defender) {
+        return null;
+      }
 
-      // Convert move name to proper format
+      // Convert move name to proper format for @smogon/calc
+      // PokeAPI uses kebab-case (e.g., "focus-blast"), Smogon uses Title Case with spaces (e.g., "Focus Blast")
       const formattedMoveName = moveName
         .split("-")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
 
-      const move = new Move(gen, formattedMoveName, {
-        isCrit: fieldConfig.isCritical,
-      });
+      let move: Move;
+      try {
+        move = new Move(gen, formattedMoveName, {
+          isCrit: fieldConfig.isCritical,
+        });
+      } catch {
+        // Try with original name as fallback
+        try {
+          move = new Move(gen, moveName, {
+            isCrit: fieldConfig.isCritical,
+          });
+        } catch {
+          return null;
+        }
+      }
 
       const field = new Field({
         gameType: fieldConfig.gameType === "Doubles" ? "Doubles" : "Singles",
@@ -257,8 +271,7 @@ export function useDamageCalc(
         moveDesc: result.moveDesc(),
         koChance: parseKoChance(result),
       };
-    } catch (error) {
-      console.error("Damage calculation error:", error);
+    } catch {
       return null;
     }
   }, [attackerConfig, defenderConfig, moveName, fieldConfig, globalGeneration]);
