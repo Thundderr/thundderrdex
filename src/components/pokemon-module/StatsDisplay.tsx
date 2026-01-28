@@ -576,30 +576,39 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                         </ul>
                       )}
                     </div>
+                  ) : moveName ? (
+                    (() => {
+                      const moveEntry = learnset?.find((e) => e.move.name === moveName);
+                      const moveData = moveEntry?.move;
+                      return (
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-[11px]">
+                          <span
+                            className="flex-1 text-white truncate cursor-pointer hover:text-blue-400"
+                            onClick={() => setSearchingMoveSlot(slotIndex)}
+                          >
+                            {moveData?.displayName || formatPokemonName(moveName)}
+                          </span>
+                          <button
+                            onClick={() => setModuleMove(moduleId, slotIndex, null)}
+                            className="p-0.5 text-slate-500 hover:text-red-400 rounded flex-shrink-0"
+                            title="Remove move"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })()
                   ) : (
                     <button
                       onClick={() => setSearchingMoveSlot(slotIndex)}
-                      className="w-full flex items-center gap-1.5 px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-left hover:bg-slate-700 transition-colors"
+                      className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] text-slate-500 hover:text-slate-300 hover:bg-slate-700 rounded border border-dashed border-slate-600 hover:border-slate-500 transition-colors"
                     >
-                      {moveName ? (
-                        <>
-                          {(() => {
-                            const moveEntry = learnset?.find((e) => e.move.name === moveName);
-                            const moveType = moveEntry?.move.type;
-                            return (
-                              <>
-                                <span
-                                  className="w-2 h-2 rounded-full flex-shrink-0"
-                                  style={{ backgroundColor: moveType ? TYPE_COLORS[moveType] : "#666" }}
-                                />
-                                <span className="text-white truncate">{formatPokemonName(moveName)}</span>
-                              </>
-                            );
-                          })()}
-                        </>
-                      ) : (
-                        <span className="text-slate-500">Move {slotIndex + 1}</span>
-                      )}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Move {slotIndex + 1}
                     </button>
                   )}
                 </div>

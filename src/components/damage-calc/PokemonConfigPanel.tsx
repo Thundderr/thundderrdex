@@ -139,7 +139,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   const moveListRef = useRef<HTMLUListElement>(null);
 
   // Import/Export modal state
-  const [showImportExport, setShowImportExport] = useState<"import" | "export" | null>(null);
+  const [showImportExport, setShowImportExport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -676,7 +676,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
       moves: result.config.moves,
     });
 
-    setShowImportExport(null);
+    setShowImportExport(false);
     setImportText("");
     setImportError(null);
   };
@@ -841,18 +841,15 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
             </div>
             <div className="flex-1" />
             <button
-              onClick={() => setShowImportExport("import")}
+              onClick={() => {
+                setImportText(serializeToShowdown());
+                setImportError(null);
+                setShowImportExport(true);
+              }}
               className="px-2 py-1 text-[10px] font-medium rounded border transition-colors bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
-              title="Import from Showdown format"
+              title="Import/Export Showdown format"
             >
-              Import
-            </button>
-            <button
-              onClick={() => setShowImportExport("export")}
-              className="px-2 py-1 text-[10px] font-medium rounded border transition-colors bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
-              title="Export to Showdown format"
-            >
-              Export
+              Showdown
             </button>
           </div>
 
@@ -1182,31 +1179,24 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                       </div>
                     ) : moveData ? (
                       <div
-                        onClick={() => selectMoveForCalc(moveName)}
-                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[11px] cursor-pointer transition-colors ${
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[11px] ${
                           isAttacker ? "hover:bg-slate-600" : "bg-slate-700/50"
                         }`}
                       >
                         <TypeBadge type={moveData.type} size="xs" fixedWidth />
                         <DamageClassIcon damageClass={moveData.damageClass} />
-                        <span className="flex-1 text-white truncate">
+                        <span
+                          className="flex-1 text-white truncate cursor-pointer hover:text-blue-400"
+                          onClick={() => {
+                            selectMoveForCalc(moveName);
+                            setEditingMoveSlot(slotIndex);
+                          }}
+                        >
                           {moveData.displayName}
                         </span>
                         <span className="text-slate-400 text-[10px]">
                           {moveData.power} BP
                         </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingMoveSlot(slotIndex);
-                          }}
-                          className="p-0.5 text-slate-500 hover:text-white rounded"
-                          title="Change move"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1242,18 +1232,16 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
 
       {/* Import/Export Modal */}
       {showImportExport && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(null)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(false)}>
           <div
             className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-[400px] max-w-[90vw]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-              <h3 className="text-sm font-medium text-white">
-                {showImportExport === "import" ? "Import Pokemon" : "Export Pokemon"}
-              </h3>
+              <h3 className="text-sm font-medium text-white">Showdown Format</h3>
               <button
                 onClick={() => {
-                  setShowImportExport(null);
+                  setShowImportExport(false);
                   setImportText("");
                   setImportError(null);
                 }}
@@ -1265,35 +1253,15 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
               </button>
             </div>
             <div className="p-4">
-              {showImportExport === "export" ? (
-                <div>
-                  <p className="text-xs text-slate-400 mb-2">Copy this text to use in Pokemon Showdown or other tools:</p>
-                  <textarea
-                    readOnly
-                    value={serializeToShowdown()}
-                    className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono focus:outline-none focus:border-blue-500 resize-none"
-                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(serializeToShowdown());
-                    }}
-                    className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm text-white font-medium transition-colors"
-                  >
-                    Copy to Clipboard
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-xs text-slate-400 mb-2">Paste a Pokemon set from Showdown format:</p>
-                  <textarea
-                    autoFocus
-                    value={importText}
-                    onChange={(e) => {
-                      setImportText(e.target.value);
-                      setImportError(null);
-                    }}
-                    placeholder={`Pikachu @ Light Ball
+              <p className="text-xs text-slate-400 mb-2">Edit or paste a Pokemon set in Showdown format:</p>
+              <textarea
+                autoFocus
+                value={importText}
+                onChange={(e) => {
+                  setImportText(e.target.value);
+                  setImportError(null);
+                }}
+                placeholder={`Pikachu @ Light Ball
 Level: 50
 Ability: Static
 Adamant Nature
@@ -1302,20 +1270,26 @@ EVs: 252 Atk / 4 SpD / 252 Spe
 - Iron Tail
 - Quick Attack
 - Thunder Wave`}
-                    className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
-                  />
-                  {importError && (
-                    <p className="mt-2 text-xs text-red-400">{importError}</p>
-                  )}
-                  <button
-                    onClick={handleImport}
-                    disabled={!importText.trim()}
-                    className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
-                  >
-                    Import
-                  </button>
-                </div>
+                className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
+              />
+              {importError && (
+                <p className="mt-2 text-xs text-red-400">{importError}</p>
               )}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => navigator.clipboard.writeText(importText)}
+                  className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-white font-medium transition-colors"
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={!importText.trim()}
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
           </div>
         </div>

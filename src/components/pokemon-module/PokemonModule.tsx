@@ -105,7 +105,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
   const { data: pokemonList, isLoading: listLoading } = usePokemonList();
 
   // Import/Export state
-  const [showImportExport, setShowImportExport] = useState<"import" | "export" | null>(null);
+  const [showImportExport, setShowImportExport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -399,7 +399,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       setStatModifiers(module.id, updates);
     }
 
-    setShowImportExport(null);
+    setShowImportExport(false);
     setImportText("");
     setImportError(null);
   };
@@ -659,26 +659,19 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
         {/* Action Buttons */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {pokemon && (
-            <>
-              <button
-                onClick={() => setShowImportExport("import")}
-                className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-                title="Import from Showdown"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setShowImportExport("export")}
-                className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-                title="Export to Showdown"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l4 4m0 0l4-4m-4 4V4" />
-                </svg>
-              </button>
-            </>
+            <button
+              onClick={() => {
+                setImportText(serializeToShowdown());
+                setImportError(null);
+                setShowImportExport(true);
+              }}
+              className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+              title="Import/Export Showdown format"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            </button>
           )}
           <button
             onClick={() => removeModule(module.id)}
@@ -842,18 +835,16 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
 
       {/* Import/Export Modal */}
       {showImportExport && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(null)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(false)}>
           <div
             className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-[400px] max-w-[90vw]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-              <h3 className="text-sm font-medium text-white">
-                {showImportExport === "import" ? "Import Pokemon" : "Export Pokemon"}
-              </h3>
+              <h3 className="text-sm font-medium text-white">Showdown Format</h3>
               <button
                 onClick={() => {
-                  setShowImportExport(null);
+                  setShowImportExport(false);
                   setImportText("");
                   setImportError(null);
                 }}
@@ -865,53 +856,39 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               </button>
             </div>
             <div className="p-4">
-              {showImportExport === "export" ? (
-                <div>
-                  <p className="text-xs text-slate-400 mb-2">Copy this text to use in Pokemon Showdown or other tools:</p>
-                  <textarea
-                    readOnly
-                    value={serializeToShowdown()}
-                    className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono focus:outline-none focus:border-blue-500 resize-none"
-                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(serializeToShowdown());
-                    }}
-                    className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm text-white font-medium transition-colors"
-                  >
-                    Copy to Clipboard
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-xs text-slate-400 mb-2">Paste a Pokemon set from Showdown format:</p>
-                  <textarea
-                    autoFocus
-                    value={importText}
-                    onChange={(e) => {
-                      setImportText(e.target.value);
-                      setImportError(null);
-                    }}
-                    placeholder={`Pikachu @ Light Ball
+              <p className="text-xs text-slate-400 mb-2">Edit or paste a Pokemon set in Showdown format:</p>
+              <textarea
+                autoFocus
+                value={importText}
+                onChange={(e) => {
+                  setImportText(e.target.value);
+                  setImportError(null);
+                }}
+                placeholder={`Pikachu @ Light Ball
 Level: 50
 Adamant Nature
 EVs: 252 Atk / 4 SpD / 252 Spe
 IVs: 0 SpA`}
-                    className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
-                  />
-                  {importError && (
-                    <p className="mt-2 text-xs text-red-400">{importError}</p>
-                  )}
-                  <button
-                    onClick={handleImport}
-                    disabled={!importText.trim()}
-                    className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
-                  >
-                    Import
-                  </button>
-                </div>
+                className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
+              />
+              {importError && (
+                <p className="mt-2 text-xs text-red-400">{importError}</p>
               )}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => navigator.clipboard.writeText(importText)}
+                  className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-white font-medium transition-colors"
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={!importText.trim()}
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
           </div>
         </div>
