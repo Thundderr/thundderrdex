@@ -5,11 +5,11 @@ import { fetchEncounters } from "@/lib/pokeapi/client";
 import {
   formatLocationName,
   formatEncounterMethod,
-  formatVersionName,
   getVersionGeneration,
 } from "@/lib/pokeapi/transformers";
 import { LocationEncounter, VersionEncounter, EncounterDetail } from "@/types/pokemon";
 import { PokeAPILocationEncounter } from "@/types/api";
+import { findPokemonInStaticData } from "@/lib/staticEncounters";
 
 function transformEncounters(data: PokeAPILocationEncounter[]): LocationEncounter[] {
   return data.map((location) => ({
@@ -35,8 +35,16 @@ export function useEncounters(pokemonName: string | null) {
     queryKey: ["encounters", pokemonName],
     queryFn: async (): Promise<LocationEncounter[]> => {
       if (!pokemonName) throw new Error("No Pokemon specified");
-      const data = await fetchEncounters(pokemonName);
-      return transformEncounters(data);
+
+      // Fetch from PokeAPI (Gen 1-7)
+      const apiData = await fetchEncounters(pokemonName);
+      const apiEncounters = transformEncounters(apiData);
+
+      // Get static Gen 8/9 data
+      const staticEncounters = findPokemonInStaticData(pokemonName);
+
+      // Combine both sources
+      return [...apiEncounters, ...staticEncounters];
     },
     enabled: !!pokemonName,
     staleTime: 5 * 60 * 1000, // 5 minutes

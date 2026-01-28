@@ -41,3 +41,7 @@ next-env.d.ts
 
 # Testing
 coverage
+
+# Scripts (scraping utilities)
+scripts
+.cache

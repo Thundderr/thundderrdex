@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchLocationArea, getSpriteUrl } from "@/lib/pokeapi/client";
 import { formatEncounterMethod, getVersionGeneration, formatLocationName } from "@/lib/pokeapi/transformers";
 import { PokeAPILocationArea } from "@/types/api";
+import { getStaticLocationData, transformStaticToLocationAreaData } from "@/lib/staticEncounters";
 
 // Encounter method grouping and priority
 const ENCOUNTER_METHOD_GROUPS: Record<string, { display: string; priority: number }> = {
@@ -241,6 +242,14 @@ export function useLocationArea(locationAreaName: string | null) {
     queryKey: ["location-area", locationAreaName],
     queryFn: async (): Promise<LocationAreaData> => {
       if (!locationAreaName) throw new Error("No location area specified");
+
+      // Check for static Gen 8/9 data first (PokeAPI doesn't have this)
+      const staticData = getStaticLocationData(locationAreaName);
+      if (staticData) {
+        return transformStaticToLocationAreaData(staticData) as LocationAreaData;
+      }
+
+      // Fall back to PokeAPI for Gen 1-7
       const data = await fetchLocationArea(locationAreaName);
       return transformLocationArea(data);
     },
