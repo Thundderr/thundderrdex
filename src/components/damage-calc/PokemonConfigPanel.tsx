@@ -13,6 +13,7 @@ import { StatValues, calculateStats } from "@/lib/utils/statCalculator";
 import { NATURES, getNatureByName, STAT_DISPLAY_NAMES, StatKey } from "@/data/natures";
 import { TYPE_COLORS } from "@/data/typeChart";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
+import { TypeBadge } from "@/components/type-chart/TypeBadge";
 
 interface Props {
   moduleId: string;
@@ -99,26 +100,21 @@ const COMMON_ITEMS = [
 // Boost options for dropdown
 const BOOST_OPTIONS = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
 
-// Category icons for moves
-function CategoryIcon({ category }: { category: string }) {
-  if (category === "physical") {
-    return (
-      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="12" cy="12" r="8" fill="#C92112" stroke="#F08030" strokeWidth="2" />
-      </svg>
-    );
-  }
-  if (category === "special") {
-    return (
-      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="12" cy="12" r="8" fill="#4F5870" stroke="#9DB7F5" strokeWidth="2" />
-      </svg>
-    );
-  }
+// Damage class icon matching LearnsetTable/MoveSelector style
+function DamageClassIcon({ damageClass }: { damageClass: string }) {
+  const config = {
+    physical: { color: "bg-orange-600", label: "P" },
+    special: { color: "bg-blue-600", label: "S" },
+    status: { color: "bg-slate-600", label: "-" },
+  }[damageClass] ?? { color: "bg-slate-600", label: "?" };
+
   return (
-    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="12" r="8" fill="#8C888C" stroke="#A8A8A8" strokeWidth="2" />
-    </svg>
+    <span
+      className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold text-white flex-shrink-0 ${config.color}`}
+      title={damageClass}
+    >
+      {config.label}
+    </span>
   );
 }
 
@@ -210,17 +206,27 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   }, [learnset, globalGeneration]);
 
   // Filter moves by search query for move slot editing
+  // Also filters out moves already selected in other slots (duplicate prevention)
   const filteredMoveOptions = useMemo(() => {
-    if (!moveQuery) return availableMoves.slice(0, 10);
+    // Get currently selected moves (excluding the slot being edited)
+    const selectedMoves = new Set(
+      (config.moves || [])
+        .filter((m, idx) => m && idx !== editingMoveSlot)
+    );
+
+    // Filter out already selected moves
+    const nonDuplicateMoves = availableMoves.filter(
+      (move) => !selectedMoves.has(move.name)
+    );
+
+    if (!moveQuery) return nonDuplicateMoves;
     const lowerQuery = moveQuery.toLowerCase();
-    return availableMoves
-      .filter(
-        (move) =>
-          move.displayName.toLowerCase().includes(lowerQuery) ||
-          move.type.toLowerCase().includes(lowerQuery)
-      )
-      .slice(0, 10);
-  }, [availableMoves, moveQuery]);
+    return nonDuplicateMoves.filter(
+      (move) =>
+        move.displayName.toLowerCase().includes(lowerQuery) ||
+        move.type.toLowerCase().includes(lowerQuery)
+    );
+  }, [availableMoves, moveQuery, config.moves, editingMoveSlot]);
 
   // Get move data for a slot
   const getMoveData = useCallback(
@@ -1116,8 +1122,17 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                         {filteredMoveOptions.length > 0 && (
                           <ul
                             ref={moveListRef}
-                            className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-32 overflow-auto"
+                            className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto"
                           >
+                            {/* Header row */}
+                            <li className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
+                              <span className="flex-1 min-w-0">Move</span>
+                              <span className="w-[52px] text-center">Type</span>
+                              <span className="w-5 text-center">Cat</span>
+                              <span className="w-8 text-right">Pwr</span>
+                              <span className="w-8 text-right">Acc</span>
+                              <span className="w-6 text-right">PP</span>
+                            </li>
                             {filteredMoveOptions.map((move, index) => (
                               <li
                                 key={move.name}
@@ -1127,25 +1142,39 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                                   setEditingMoveSlot(null);
                                   setMoveQuery("");
                                 }}
-                                className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer text-[11px] ${
+                                className={`px-3 py-1.5 cursor-pointer ${
                                   index === moveHighlightedIndex
                                     ? "bg-slate-700"
                                     : "hover:bg-slate-700/50"
                                 }`}
                               >
-                                <span
-                                  className="px-1 py-0.5 text-[8px] rounded text-white flex-shrink-0"
-                                  style={{ backgroundColor: TYPE_COLORS[move.type] }}
-                                >
-                                  {move.type.slice(0, 3).toUpperCase()}
-                                </span>
-                                <CategoryIcon category={move.damageClass} />
-                                <span className="flex-1 text-white truncate">
-                                  {move.displayName}
-                                </span>
-                                <span className="text-slate-400 text-[10px]">
-                                  {move.power}
-                                </span>
+                                {/* Main stats row */}
+                                <div className="flex items-center gap-1.5 text-[11px]">
+                                  <span className="flex-1 text-white truncate min-w-0">
+                                    {move.displayName}
+                                  </span>
+                                  <span className="w-[52px] flex justify-center flex-shrink-0">
+                                    <TypeBadge type={move.type} size="xs" fixedWidth />
+                                  </span>
+                                  <span className="w-5 flex justify-center flex-shrink-0">
+                                    <DamageClassIcon damageClass={move.damageClass} />
+                                  </span>
+                                  <span className="w-8 text-right text-slate-300 font-mono text-[10px] flex-shrink-0">
+                                    {move.power ?? "-"}
+                                  </span>
+                                  <span className="w-8 text-right text-slate-300 font-mono text-[10px] flex-shrink-0">
+                                    {move.accuracy ?? "-"}
+                                  </span>
+                                  <span className="w-6 text-right text-slate-400 font-mono text-[10px] flex-shrink-0">
+                                    {move.pp}
+                                  </span>
+                                </div>
+                                {/* Effect description row */}
+                                {move.description && (
+                                  <div className="mt-1.5 text-[9px] text-slate-400 line-clamp-2 leading-tight">
+                                    {move.description}
+                                  </div>
+                                )}
                               </li>
                             ))}
                           </ul>
@@ -1158,18 +1187,13 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                           isAttacker ? "hover:bg-slate-600" : "bg-slate-700/50"
                         }`}
                       >
-                        <span
-                          className="px-1 py-0.5 text-[8px] rounded text-white flex-shrink-0"
-                          style={{ backgroundColor: TYPE_COLORS[moveData.type] }}
-                        >
-                          {moveData.type.slice(0, 3).toUpperCase()}
-                        </span>
-                        <CategoryIcon category={moveData.damageClass} />
+                        <TypeBadge type={moveData.type} size="xs" fixedWidth />
+                        <DamageClassIcon damageClass={moveData.damageClass} />
                         <span className="flex-1 text-white truncate">
                           {moveData.displayName}
                         </span>
                         <span className="text-slate-400 text-[10px]">
-                          {moveData.power}
+                          {moveData.power} BP
                         </span>
                         <button
                           onClick={(e) => {

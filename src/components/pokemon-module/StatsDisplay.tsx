@@ -11,7 +11,6 @@ import { TYPE_COLORS } from "@/data/typeChart";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import { filterItems } from "@/data/items";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
-import { Move } from "@/types/moves";
 
 // Category icon matching LearnsetTable
 function DamageClassIcon({ damageClass }: { damageClass: string }) {
@@ -109,8 +108,16 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
   const selectedNature = statModifiers ? NATURES.find((n) => n.name === statModifiers.nature) : null;
 
   // Filter moves for current generation and search query
+  // Also filters out moves already selected in other slots (duplicate prevention)
   const filteredMoves = useMemo(() => {
     if (!learnset || !moveQuery.trim()) return [];
+
+    // Get currently selected moves (excluding the slot being edited)
+    const selectedMoves = new Set(
+      (statModifiers?.moves || [])
+        .filter((m, idx) => m && idx !== searchingMoveSlot)
+    );
+
     const lowerQuery = moveQuery.toLowerCase().trim();
     const seen = new Set<string>();
     return learnset
@@ -120,11 +127,13 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
         // Deduplicate moves (same move can be learned via different methods)
         if (seen.has(entry.move.name)) return false;
         seen.add(entry.move.name);
+        // Filter out already selected moves
+        if (selectedMoves.has(entry.move.name)) return false;
         return true;
       })
       .slice(0, 8)
       .map((entry) => entry.move);
-  }, [learnset, moveQuery, globalGeneration]);
+  }, [learnset, moveQuery, globalGeneration, statModifiers?.moves, searchingMoveSlot]);
 
   // Handle move selection
   const handleMoveSelect = (slotIndex: number, moveName: string) => {
@@ -486,10 +495,12 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
       {pokemonName && (
         <div className="pt-2 border-t border-slate-700">
           <label className="text-[10px] text-slate-400 mb-1.5 block">Moves</label>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5 relative">
             {[0, 1, 2, 3].map((slotIndex) => {
               const moveName = statModifiers.moves?.[slotIndex] ?? null;
               const isSearching = searchingMoveSlot === slotIndex;
+              // Left column (0, 2) aligns left, right column (1, 3) aligns right
+              const isLeftColumn = slotIndex % 2 === 0;
 
               return (
                 <div key={slotIndex} className="relative">
@@ -512,15 +523,18 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                       {filteredMoves.length > 0 && (
                         <ul
                           ref={moveListRef}
-                          className="absolute z-50 w-[340px] right-0 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[200px] overflow-auto"
+                          className={`absolute z-50 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto ${
+                            isLeftColumn ? "left-0" : "right-0"
+                          }`}
+                          style={{ width: "calc(200% + 6px)" }}
                         >
                           {/* Header row */}
-                          <li className="flex items-center gap-1 px-2 py-1 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/90 sticky top-0">
+                          <li className="flex items-center gap-1.5 px-2.5 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
                             <span className="flex-1">Move</span>
                             <span className="w-[52px] text-center">Type</span>
                             <span className="w-4 text-center">Cat</span>
-                            <span className="w-7 text-right">Pwr</span>
-                            <span className="w-7 text-right">Acc</span>
+                            <span className="w-8 text-right">Pwr</span>
+                            <span className="w-8 text-right">Acc</span>
                             <span className="w-6 text-right">PP</span>
                           </li>
                           {filteredMoves.map((move, index) => (
@@ -528,26 +542,35 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                               key={move.name}
                               onMouseEnter={() => setHighlightedMoveIndex(index)}
                               onClick={() => handleMoveSelect(slotIndex, move.name)}
-                              className={`flex items-center gap-1 px-2 py-1.5 text-[11px] cursor-pointer ${
+                              className={`px-2.5 py-1.5 cursor-pointer ${
                                 index === highlightedMoveIndex ? "bg-slate-700" : "hover:bg-slate-700/50"
                               }`}
                             >
-                              <span className="flex-1 text-white truncate">{formatPokemonName(move.name)}</span>
-                              <span className="w-[52px] flex justify-center">
-                                <TypeBadge type={move.type} size="xs" fixedWidth />
-                              </span>
-                              <span className="w-4 flex justify-center">
-                                <DamageClassIcon damageClass={move.damageClass} />
-                              </span>
-                              <span className="w-7 text-right text-slate-300 font-mono text-[10px]">
-                                {move.power ?? "-"}
-                              </span>
-                              <span className="w-7 text-right text-slate-300 font-mono text-[10px]">
-                                {move.accuracy ?? "-"}
-                              </span>
-                              <span className="w-6 text-right text-slate-400 font-mono text-[10px]">
-                                {move.pp}
-                              </span>
+                              {/* Main stats row */}
+                              <div className="flex items-center gap-1.5 text-[11px]">
+                                <span className="flex-1 text-white truncate">{formatPokemonName(move.name)}</span>
+                                <span className="w-[52px] flex justify-center">
+                                  <TypeBadge type={move.type} size="xs" fixedWidth />
+                                </span>
+                                <span className="w-4 flex justify-center">
+                                  <DamageClassIcon damageClass={move.damageClass} />
+                                </span>
+                                <span className="w-8 text-right text-slate-300 font-mono text-[10px]">
+                                  {move.power ?? "-"}
+                                </span>
+                                <span className="w-8 text-right text-slate-300 font-mono text-[10px]">
+                                  {move.accuracy ?? "-"}
+                                </span>
+                                <span className="w-6 text-right text-slate-400 font-mono text-[10px]">
+                                  {move.pp}
+                                </span>
+                              </div>
+                              {/* Effect description row */}
+                              {move.description && (
+                                <div className="mt-1.5 text-[9px] text-slate-400 line-clamp-2 leading-tight">
+                                  {move.description}
+                                </div>
+                              )}
                             </li>
                           ))}
                         </ul>

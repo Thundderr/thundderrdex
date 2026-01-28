@@ -5,7 +5,7 @@ import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useLearnset } from "@/hooks/useLearnset";
 import { Move } from "@/types/moves";
-import { TYPE_COLORS } from "@/data/typeChart";
+import { TypeBadge } from "@/components/type-chart/TypeBadge";
 
 interface Props {
   moduleId: string;
@@ -13,26 +13,21 @@ interface Props {
   selectedMove: string | null;
 }
 
-// Category icons
-function CategoryIcon({ category }: { category: string }) {
-  if (category === "physical") {
-    return (
-      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="12" cy="12" r="8" fill="#C92112" stroke="#F08030" strokeWidth="2" />
-      </svg>
-    );
-  }
-  if (category === "special") {
-    return (
-      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="12" cy="12" r="8" fill="#4F5870" stroke="#9DB7F5" strokeWidth="2" />
-      </svg>
-    );
-  }
+// Category icon matching LearnsetTable
+function DamageClassIcon({ damageClass }: { damageClass: string }) {
+  const config = {
+    physical: { color: "bg-orange-600", label: "P" },
+    special: { color: "bg-blue-600", label: "S" },
+    status: { color: "bg-slate-600", label: "-" },
+  }[damageClass] ?? { color: "bg-slate-600", label: "?" };
+
   return (
-    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="12" r="8" fill="#8C888C" stroke="#A8A8A8" strokeWidth="2" />
-    </svg>
+    <span
+      className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold text-white flex-shrink-0 ${config.color}`}
+      title={damageClass}
+    >
+      {config.label}
+    </span>
   );
 }
 
@@ -127,7 +122,8 @@ export function MoveSelector({ moduleId, attackerName, selectedMove }: Props) {
 
   useEffect(() => {
     if (listRef.current && filteredMoves.length > 0) {
-      const item = listRef.current.children[highlightedIndex] as HTMLElement;
+      // +1 to account for the header row
+      const item = listRef.current.children[highlightedIndex + 1] as HTMLElement;
       item?.scrollIntoView({ block: "nearest" });
     }
   }, [highlightedIndex, filteredMoves.length]);
@@ -185,32 +181,55 @@ export function MoveSelector({ moduleId, attackerName, selectedMove }: Props) {
           {filteredMoves.length > 0 && (
             <ul
               ref={listRef}
-              className="mt-1 max-h-48 overflow-auto border border-slate-700 rounded"
+              className="mt-1 max-h-[320px] overflow-auto border border-slate-700 rounded"
             >
+              {/* Header row */}
+              <li className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
+                <span className="flex-1 min-w-0">Move</span>
+                <span className="w-[52px] text-center">Type</span>
+                <span className="w-5 text-center">Cat</span>
+                <span className="w-8 text-right">Pwr</span>
+                <span className="w-8 text-right">Acc</span>
+                <span className="w-6 text-right">PP</span>
+              </li>
               {filteredMoves.map((move, index) => (
                 <li
                   key={move.name}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   onClick={() => handleSelect(move.name)}
-                  className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer ${
+                  className={`px-3 py-1.5 cursor-pointer ${
                     index === highlightedIndex
                       ? "bg-slate-700"
                       : "hover:bg-slate-700/50"
                   }`}
                 >
-                  <span
-                    className="px-1.5 py-0.5 text-[9px] rounded text-white flex-shrink-0"
-                    style={{ backgroundColor: TYPE_COLORS[move.type] }}
-                  >
-                    {move.type.slice(0, 3).toUpperCase()}
-                  </span>
-                  <CategoryIcon category={move.damageClass} />
-                  <span className="flex-1 text-sm text-white truncate">
-                    {move.displayName}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {move.power || "—"}
-                  </span>
+                  {/* Main stats row */}
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <span className="flex-1 text-white truncate min-w-0">
+                      {move.displayName}
+                    </span>
+                    <span className="w-[52px] flex justify-center flex-shrink-0">
+                      <TypeBadge type={move.type} size="xs" fixedWidth />
+                    </span>
+                    <span className="w-5 flex justify-center flex-shrink-0">
+                      <DamageClassIcon damageClass={move.damageClass} />
+                    </span>
+                    <span className="w-8 text-right text-slate-300 font-mono text-[10px] flex-shrink-0">
+                      {move.power ?? "-"}
+                    </span>
+                    <span className="w-8 text-right text-slate-300 font-mono text-[10px] flex-shrink-0">
+                      {move.accuracy ?? "-"}
+                    </span>
+                    <span className="w-6 text-right text-slate-400 font-mono text-[10px] flex-shrink-0">
+                      {move.pp}
+                    </span>
+                  </div>
+                  {/* Effect description row */}
+                  {move.description && (
+                    <div className="mt-0.5 text-[9px] text-slate-400 line-clamp-2 leading-tight">
+                      {move.description}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -226,13 +245,8 @@ export function MoveSelector({ moduleId, attackerName, selectedMove }: Props) {
           onClick={() => setIsOpen(true)}
           className="w-full bg-slate-800 rounded-lg p-3 flex items-center gap-2 hover:bg-slate-700 transition-colors text-left"
         >
-          <span
-            className="px-2 py-0.5 text-[10px] rounded text-white flex-shrink-0"
-            style={{ backgroundColor: TYPE_COLORS[selectedMoveData.type] }}
-          >
-            {selectedMoveData.type.toUpperCase()}
-          </span>
-          <CategoryIcon category={selectedMoveData.damageClass} />
+          <TypeBadge type={selectedMoveData.type} size="xs" fixedWidth />
+          <DamageClassIcon damageClass={selectedMoveData.damageClass} />
           <span className="flex-1 text-sm text-white">
             {selectedMoveData.displayName}
           </span>
