@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, TeamBuilderModule, DamageCalcModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
@@ -72,6 +72,13 @@ const createDamageCalcModule = (): DamageCalcModule => ({
   field: { ...DEFAULT_DAMAGE_CALC_FIELD },
 });
 
+const createLocationModule = (locationAreaName: string | null = null): LocationModule => ({
+  id: uuidv4(),
+  moduleType: "location",
+  isMinimized: false,
+  locationAreaName,
+});
+
 const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
   id: uuidv4(),
   name,
@@ -120,6 +127,9 @@ interface ModuleStore {
   setDamageCalcField: (moduleId: string, field: Partial<DamageCalcFieldConfig>) => void;
   setDamageCalcBothLevels: (moduleId: string, level: number) => void;
   swapDamageCalcPokemon: (moduleId: string) => void;
+  // Location module methods
+  addLocationModule: (locationAreaName?: string | null) => void;
+  setLocationArea: (moduleId: string, locationAreaName: string | null) => void;
   setPokemon: (id: string, pokemonName: string) => void;
   setActiveTab: (id: string, tab: ModuleTab) => void;
   toggleMinimize: (id: string) => void;
@@ -462,6 +472,29 @@ export const useModuleStore = create<ModuleStore>()(
                   defender: { ...dmgModule.attacker },
                   selectedMove: null, // Reset move when swapping
                 };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      // Location module methods
+      addLocationModule: (locationAreaName = null) => {
+        const newModule = createLocationModule(locationAreaName);
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      setLocationArea: (moduleId, locationAreaName) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "location") {
+                return { ...m, locationAreaName } as LocationModule;
               }
               return m;
             })

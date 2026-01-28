@@ -22,6 +22,7 @@ import { PokemonModule } from "@/components/pokemon-module/PokemonModule";
 import { TypeChartModule } from "@/components/pokemon-module/TypeChartModule";
 import { TeamBuilderModule } from "@/components/pokemon-module/TeamBuilderModule";
 import { DamageCalcModule } from "@/components/damage-calc/DamageCalcModule";
+import { LocationModule } from "@/components/location-module/LocationModule";
 
 export function ModuleContainer() {
   const { tabs, activeTabId, reorderModules } = useModuleStore();
@@ -109,6 +110,9 @@ export function ModuleContainer() {
             if (module.moduleType === "damage-calc") {
               return <DamageCalcModule key={module.id} module={module} />;
             }
+            if (module.moduleType === "location") {
+              return <LocationModule key={module.id} module={module} />;
+            }
             return <PokemonModule key={module.id} module={module} />;
           })}
         </div>
@@ -121,6 +125,8 @@ export function ModuleContainer() {
             <TeamBuilderModule module={activeModule} isOverlay />
           ) : activeModule.moduleType === "damage-calc" ? (
             <DamageCalcModule module={activeModule} isOverlay />
+          ) : activeModule.moduleType === "location" ? (
+            <LocationModule module={activeModule} isOverlay />
           ) : (
             <PokemonModule module={activeModule} isOverlay />
           )

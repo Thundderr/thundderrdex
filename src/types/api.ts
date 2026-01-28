@@ -189,3 +189,97 @@ export interface PokeAPILocationEncounter {
   };
   version_details: PokeAPIVersionEncounter[];
 }
+
+// Location Area types (for fetching Pokemon at a location)
+export interface PokeAPILocationAreaPokemonEncounter {
+  pokemon: {
+    name: string;
+    url: string;
+  };
+  version_details: {
+    max_chance: number;
+    version: {
+      name: string;
+      url: string;
+    };
+    encounter_details: PokeAPIEncounterDetail[];
+  }[];
+}
+
+export interface PokeAPILocationArea {
+  id: number;
+  name: string;
+  game_index: number;
+  location: {
+    name: string;
+    url: string;
+  };
+  names: {
+    name: string;
+    language: {
+      name: string;
+      url: string;
+    };
+  }[];
+  encounter_method_rates: {
+    encounter_method: {
+      name: string;
+      url: string;
+    };
+    version_details: {
+      rate: number;
+      version: {
+        name: string;
+        url: string;
+      };
+    }[];
+  }[];
+  pokemon_encounters: PokeAPILocationAreaPokemonEncounter[];
+}
+
+export interface PokeAPILocation {
+  id: number;
+  name: string;
+  region: {
+    name: string;
+    url: string;
+  } | null;
+  names: {
+    name: string;
+    language: {
+      name: string;
+      url: string;
+    };
+  }[];
+  game_indices: {
+    game_index: number;
+    generation: {
+      name: string;
+      url: string;
+    };
+  }[];
+  areas: {
+    name: string;
+    url: string;
+  }[];
+}
+
+export interface PokeAPILocationList {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: {
+    name: string;
+    url: string;
+  }[];
+}
+
+export interface PokeAPILocationAreaList {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: {
+    name: string;
+    url: string;
+  }[];
+}

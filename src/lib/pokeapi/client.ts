@@ -5,6 +5,8 @@ import {
   PokeAPIMoveDetail,
   PokeAPIMachine,
   PokeAPILocationEncounter,
+  PokeAPILocationArea,
+  PokeAPILocationAreaList,
 } from "@/types/api";
 
 const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -89,4 +91,22 @@ export function getSpriteUrl(pokemonId: number): string {
 
 export function getOfficialArtworkUrl(pokemonId: number): string {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+}
+
+// Location area endpoints
+export async function fetchLocationArea(
+  nameOrId: string | number
+): Promise<PokeAPILocationArea> {
+  return fetchWithCache<PokeAPILocationArea>(
+    `${POKEAPI_BASE}/location-area/${nameOrId}`
+  );
+}
+
+export async function fetchLocationAreaList(
+  limit: number = 1089,
+  offset: number = 0
+): Promise<PokeAPILocationAreaList> {
+  return fetchWithCache<PokeAPILocationAreaList>(
+    `${POKEAPI_BASE}/location-area?limit=${limit}&offset=${offset}`
+  );
 }

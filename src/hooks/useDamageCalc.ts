@@ -53,7 +53,8 @@ function convertToSmogonPokemon(
       .join("-");
 
     // Verify the Pokemon exists in this generation's dex
-    const species = gen.species.get(pokemonName);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const species = gen.species.get(pokemonName as any);
     if (!species) return null;
 
     // Build options object, only including defined values
@@ -90,7 +91,8 @@ function convertToSmogonPokemon(
       : maxHP;
 
     // Build the full options, only including ability/item if they're valid strings
-    const options: Parameters<typeof Pokemon>[2] = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const options: Record<string, any> = {
       level: config.level,
       nature: config.nature,
       ivs,
@@ -111,7 +113,7 @@ function convertToSmogonPokemon(
     }
 
     // Create the actual Pokemon with all options
-    const pokemon = new Pokemon(gen, pokemonName, options);
+    const pokemon = new Pokemon(gen, pokemonName, options as any);
 
     return pokemon;
   } catch (error) {

@@ -7,7 +7,7 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { GENERATIONS } from "@/data/generations";
 
 export function Header() {
-  const { addModule, addTypeChartModule, addTeamBuilderModule, addDamageCalcModule } = useModuleStore();
+  const { addModule, addTypeChartModule, addTeamBuilderModule, addDamageCalcModule, addLocationModule } = useModuleStore();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -62,6 +62,12 @@ export function Header() {
             className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors"
           >
             + Damage Calc
+          </button>
+          <button
+            onClick={() => addLocationModule()}
+            className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            + Location
           </button>
         </div>
       </div>

@@ -14,6 +14,7 @@ const GLOBAL_SHORTCUTS = [
   { key: "Shift + C", description: "New Type Chart module" },
   { key: "Shift + B", description: "New Team Coverage module" },
   { key: "Shift + E", description: "New Damage Calc module" },
+  { key: "Shift + O", description: "New Location module" },
   { key: "Shift + I", description: "Show keyboard shortcuts" },
   { key: "[", description: "Previous tab" },
   { key: "]", description: "Next tab" },

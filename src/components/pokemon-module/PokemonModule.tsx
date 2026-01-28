@@ -559,6 +559,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     <div
       ref={setRefs}
       style={style}
+      data-module-id={module.id}
       onClick={() => selectModule(module.id)}
       className={`bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""

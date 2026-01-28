@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useEncounters } from "@/hooks/useEncounters";
+import { useModuleStore } from "@/stores/moduleStore";
 import { LocationEncounter } from "@/types/pokemon";
 
 interface Props {
@@ -125,10 +126,16 @@ function cleanLocationName(name: string): string {
     .join(" ");
 }
 
+// Location data with both display name and original API name
+interface LocationInfo {
+  displayName: string;
+  areaName: string; // Original API name for opening location module
+}
+
 // Version group data
 interface VersionGroup {
   versions: string[];
-  locations: string[];
+  locations: LocationInfo[];
 }
 
 // Final grouped structure by generation
@@ -138,12 +145,13 @@ interface GenerationData {
 }
 
 function processEncounters(encounters: LocationEncounter[]): GenerationData[] {
-  // Build a map of version -> set of locations
-  const versionLocationMap: Map<string, Set<string>> = new Map();
+  // Build a map of version -> map of display name -> original name
+  const versionLocationMap: Map<string, Map<string, string>> = new Map();
   const versionGenerations: Map<string, number> = new Map();
 
   for (const location of encounters) {
     const cleanedName = cleanLocationName(location.locationName);
+    const originalName = location.locationName;
 
     for (const vd of location.versionDetails) {
       if (vd.generation === 0) continue;
@@ -151,10 +159,11 @@ function processEncounters(encounters: LocationEncounter[]): GenerationData[] {
       versionGenerations.set(vd.version, vd.generation);
 
       if (!versionLocationMap.has(vd.version)) {
-        versionLocationMap.set(vd.version, new Set());
+        versionLocationMap.set(vd.version, new Map());
       }
 
-      versionLocationMap.get(vd.version)!.add(cleanedName);
+      // Store both the display name and original name
+      versionLocationMap.get(vd.version)!.set(cleanedName, originalName);
     }
   }
 
@@ -174,8 +183,8 @@ function processEncounters(encounters: LocationEncounter[]): GenerationData[] {
     const versionFingerprints: Map<string, string[]> = new Map();
 
     for (const version of versions) {
-      const locationSet = versionLocationMap.get(version)!;
-      const fingerprint = Array.from(locationSet).sort().join("|");
+      const locationMap = versionLocationMap.get(version)!;
+      const fingerprint = Array.from(locationMap.keys()).sort().join("|");
 
       if (!versionFingerprints.has(fingerprint)) {
         versionFingerprints.set(fingerprint, []);
@@ -187,8 +196,10 @@ function processEncounters(encounters: LocationEncounter[]): GenerationData[] {
     const versionGroups: VersionGroup[] = [];
 
     for (const [, groupVersions] of versionFingerprints) {
-      const locationSet = versionLocationMap.get(groupVersions[0])!;
-      const locations = Array.from(locationSet).sort();
+      const locationMap = versionLocationMap.get(groupVersions[0])!;
+      const locations: LocationInfo[] = Array.from(locationMap.entries())
+        .map(([displayName, areaName]) => ({ displayName, areaName }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
       versionGroups.push({
         versions: groupVersions.sort(),
@@ -223,11 +234,16 @@ function VersionLabel({ version }: { version: string }) {
 
 export function LocationsPanel({ pokemonName }: Props) {
   const { data: encounters, isLoading, error } = useEncounters(pokemonName);
+  const { addLocationModule } = useModuleStore();
 
   const generationData = useMemo(() => {
     if (!encounters) return [];
     return processEncounters(encounters);
   }, [encounters]);
+
+  const handleLocationClick = (areaName: string) => {
+    addLocationModule(areaName);
+  };
 
   if (isLoading) {
     return (
@@ -274,8 +290,21 @@ export function LocationsPanel({ pokemonName }: Props) {
                     <VersionLabel key={version} version={version} />
                   ))}
                 </div>
-                <div className="flex-1 text-xs text-slate-300">
-                  {group.locations.join(", ")}
+                <div className="flex-1 text-xs">
+                  {group.locations.map((loc, locIdx) => (
+                    <span key={loc.areaName}>
+                      <button
+                        onClick={() => handleLocationClick(loc.areaName)}
+                        className="text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+                        title={`View all Pokemon in ${loc.displayName}`}
+                      >
+                        {loc.displayName}
+                      </button>
+                      {locIdx < group.locations.length - 1 && (
+                        <span className="text-slate-500">, </span>
+                      )}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
