@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
@@ -10,6 +10,8 @@ import { MoveSelector } from "./MoveSelector";
 import { FieldConditions } from "./FieldConditions";
 import { DamageResults } from "./DamageResults";
 import { useDamageCalc } from "@/hooks/useDamageCalc";
+import { useLearnset } from "@/hooks/useLearnset";
+import { formatPokemonName } from "@/lib/pokeapi/transformers";
 
 interface Props {
   module: DamageCalcModuleType;
@@ -17,9 +19,12 @@ interface Props {
 }
 
 export function DamageCalcModule({ module, isOverlay = false }: Props) {
-  const { removeModule, selectedModuleId, selectModule, swapDamageCalcPokemon } = useModuleStore();
+  const { removeModule, selectedModuleId, selectModule, swapDamageCalcPokemon, setDamageCalcMove } = useModuleStore();
   const isSelected = selectedModuleId === module.id;
   const moduleContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch attacker's learnset for move display names
+  const { data: attackerLearnset } = useLearnset(module.attacker.pokemonName);
 
   const {
     attributes,
@@ -45,6 +50,16 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
     module.selectedMove,
     module.field
   );
+
+  // Get display names for attacker's moves
+  const attackerMoveData = useMemo(() => {
+    if (!attackerLearnset) return [];
+    return (module.attacker.moves || []).map((moveName) => {
+      if (!moveName) return null;
+      const entry = attackerLearnset.find((e) => e.move.name === moveName);
+      return entry?.move || null;
+    });
+  }, [attackerLearnset, module.attacker.moves]);
 
   // Combine refs
   const setRefs = (node: HTMLDivElement | null) => {
@@ -144,6 +159,32 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
             {/* Move Selector */}
             <div>
               <h3 className="text-[10px] font-medium text-slate-500 uppercase mb-1">Selected Move</h3>
+
+              {/* Quick select from attacker's moves */}
+              {module.attacker.moves?.some((m) => m) && (
+                <div className="grid grid-cols-2 gap-1 mb-2">
+                  {module.attacker.moves.map((moveName, idx) => {
+                    const moveData = attackerMoveData[idx];
+                    if (!moveName || !moveData) return null;
+                    const isSelected = module.selectedMove === moveName;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setDamageCalcMove(module.id, moveName)}
+                        className={`px-2 py-1.5 text-[11px] rounded truncate transition-colors ${
+                          isSelected
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                        }`}
+                        title={moveData.displayName}
+                      >
+                        {moveData.displayName}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <MoveSelector
                 moduleId={module.id}
                 attackerName={module.attacker.pokemonName}

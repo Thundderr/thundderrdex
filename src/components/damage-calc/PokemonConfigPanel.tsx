@@ -1119,7 +1119,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                         {filteredMoveOptions.length > 0 && (
                           <ul
                             ref={moveListRef}
-                            className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto"
+                            className="absolute z-50 w-full bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto"
                           >
                             {/* Header row */}
                             <li className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
@@ -1179,19 +1179,17 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                       </div>
                     ) : moveData ? (
                       <div
-                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[11px] ${
-                          isAttacker ? "hover:bg-slate-600" : "bg-slate-700/50"
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[11px] cursor-pointer ${
+                          isAttacker ? "hover:bg-slate-600" : "bg-slate-700/50 hover:bg-slate-700"
                         }`}
+                        onClick={() => {
+                          selectMoveForCalc(moveName);
+                          setEditingMoveSlot(slotIndex);
+                        }}
                       >
                         <TypeBadge type={moveData.type} size="xs" fixedWidth />
                         <DamageClassIcon damageClass={moveData.damageClass} />
-                        <span
-                          className="flex-1 text-white truncate cursor-pointer hover:text-blue-400"
-                          onClick={() => {
-                            selectMoveForCalc(moveName);
-                            setEditingMoveSlot(slotIndex);
-                          }}
-                        >
+                        <span className="flex-1 text-white truncate">
                           {moveData.displayName}
                         </span>
                         <span className="text-slate-400 text-[10px]">

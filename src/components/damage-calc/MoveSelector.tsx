@@ -161,7 +161,7 @@ export function MoveSelector({ moduleId, attackerName, selectedMove }: Props) {
   return (
     <div className="relative">
       {isOpen ? (
-        <div className="bg-slate-800 rounded-lg">
+        <div className="bg-slate-800 rounded-lg relative">
           <input
             ref={inputRef}
             type="text"
@@ -181,7 +181,7 @@ export function MoveSelector({ moduleId, attackerName, selectedMove }: Props) {
           {filteredMoves.length > 0 && (
             <ul
               ref={listRef}
-              className="mt-1 max-h-[320px] overflow-auto border border-slate-700 rounded"
+              className="absolute z-50 w-full bottom-full mb-1 max-h-[320px] overflow-auto border border-slate-700 rounded bg-slate-800 shadow-xl"
             >
               {/* Header row */}
               <li className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
