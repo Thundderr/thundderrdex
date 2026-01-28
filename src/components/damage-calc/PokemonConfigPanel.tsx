@@ -7,6 +7,7 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { usePokemon } from "@/hooks/usePokemon";
 import { useLearnset } from "@/hooks/useLearnset";
+import { useSmogonSets, SmogonSet } from "@/hooks/useSmogonSets";
 import { Move } from "@/types/moves";
 import { DamageCalcPokemonConfig, DamageCalcStatus } from "@/types/module";
 import { StatValues, calculateStats } from "@/lib/utils/statCalculator";
@@ -142,6 +143,10 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   const [showImportExport, setShowImportExport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Load Set dropdown state
+  const [showSetsDropdown, setShowSetsDropdown] = useState(false);
+  const { data: smogonSets, isLoading: setsLoading } = useSmogonSets(config.pokemonName);
 
   const setConfig = isAttacker ? setDamageCalcAttacker : setDamageCalcDefender;
 
@@ -681,6 +686,57 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
     setImportError(null);
   };
 
+  // Apply a Smogon set to the config
+  const applySmogonSet = (set: SmogonSet) => {
+    // Helper to get first value if array
+    const getFirst = <T,>(val: T | T[] | undefined): T | undefined =>
+      Array.isArray(val) ? val[0] : val;
+
+    // Map Smogon stat keys to our stat keys
+    const mapEvs = (evs: SmogonSet["evs"]): StatValues => ({
+      hp: evs?.hp ?? 0,
+      attack: evs?.atk ?? 0,
+      defense: evs?.def ?? 0,
+      specialAttack: evs?.spa ?? 0,
+      specialDefense: evs?.spd ?? 0,
+      speed: evs?.spe ?? 0,
+    });
+
+    const mapIvs = (ivs: SmogonSet["ivs"]): StatValues => ({
+      hp: ivs?.hp ?? 31,
+      attack: ivs?.atk ?? 31,
+      defense: ivs?.def ?? 31,
+      specialAttack: ivs?.spa ?? 31,
+      specialDefense: ivs?.spd ?? 31,
+      speed: ivs?.spe ?? 31,
+    });
+
+    // Normalize move name for our system
+    const normalizeMoveName = (move: string): string =>
+      move.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+
+    // Get moves (first 4, taking first option if slash)
+    const moves: (string | null)[] = [null, null, null, null];
+    set.moves.slice(0, 4).forEach((move, idx) => {
+      const moveName = Array.isArray(move) ? move[0] : move;
+      if (moveName) {
+        moves[idx] = normalizeMoveName(moveName);
+      }
+    });
+
+    updateConfig({
+      level: set.level ?? 100,
+      ability: getFirst(set.ability) ?? null,
+      item: getFirst(set.item) ?? null,
+      nature: getFirst(set.nature) ?? "Hardy",
+      evs: mapEvs(set.evs),
+      ivs: mapIvs(set.ivs),
+      moves,
+    });
+
+    setShowSetsDropdown(false);
+  };
+
   return (
     <div className="bg-slate-800 rounded-lg p-2 space-y-2">
       {/* Pokemon Search / Display */}
@@ -840,6 +896,60 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
               />
             </div>
             <div className="flex-1" />
+            {/* Load Set Button with Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSetsDropdown(!showSetsDropdown)}
+                onBlur={() => setTimeout(() => setShowSetsDropdown(false), 200)}
+                className="px-2 py-1 text-[10px] font-medium rounded border transition-colors bg-blue-600 text-white border-blue-500 hover:bg-blue-500"
+                title="Load competitive set"
+              >
+                Load Set
+              </button>
+              {showSetsDropdown && (
+                <div className="absolute z-50 right-0 top-full mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
+                  <div className="py-1">
+                    {/* Blank/Reset option */}
+                    <button
+                      onClick={() => {
+                        updateConfig({
+                          level: 100,
+                          ability: null,
+                          item: null,
+                          nature: "Hardy",
+                          evs: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 },
+                          ivs: { hp: 31, attack: 31, defense: 31, specialAttack: 31, specialDefense: 31, speed: 31 },
+                          moves: [null, null, null, null],
+                        });
+                        setShowSetsDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-slate-700 transition-colors flex items-center gap-3 border-b border-slate-700"
+                    >
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-600 text-slate-300 font-medium min-w-[50px] text-center">
+                        Reset
+                      </span>
+                      <span className="text-sm text-slate-400">Blank (Neutral)</span>
+                    </button>
+                    {setsLoading ? (
+                      <div className="px-4 py-3 text-xs text-slate-400">Loading sets...</div>
+                    ) : smogonSets && smogonSets.length > 0 ? (
+                      smogonSets.map((set, idx) => (
+                        <button
+                          key={`${set.format}-${set.name}-${idx}`}
+                          onClick={() => applySmogonSet(set)}
+                          className="w-full px-3 py-2 text-left hover:bg-slate-700 transition-colors flex items-center gap-3"
+                        >
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-blue-600/30 text-blue-300 font-medium min-w-[50px] text-center">
+                            {set.formatDisplay}
+                          </span>
+                          <span className="text-sm text-white">{set.name}</span>
+                        </button>
+                      ))
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => {
                 setImportText(serializeToShowdown());
@@ -849,7 +959,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
               className="px-2 py-1 text-[10px] font-medium rounded border transition-colors bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600"
               title="Import/Export Showdown format"
             >
-              Showdown
+              Import/Export
             </button>
           </div>
 

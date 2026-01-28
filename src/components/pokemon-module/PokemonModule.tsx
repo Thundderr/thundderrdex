@@ -18,6 +18,7 @@ import { LocationsPanel } from "./LocationsPanel";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { NATURES } from "@/data/natures";
 import { StatValues } from "@/lib/utils/statCalculator";
+import { useSmogonSets, SmogonSet } from "@/hooks/useSmogonSets";
 import Image from "next/image";
 
 interface Props {
@@ -108,6 +109,10 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
   const [showImportExport, setShowImportExport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Load Set dropdown state
+  const [showSetsDropdown, setShowSetsDropdown] = useState(false);
+  const { data: smogonSets, isLoading: setsLoading } = useSmogonSets(module.pokemonName);
 
   // Serialize to Showdown format
   const serializeToShowdown = () => {
@@ -404,6 +409,58 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     setImportError(null);
   };
 
+  // Apply a Smogon set to the module
+  const applySmogonSet = (set: SmogonSet) => {
+    // Helper to get first value if array
+    const getFirst = <T,>(val: T | T[] | undefined): T | undefined =>
+      Array.isArray(val) ? val[0] : val;
+
+    // Map Smogon stat keys to our stat keys
+    const mapEvs = (evs: SmogonSet["evs"]): StatValues => ({
+      hp: evs?.hp ?? 0,
+      attack: evs?.atk ?? 0,
+      defense: evs?.def ?? 0,
+      specialAttack: evs?.spa ?? 0,
+      specialDefense: evs?.spd ?? 0,
+      speed: evs?.spe ?? 0,
+    });
+
+    const mapIvs = (ivs: SmogonSet["ivs"]): StatValues => ({
+      hp: ivs?.hp ?? 31,
+      attack: ivs?.atk ?? 31,
+      defense: ivs?.def ?? 31,
+      specialAttack: ivs?.spa ?? 31,
+      specialDefense: ivs?.spd ?? 31,
+      speed: ivs?.spe ?? 31,
+    });
+
+    // Normalize move name for our system
+    const normalizeMoveName = (move: string): string =>
+      move.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+
+    // Get moves (first 4, taking first option if slash)
+    const moves: (string | null)[] = [null, null, null, null];
+    set.moves.slice(0, 4).forEach((move, idx) => {
+      const moveName = Array.isArray(move) ? move[0] : move;
+      if (moveName) {
+        moves[idx] = normalizeMoveName(moveName);
+      }
+    });
+
+    const updates: Parameters<typeof setStatModifiers>[1] = {
+      level: set.level ?? 100,
+      ability: getFirst(set.ability) ?? null,
+      item: getFirst(set.item) ?? null,
+      nature: getFirst(set.nature) ?? "Hardy",
+      evs: mapEvs(set.evs),
+      ivs: mapIvs(set.ivs),
+      moves,
+    };
+
+    setStatModifiers(module.id, updates);
+    setShowSetsDropdown(false);
+  };
+
   const filteredResults = useMemo(() => {
     if (!query || !pokemonList) return [];
     const lowerQuery = query.toLowerCase().trim();
@@ -659,19 +716,78 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
         {/* Action Buttons */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {pokemon && (
-            <button
-              onClick={() => {
-                setImportText(serializeToShowdown());
-                setImportError(null);
-                setShowImportExport(true);
-              }}
-              className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-              title="Import/Export Showdown format"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            </button>
+            <>
+              {/* Load Set Button with Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSetsDropdown(!showSetsDropdown)}
+                  onBlur={() => setTimeout(() => setShowSetsDropdown(false), 200)}
+                  className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-blue-400"
+                  title="Load competitive set"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                </button>
+                {showSetsDropdown && (
+                  <div className="absolute z-50 right-0 top-full mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
+                    <div className="py-1">
+                      {/* Blank/Reset option */}
+                      <button
+                        onClick={() => {
+                          setStatModifiers(module.id, {
+                            level: 100,
+                            ability: null,
+                            item: null,
+                            nature: "Hardy",
+                            evs: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 },
+                            ivs: { hp: 31, attack: 31, defense: 31, specialAttack: 31, specialDefense: 31, speed: 31 },
+                            moves: [null, null, null, null],
+                          });
+                          setShowSetsDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 text-left hover:bg-slate-700 transition-colors flex items-center gap-3 border-b border-slate-700"
+                      >
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-600 text-slate-300 font-medium min-w-[50px] text-center">
+                          Reset
+                        </span>
+                        <span className="text-sm text-slate-400">Blank (Neutral)</span>
+                      </button>
+                      {setsLoading ? (
+                        <div className="px-4 py-3 text-xs text-slate-400">Loading sets...</div>
+                      ) : smogonSets && smogonSets.length > 0 ? (
+                        smogonSets.map((set, idx) => (
+                          <button
+                            key={`${set.format}-${set.name}-${idx}`}
+                            onClick={() => applySmogonSet(set)}
+                            className="w-full px-3 py-2 text-left hover:bg-slate-700 transition-colors flex items-center gap-3"
+                          >
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-blue-600/30 text-blue-300 font-medium min-w-[50px] text-center">
+                              {set.formatDisplay}
+                            </span>
+                            <span className="text-sm text-white">{set.name}</span>
+                          </button>
+                        ))
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Import/Export Button */}
+              <button
+                onClick={() => {
+                  setImportText(serializeToShowdown());
+                  setImportError(null);
+                  setShowImportExport(true);
+                }}
+                className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+                title="Import/Export"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </button>
+            </>
           )}
           <button
             onClick={() => removeModule(module.id)}

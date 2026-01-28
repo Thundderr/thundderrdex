@@ -52,26 +52,35 @@ function convertToSmogonPokemon(
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join("-");
 
+    // Verify the Pokemon exists in this generation's dex
+    const species = gen.species.get(pokemonName);
+    if (!species) return null;
+
+    // Build options object, only including defined values
+    const ivs = {
+      hp: config.ivs.hp,
+      atk: config.ivs.attack,
+      def: config.ivs.defense,
+      spa: config.ivs.specialAttack,
+      spd: config.ivs.specialDefense,
+      spe: config.ivs.speed,
+    };
+
+    const evs = {
+      hp: config.evs.hp,
+      atk: config.evs.attack,
+      def: config.evs.defense,
+      spa: config.evs.specialAttack,
+      spd: config.evs.specialDefense,
+      spe: config.evs.speed,
+    };
+
     // First create Pokemon to get maxHP, then recreate with proper curHP if needed
     const tempPokemon = new Pokemon(gen, pokemonName, {
       level: config.level,
       nature: config.nature,
-      ivs: {
-        hp: config.ivs.hp,
-        atk: config.ivs.attack,
-        def: config.ivs.defense,
-        spa: config.ivs.specialAttack,
-        spd: config.ivs.specialDefense,
-        spe: config.ivs.speed,
-      },
-      evs: {
-        hp: config.evs.hp,
-        atk: config.evs.attack,
-        def: config.evs.defense,
-        spa: config.evs.specialAttack,
-        spd: config.evs.specialDefense,
-        spe: config.evs.speed,
-      },
+      ivs,
+      evs,
     });
 
     // Calculate current HP based on percentage
@@ -80,35 +89,33 @@ function convertToSmogonPokemon(
       ? Math.floor((config.currentHpPercent / 100) * maxHP)
       : maxHP;
 
-    // Create the actual Pokemon with all options
-    const pokemon = new Pokemon(gen, pokemonName, {
+    // Build the full options, only including ability/item if they're valid strings
+    const options: Parameters<typeof Pokemon>[2] = {
       level: config.level,
       nature: config.nature,
-      ability: config.ability || undefined,
-      item: config.item || undefined,
-      ivs: {
-        hp: config.ivs.hp,
-        atk: config.ivs.attack,
-        def: config.ivs.defense,
-        spa: config.ivs.specialAttack,
-        spd: config.ivs.specialDefense,
-        spe: config.ivs.speed,
-      },
-      evs: {
-        hp: config.evs.hp,
-        atk: config.evs.attack,
-        def: config.evs.defense,
-        spa: config.evs.specialAttack,
-        spd: config.evs.specialDefense,
-        spe: config.evs.speed,
-      },
+      ivs,
+      evs,
       boosts: config.boosts,
       status: convertStatus(config.status),
       curHP: curHP,
-    });
+    };
+
+    // Only add ability if it's a non-empty string
+    if (config.ability && typeof config.ability === "string" && config.ability.trim()) {
+      options.ability = config.ability;
+    }
+
+    // Only add item if it's a non-empty string
+    if (config.item && typeof config.item === "string" && config.item.trim()) {
+      options.item = config.item;
+    }
+
+    // Create the actual Pokemon with all options
+    const pokemon = new Pokemon(gen, pokemonName, options);
 
     return pokemon;
-  } catch {
+  } catch (error) {
+    console.error("Error creating Pokemon for damage calc:", error);
     return null;
   }
 }
