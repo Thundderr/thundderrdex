@@ -236,9 +236,9 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
       {/* Content */}
       <div className="p-3">
         {/* Main Grid: Attacker | Controls | Defender */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
           {/* Attacker Panel */}
-          <div>
+          <div className="flex flex-col">
             <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
               <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -252,8 +252,8 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
             />
           </div>
 
-          {/* Center Controls - Compact */}
-          <div className="space-y-2">
+          {/* Center Controls - Compact with constrained height */}
+          <div className="space-y-2 overflow-hidden">
             {/* Swap Button - Smaller */}
             <div className="flex justify-center">
               <button
@@ -361,14 +361,6 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
                   )}
                 </div>
 
-                {/* Original Move (if transformed) */}
-                {isGimmickActive && (
-                  <div className="text-[10px] text-slate-500 mb-2 flex items-center gap-1">
-                    <span>From:</span>
-                    <span className="text-slate-400">{selectedMoveData.displayName}</span>
-                    <span className="text-slate-600">({selectedMoveData.power ?? "Status"} BP)</span>
-                  </div>
-                )}
 
                 {/* Power Display - Large and prominent */}
                 <div className="flex items-baseline gap-4 mb-2">
@@ -404,19 +396,19 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
                   )}
                 </div>
 
-                {/* Effect/Description */}
+                {/* Effect/Description - limited to 2 lines */}
                 {isGimmickActive && transformedMoveInfo.effect ? (
-                  <div className={`text-[10px] leading-relaxed p-2 rounded ${
+                  <div className={`text-[10px] leading-tight p-1.5 rounded line-clamp-2 ${
                     module.attacker.useZMove
                       ? "bg-yellow-900/20 text-yellow-300/90"
                       : isGmaxMove
                         ? "bg-purple-900/20 text-purple-300/90"
                         : "bg-red-900/20 text-red-300/90"
-                  }`}>
+                  }`} title={transformedMoveInfo.effect}>
                     {transformedMoveInfo.effect}
                   </div>
                 ) : selectedMoveData.description && !isGimmickActive ? (
-                  <div className="text-[10px] text-slate-400 leading-relaxed">
+                  <div className="text-[10px] text-slate-400 leading-tight line-clamp-2" title={selectedMoveData.description}>
                     {selectedMoveData.description}
                   </div>
                 ) : null}
@@ -432,7 +424,7 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
           </div>
 
           {/* Defender Panel */}
-          <div>
+          <div className="flex flex-col">
             <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
               <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />

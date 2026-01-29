@@ -989,9 +989,9 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
 
               {/* Dynamax/Gigantamax - Gen 8 */}
               {genFeatures.hasDynamax && (
-                <div className="flex flex-col items-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+                <div className="flex flex-col items-end justify-between h-12 py-0.5" onClick={(e) => e.stopPropagation()}>
                   {/* Dynamax option */}
-                  <label className="flex items-center gap-1.5 cursor-pointer">
+                  <label className="flex items-center gap-1 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={config.isDynamaxed && !config.useGigantamax}
@@ -1002,9 +1002,9 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                           updateConfig({ isDynamaxed: false });
                         }
                       }}
-                      className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-red-500 focus:ring-red-500 focus:ring-offset-slate-800"
+                      className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-red-500 focus:ring-red-500 focus:ring-offset-slate-800"
                     />
-                    <span className={`text-[10px] ${
+                    <span className={`text-[9px] ${
                       config.isDynamaxed && !config.useGigantamax
                         ? "text-red-400 font-medium"
                         : "text-slate-400"
@@ -1012,48 +1012,44 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                       Dynamax
                     </span>
                   </label>
-                  {/* G-Max option (only for Pokemon that can Gigantamax) */}
-                  {pokemonCanGmax && (
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.isDynamaxed && config.useGigantamax}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            updateConfig({ isDynamaxed: true, useGigantamax: true });
-                          } else {
-                            updateConfig({ isDynamaxed: false, useGigantamax: false });
-                          }
-                        }}
-                        className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-slate-800"
-                      />
-                      <span className={`text-[10px] ${
-                        config.isDynamaxed && config.useGigantamax
-                          ? "text-purple-400 font-medium"
-                          : "text-slate-400"
-                      }`}>
-                        G-Max
-                      </span>
-                    </label>
-                  )}
-                  {/* Dynamax Level selector */}
-                  {config.isDynamaxed && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] text-slate-500">Lv</span>
-                      <select
-                        value={config.dynamaxLevel ?? 10}
-                        onChange={(e) => updateConfig({ dynamaxLevel: parseInt(e.target.value) })}
-                        className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-[10px] text-white focus:outline-none focus:border-red-400"
-                        title={`${((1.5 + (config.dynamaxLevel ?? 10) * 0.05) * 100).toFixed(0)}% HP`}
-                      >
-                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
-                          <option key={level} value={level}>
-                            {level}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  {/* G-Max option (only for Pokemon that can Gigantamax) - always reserve space */}
+                  <label className={`flex items-center gap-1 cursor-pointer ${pokemonCanGmax ? "" : "invisible"}`}>
+                    <input
+                      type="checkbox"
+                      checked={config.isDynamaxed && config.useGigantamax}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          updateConfig({ isDynamaxed: true, useGigantamax: true });
+                        } else {
+                          updateConfig({ isDynamaxed: false, useGigantamax: false });
+                        }
+                      }}
+                      className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-slate-800"
+                    />
+                    <span className={`text-[9px] ${
+                      config.isDynamaxed && config.useGigantamax
+                        ? "text-purple-400 font-medium"
+                        : "text-slate-400"
+                    }`}>
+                      G-Max
+                    </span>
+                  </label>
+                  {/* Dynamax Level selector - always present to prevent layout shift */}
+                  <div className={`flex items-center gap-1 ${config.isDynamaxed ? "" : "invisible"}`}>
+                    <span className="text-[8px] text-slate-500">Lv</span>
+                    <select
+                      value={config.dynamaxLevel ?? 10}
+                      onChange={(e) => updateConfig({ dynamaxLevel: parseInt(e.target.value) })}
+                      className="w-9 bg-slate-700 border border-slate-600 rounded px-0.5 py-0 text-[9px] text-white focus:outline-none focus:border-red-400"
+                      title={`${((1.5 + (config.dynamaxLevel ?? 10) * 0.05) * 100).toFixed(0)}% HP`}
+                    >
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                        <option key={level} value={level}>
+                          {level}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
             </div>

@@ -128,9 +128,9 @@ export function DamageResults({ result }: Props) {
           </div>
         </div>
 
-        {/* Full Description */}
+        {/* Full Description - limited to 2 lines */}
         <div className="pt-1.5 border-t border-slate-700">
-          <p className="text-[10px] text-slate-300 leading-relaxed break-words">
+          <p className="text-[10px] text-slate-300 leading-tight line-clamp-2" title={result.fullDesc}>
             {result.fullDesc}
           </p>
         </div>
