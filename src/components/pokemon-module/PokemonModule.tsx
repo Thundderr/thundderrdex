@@ -744,16 +744,14 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
           {pokemon && (
             <>
               {/* Load Set Button with Dropdown */}
-              <div className="relative">
+              <div className="relative flex items-center">
                 <button
                   onClick={() => setShowSetsDropdown(!showSetsDropdown)}
                   onBlur={() => setTimeout(() => setShowSetsDropdown(false), 200)}
-                  className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-blue-400"
+                  className="px-1.5 py-1 hover:bg-slate-700 rounded text-[10px] font-medium text-slate-400 hover:text-blue-400"
                   title="Load competitive set"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
+                  Sets
                 </button>
                 {showSetsDropdown && (
                   <div className="absolute z-50 right-0 top-full mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
@@ -806,12 +804,10 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                   setImportError(null);
                   setShowImportExport(true);
                 }}
-                className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+                className="px-1.5 py-1 hover:bg-slate-700 rounded text-[10px] font-medium text-slate-400 hover:text-white"
                 title="Import/Export"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
+                Import/Export
               </button>
             </>
           )}
