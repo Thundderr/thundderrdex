@@ -249,7 +249,7 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
   }, [isSearchingItem]);
 
   // Check if current Pokemon is a Mega (for locking item)
-  const isCurrentMega = isMegaPokemon(pokemonName);
+  const isCurrentMega = isMegaPokemon(pokemonName ?? null);
   const megaStone = pokemonName ? getMegaStone(pokemonName) : null;
 
   // Auto-set Mega Stone when a Mega Pokemon is selected
