@@ -249,9 +249,9 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
                       STAB
                     </span>
                   )}
-                  {/* Floating tooltip on click */}
+                  {/* Floating tooltip on click - goes down for first 2 rows, up otherwise */}
                   {entry.move.description && openTooltipId === entry.move.id && (
-                    <div className="absolute left-0 bottom-full mb-1 z-20">
+                    <div className={`absolute left-0 z-20 ${idx < 2 ? "top-full mt-1" : "bottom-full mb-1"}`}>
                       <div className="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 shadow-lg max-w-xs">
                         <p className="text-[11px] text-slate-300 whitespace-normal">{entry.move.description}</p>
                       </div>
