@@ -9,6 +9,7 @@ import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TYPES_BY_GENERATION } from "@/data/typeChart";
+import { isMegaPokemon, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
 import { PokemonModule as PokemonModuleType, ModuleTab } from "@/types/module";
 import { StatsDisplay } from "./StatsDisplay";
 import { AbilitiesPanel } from "./AbilitiesPanel";
@@ -47,6 +48,31 @@ function getPokemonGeneration(pokedexId: number): number {
   return 9;
 }
 
+// Get the display ID - use base species ID for variants/megas
+function getDisplayId(pokemonName: string, apiId: number): number {
+  if (isMegaPokemon(pokemonName)) {
+    const megaInfo = getMegaPokemonInfo(pokemonName);
+    return megaInfo?.baseSpeciesId ?? apiId;
+  }
+  if (isRegionalVariant(pokemonName)) {
+    const variantInfo = getRegionalVariantInfo(pokemonName);
+    return variantInfo?.baseSpeciesId ?? apiId;
+  }
+  return apiId;
+}
+
+// Get generation range for any Pokemon (including Megas and Regional Variants)
+function getPokemonGenerationRange(pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } {
+  if (isMegaPokemon(pokemonName)) {
+    return { minGen: 6, maxGen: 7 };
+  }
+  const regionalInfo = getRegionalVariantInfo(pokemonName);
+  if (regionalInfo) {
+    return { minGen: regionalInfo.minGeneration, maxGen: null };
+  }
+  return { minGen: getPokemonGeneration(pokedexId), maxGen: null };
+}
+
 export function PokemonModule({ module, isOverlay = false }: Props) {
   const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule, setStatModifiers } =
     useModuleStore();
@@ -75,10 +101,10 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
 
   // Check if Pokemon exists in the current generation
   const pokemonExistsInGen = useMemo(() => {
-    if (!pokemon) return true;
-    const pokeGen = getPokemonGeneration(pokemon.id);
-    return pokeGen <= globalGeneration;
-  }, [pokemon, globalGeneration]);
+    if (!pokemon || !module.pokemonName) return true;
+    const { minGen, maxGen } = getPokemonGenerationRange(module.pokemonName, pokemon.id);
+    return globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
+  }, [pokemon, module.pokemonName, globalGeneration]);
 
   const {
     attributes,
@@ -467,11 +493,10 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     if (!lowerQuery) return [];
 
     return pokemonList
-      .filter(
-        (p) =>
-          p.name.includes(lowerQuery) ||
-          p.displayName.toLowerCase().includes(lowerQuery) ||
-          p.id.toString() === lowerQuery
+      .filter((p) =>
+        p.name.includes(lowerQuery) ||
+        p.displayName.toLowerCase().includes(lowerQuery) ||
+        p.id.toString() === lowerQuery
       )
       .slice(0, 10)
       .sort((a, b) => {
@@ -653,12 +678,12 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-72 overflow-auto"
             >
               {filteredResults.map((poke, index) => {
-                const pokeGen = getPokemonGeneration(poke.id);
-                const existsInGen = pokeGen <= globalGeneration;
+                const { minGen, maxGen } = getPokemonGenerationRange(poke.name, poke.id);
+                const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
 
                 return (
                   <li
-                    key={poke.id}
+                    key={poke.name}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => existsInGen && handleSelect(poke.name)}
                     className={`flex items-center gap-2 px-3 py-2 transition-colors ${
@@ -693,12 +718,12 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setGeneration(pokeGen);
+                          setGeneration(minGen);
                         }}
                         className="px-1.5 py-0.5 text-[10px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors"
-                        title={`Switch to Gen ${pokeGen} to enable`}
+                        title={`Switch to Gen ${minGen}${maxGen ? `-${maxGen}` : ""}`}
                       >
-                        Gen {pokeGen}
+                        Gen {minGen}{maxGen ? `-${maxGen}` : ""}
                       </button>
                     )}
                   </li>
@@ -877,7 +902,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                     {pokemon.displayName}
                   </h2>
                   <p className="text-sm text-slate-400 mb-1">
-                    #{pokemon.id.toString().padStart(4, "0")}
+                    #{getDisplayId(module.pokemonName ?? "", pokemon.id).toString().padStart(4, "0")}
                   </p>
                   <div className="flex items-center gap-1.5">
                     {pokemon.types.map((type) => {

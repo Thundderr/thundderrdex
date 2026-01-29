@@ -13,6 +13,7 @@ import { PokemonTypeName } from "@/types/pokemon";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { calculateDualTypeEffectiveness } from "@/lib/utils/typeEffectiveness";
 import { TYPES_BY_GENERATION, TYPE_COLORS } from "@/data/typeChart";
+import { isMegaPokemon, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 
 interface Props {
@@ -31,6 +32,18 @@ function getPokemonGeneration(pokedexId: number): number {
   if (pokedexId <= 809) return 7;
   if (pokedexId <= 905) return 8;
   return 9;
+}
+
+// Get generation range for any Pokemon (including Megas and Regional Variants)
+function getPokemonGenerationRange(pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } {
+  if (isMegaPokemon(pokemonName)) {
+    return { minGen: 6, maxGen: 7 };
+  }
+  const regionalInfo = getRegionalVariantInfo(pokemonName);
+  if (regionalInfo) {
+    return { minGen: regionalInfo.minGeneration, maxGen: null };
+  }
+  return { minGen: getPokemonGeneration(pokedexId), maxGen: null };
 }
 
 // Team slot component with search
@@ -75,11 +88,10 @@ function TeamSlot({
     if (!lowerQuery) return [];
 
     return pokemonList
-      .filter(
-        (p) =>
-          p.name.includes(lowerQuery) ||
-          p.displayName.toLowerCase().includes(lowerQuery) ||
-          p.id.toString() === lowerQuery
+      .filter((p) =>
+        p.name.includes(lowerQuery) ||
+        p.displayName.toLowerCase().includes(lowerQuery) ||
+        p.id.toString() === lowerQuery
       )
       .slice(0, 8)
       .sort((a, b) => {
@@ -161,27 +173,34 @@ function TeamSlot({
               className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-48 overflow-auto"
             >
               {filteredResults.map((poke, index) => {
-                const pokeGen = getPokemonGeneration(poke.id);
-                const existsInGen = pokeGen <= globalGeneration;
+                const { minGen, maxGen } = getPokemonGenerationRange(poke.name, poke.id);
+                const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
 
                 return (
                   <li
-                    key={poke.id}
+                    key={poke.name}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => existsInGen && handleSelect(poke.name)}
                     className={`flex items-center gap-1.5 px-2 py-1 text-xs transition-colors ${
                       index === highlightedIndex ? "bg-slate-700" : "hover:bg-slate-700/50"
                     } ${!existsInGen ? "cursor-not-allowed" : "cursor-pointer"}`}
                   >
-                    <Image
-                      src={poke.spriteUrl}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className={`pixelated ${!existsInGen ? "opacity-40 grayscale" : ""}`}
-                      unoptimized
-                    />
-                    <span className={`flex-1 truncate ${existsInGen ? "text-white" : "text-slate-500"}`}>
+                    <div className="relative flex-shrink-0">
+                      <Image
+                        src={poke.spriteUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className={`pixelated ${!existsInGen ? "opacity-40 grayscale" : ""}`}
+                        unoptimized
+                      />
+                      {!existsInGen && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-full h-0.5 bg-red-500 rotate-[-20deg]" />
+                        </div>
+                      )}
+                    </div>
+                    <span className={`flex-1 truncate ${existsInGen ? "text-white" : "text-slate-500 line-through"}`}>
                       {poke.displayName}
                     </span>
                     {!existsInGen && (
@@ -189,11 +208,11 @@ function TeamSlot({
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setGeneration(pokeGen);
+                          setGeneration(minGen);
                         }}
                         className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded"
                       >
-                        Gen {pokeGen}
+                        Gen {minGen}{maxGen ? `-${maxGen}` : ""}
                       </button>
                     )}
                   </li>

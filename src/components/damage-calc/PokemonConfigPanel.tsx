@@ -15,7 +15,7 @@ import { NATURES, getNatureByName, STAT_DISPLAY_NAMES, StatKey } from "@/data/na
 import { TYPE_COLORS } from "@/data/typeChart";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
-import { getGenerationFeatures, POKEMON_TYPES, getZCrystals, isZCrystal, getItemsForGeneration, getCommonItemsForGeneration, getDynamaxHpMultiplier, canGigantamax, getMaxMoveName, getZMoveName, getGMaxMove } from "@/lib/utils/generationConfig";
+import { getGenerationFeatures, POKEMON_TYPES, getZCrystals, isZCrystal, getItemsForGeneration, getCommonItemsForGeneration, getDynamaxHpMultiplier, canGigantamax, getMaxMoveName, getZMoveName, getGMaxMove, isMegaPokemon, getMegaStone, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
 
 interface Props {
   moduleId: string;
@@ -24,7 +24,7 @@ interface Props {
 }
 
 // Pokemon generation ranges by Pokedex number
-function getPokemonGeneration(pokedexId: number): number {
+function getPokemonGenerationById(pokedexId: number): number {
   if (pokedexId <= 151) return 1;
   if (pokedexId <= 251) return 2;
   if (pokedexId <= 386) return 3;
@@ -34,6 +34,23 @@ function getPokemonGeneration(pokedexId: number): number {
   if (pokedexId <= 809) return 7;
   if (pokedexId <= 905) return 8;
   return 9;
+}
+
+// Get generation for any Pokemon, including Megas and Regional Variants
+function getPokemonGeneration(pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } {
+  // Check if it's a Mega Pokemon (Gen 6-7 only)
+  if (isMegaPokemon(pokemonName)) {
+    return { minGen: 6, maxGen: 7 };
+  }
+
+  // Check if it's a Regional Variant
+  const regionalInfo = getRegionalVariantInfo(pokemonName);
+  if (regionalInfo) {
+    return { minGen: regionalInfo.minGeneration, maxGen: null };
+  }
+
+  // Regular Pokemon - use Pokedex ID
+  return { minGen: getPokemonGenerationById(pokedexId), maxGen: null };
 }
 
 // Stat keys for the table
@@ -144,10 +161,17 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
 
   // Check if Pokemon exists in the current generation
   const pokemonExistsInGen = useMemo(() => {
-    if (!pokemon) return true;
-    const pokeGen = getPokemonGeneration(pokemon.id);
-    return pokeGen <= globalGeneration;
-  }, [pokemon, globalGeneration]);
+    if (!pokemon || !config.pokemonName) return true;
+    const { minGen, maxGen } = getPokemonGeneration(config.pokemonName, pokemon.id);
+    // Pokemon exists if current gen is >= minGen and (no maxGen or current gen <= maxGen)
+    return globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
+  }, [pokemon, config.pokemonName, globalGeneration]);
+
+  // Get the min generation for the selected Pokemon (for "Gen X" button)
+  const pokemonMinGen = useMemo(() => {
+    if (!pokemon || !config.pokemonName) return 1;
+    return getPokemonGeneration(config.pokemonName, pokemon.id).minGen;
+  }, [pokemon, config.pokemonName]);
 
   // Get abilities for the Pokemon
   const abilities = useMemo(() => {
@@ -283,11 +307,10 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
     if (!lowerQuery) return [];
 
     return pokemonList
-      .filter(
-        (p) =>
-          p.name.includes(lowerQuery) ||
-          p.displayName.toLowerCase().includes(lowerQuery) ||
-          p.id.toString() === lowerQuery
+      .filter((p) =>
+        p.name.includes(lowerQuery) ||
+        p.displayName.toLowerCase().includes(lowerQuery) ||
+        p.id.toString() === lowerQuery
       )
       .slice(0, 8)
       .sort((a, b) => {
@@ -462,6 +485,19 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
       updateConfig({ ability: abilities[0] });
     }
   }, [pokemon, abilities]);
+
+  // Auto-set Mega Stone when a Mega Pokemon is selected
+  useEffect(() => {
+    if (config.pokemonName) {
+      const megaStone = getMegaStone(config.pokemonName);
+      if (megaStone && config.item !== megaStone) {
+        updateConfig({ item: megaStone });
+      }
+    }
+  }, [config.pokemonName]);
+
+  // Check if current Pokemon is a Mega (for locking item)
+  const isCurrentMega = isMegaPokemon(config.pokemonName);
 
   // Focus move input when editing
   useEffect(() => {
@@ -646,9 +682,13 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
       return { error: `Pokemon "${pokemonName}" not found` };
     }
 
-    const pokeGen = getPokemonGeneration(foundPokemon.id);
-    if (pokeGen > globalGeneration) {
-      return { error: `${foundPokemon.displayName} is from Gen ${pokeGen}, but current generation is Gen ${globalGeneration}` };
+    const { minGen, maxGen } = getPokemonGeneration(foundPokemon.name, foundPokemon.id);
+    const existsInCurrentGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
+    if (!existsInCurrentGen) {
+      if (maxGen !== null) {
+        return { error: `${foundPokemon.displayName} only exists in Gen ${minGen}-${maxGen}, but current generation is Gen ${globalGeneration}` };
+      }
+      return { error: `${foundPokemon.displayName} is from Gen ${minGen}, but current generation is Gen ${globalGeneration}` };
     }
 
     // Parse remaining lines
@@ -863,12 +903,12 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
               className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-48 overflow-auto"
             >
               {filteredResults.map((poke, index) => {
-                const pokeGen = getPokemonGeneration(poke.id);
-                const existsInGen = pokeGen <= globalGeneration;
+                const { minGen, maxGen } = getPokemonGeneration(poke.name, poke.id);
+                const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
 
                 return (
                   <li
-                    key={poke.id}
+                    key={poke.name}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => existsInGen && handleSelect(poke.name)}
                     className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
@@ -877,16 +917,23 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                         : "hover:bg-slate-700/50"
                     } ${!existsInGen ? "cursor-not-allowed" : "cursor-pointer"}`}
                   >
-                    <Image
-                      src={poke.spriteUrl}
-                      alt=""
-                      width={24}
-                      height={24}
-                      className={`pixelated ${!existsInGen ? "opacity-40 grayscale" : ""}`}
-                      unoptimized
-                    />
+                    <div className="relative flex-shrink-0">
+                      <Image
+                        src={poke.spriteUrl}
+                        alt=""
+                        width={24}
+                        height={24}
+                        className={`pixelated ${!existsInGen ? "opacity-40 grayscale" : ""}`}
+                        unoptimized
+                      />
+                      {!existsInGen && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-full h-0.5 bg-red-500 rotate-[-20deg]" />
+                        </div>
+                      )}
+                    </div>
                     <span
-                      className={`flex-1 truncate ${existsInGen ? "text-white" : "text-slate-500"}`}
+                      className={`flex-1 truncate ${existsInGen ? "text-white" : "text-slate-500 line-through"}`}
                     >
                       {poke.displayName}
                     </span>
@@ -895,11 +942,11 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setGeneration(pokeGen);
+                          setGeneration(minGen);
                         }}
                         className="px-1.5 py-0.5 text-[10px] bg-blue-600 hover:bg-blue-500 text-white rounded"
                       >
-                        Gen {pokeGen}
+                        Gen {minGen}{maxGen ? `-${maxGen}` : ""}
                       </button>
                     )}
                   </li>
@@ -1060,12 +1107,12 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setGeneration(getPokemonGeneration(pokemon.id));
+                setGeneration(pokemonMinGen);
               }}
               className="px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
-              title={`Switch to Gen ${getPokemonGeneration(pokemon.id)}`}
+              title={`Switch to Gen ${pokemonMinGen}`}
             >
-              Gen {getPokemonGeneration(pokemon.id)}
+              Gen {pokemonMinGen}
             </button>
           )}
         </div>
@@ -1322,11 +1369,22 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
             </select>
           </div>
 
-          {/* Item Row - Searchable */}
+          {/* Item Row - Searchable (locked for Mega Pokemon) */}
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-slate-400 w-14">Item</label>
             <div className="flex-1 relative">
-              {isItemSearching ? (
+              {isCurrentMega ? (
+                // Mega Pokemon: show locked item
+                <div
+                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-xs bg-slate-700 border border-amber-600/50 text-amber-400 cursor-not-allowed"
+                  title="Mega Pokemon require their Mega Stone"
+                >
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span className="truncate">{config.item}</span>
+                </div>
+              ) : isItemSearching ? (
                 <div>
                   <input
                     ref={itemInputRef}
@@ -1384,7 +1442,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                 </button>
               )}
             </div>
-            {config.item && (
+            {config.item && !isCurrentMega && (
               <button
                 onClick={() => updateConfig({ item: null })}
                 className="p-1 text-slate-500 hover:text-red-400 rounded"

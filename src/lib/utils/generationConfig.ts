@@ -340,6 +340,214 @@ export function getDynamaxHpMultiplier(dynamaxLevel: number): number {
 }
 
 /**
+ * Mega Pokemon data - maps Mega Pokemon names to their info
+ * Includes base species ID for sprite lookup and required Mega Stone
+ * Gen 6-7 only
+ */
+export interface MegaPokemonInfo {
+  name: string;           // API name (e.g., "venusaur-mega")
+  displayName: string;    // Display name (e.g., "Mega Venusaur")
+  baseSpeciesId: number;  // Base Pokemon ID for display (e.g., #3 for Venusaur)
+  formId: number;         // PokeAPI form ID for sprite lookup
+  megaStone: string;      // Required held item
+}
+
+export const MEGA_POKEMON: MegaPokemonInfo[] = [
+  // Gen 1 Megas
+  { name: "venusaur-mega", displayName: "Mega Venusaur", baseSpeciesId: 3, formId: 10033, megaStone: "Venusaurite" },
+  { name: "charizard-mega-x", displayName: "Mega Charizard X", baseSpeciesId: 6, formId: 10034, megaStone: "Charizardite X" },
+  { name: "charizard-mega-y", displayName: "Mega Charizard Y", baseSpeciesId: 6, formId: 10035, megaStone: "Charizardite Y" },
+  { name: "blastoise-mega", displayName: "Mega Blastoise", baseSpeciesId: 9, formId: 10036, megaStone: "Blastoisinite" },
+  { name: "beedrill-mega", displayName: "Mega Beedrill", baseSpeciesId: 15, formId: 10090, megaStone: "Beedrillite" },
+  { name: "pidgeot-mega", displayName: "Mega Pidgeot", baseSpeciesId: 18, formId: 10073, megaStone: "Pidgeotite" },
+  { name: "alakazam-mega", displayName: "Mega Alakazam", baseSpeciesId: 65, formId: 10037, megaStone: "Alakazite" },
+  { name: "slowbro-mega", displayName: "Mega Slowbro", baseSpeciesId: 80, formId: 10071, megaStone: "Slowbronite" },
+  { name: "gengar-mega", displayName: "Mega Gengar", baseSpeciesId: 94, formId: 10038, megaStone: "Gengarite" },
+  { name: "kangaskhan-mega", displayName: "Mega Kangaskhan", baseSpeciesId: 115, formId: 10039, megaStone: "Kangaskhanite" },
+  { name: "pinsir-mega", displayName: "Mega Pinsir", baseSpeciesId: 127, formId: 10040, megaStone: "Pinsirite" },
+  { name: "gyarados-mega", displayName: "Mega Gyarados", baseSpeciesId: 130, formId: 10041, megaStone: "Gyaradosite" },
+  { name: "aerodactyl-mega", displayName: "Mega Aerodactyl", baseSpeciesId: 142, formId: 10042, megaStone: "Aerodactylite" },
+  { name: "mewtwo-mega-x", displayName: "Mega Mewtwo X", baseSpeciesId: 150, formId: 10043, megaStone: "Mewtwonite X" },
+  { name: "mewtwo-mega-y", displayName: "Mega Mewtwo Y", baseSpeciesId: 150, formId: 10044, megaStone: "Mewtwonite Y" },
+  // Gen 2 Megas
+  { name: "ampharos-mega", displayName: "Mega Ampharos", baseSpeciesId: 181, formId: 10045, megaStone: "Ampharosite" },
+  { name: "steelix-mega", displayName: "Mega Steelix", baseSpeciesId: 208, formId: 10072, megaStone: "Steelixite" },
+  { name: "scizor-mega", displayName: "Mega Scizor", baseSpeciesId: 212, formId: 10046, megaStone: "Scizorite" },
+  { name: "heracross-mega", displayName: "Mega Heracross", baseSpeciesId: 214, formId: 10047, megaStone: "Heracronite" },
+  { name: "houndoom-mega", displayName: "Mega Houndoom", baseSpeciesId: 229, formId: 10048, megaStone: "Houndoominite" },
+  { name: "tyranitar-mega", displayName: "Mega Tyranitar", baseSpeciesId: 248, formId: 10049, megaStone: "Tyranitarite" },
+  // Gen 3 Megas
+  { name: "sceptile-mega", displayName: "Mega Sceptile", baseSpeciesId: 254, formId: 10065, megaStone: "Sceptilite" },
+  { name: "blaziken-mega", displayName: "Mega Blaziken", baseSpeciesId: 257, formId: 10050, megaStone: "Blazikenite" },
+  { name: "swampert-mega", displayName: "Mega Swampert", baseSpeciesId: 260, formId: 10064, megaStone: "Swampertite" },
+  { name: "gardevoir-mega", displayName: "Mega Gardevoir", baseSpeciesId: 282, formId: 10051, megaStone: "Gardevoirite" },
+  { name: "sableye-mega", displayName: "Mega Sableye", baseSpeciesId: 302, formId: 10066, megaStone: "Sablenite" },
+  { name: "mawile-mega", displayName: "Mega Mawile", baseSpeciesId: 303, formId: 10052, megaStone: "Mawilite" },
+  { name: "aggron-mega", displayName: "Mega Aggron", baseSpeciesId: 306, formId: 10053, megaStone: "Aggronite" },
+  { name: "medicham-mega", displayName: "Mega Medicham", baseSpeciesId: 308, formId: 10054, megaStone: "Medichamite" },
+  { name: "manectric-mega", displayName: "Mega Manectric", baseSpeciesId: 310, formId: 10055, megaStone: "Manectite" },
+  { name: "sharpedo-mega", displayName: "Mega Sharpedo", baseSpeciesId: 319, formId: 10070, megaStone: "Sharpedoite" },
+  { name: "camerupt-mega", displayName: "Mega Camerupt", baseSpeciesId: 323, formId: 10087, megaStone: "Cameruptite" },
+  { name: "altaria-mega", displayName: "Mega Altaria", baseSpeciesId: 334, formId: 10067, megaStone: "Altarianite" },
+  { name: "banette-mega", displayName: "Mega Banette", baseSpeciesId: 354, formId: 10056, megaStone: "Banettite" },
+  { name: "absol-mega", displayName: "Mega Absol", baseSpeciesId: 359, formId: 10057, megaStone: "Absolite" },
+  { name: "glalie-mega", displayName: "Mega Glalie", baseSpeciesId: 362, formId: 10074, megaStone: "Glalitite" },
+  { name: "salamence-mega", displayName: "Mega Salamence", baseSpeciesId: 373, formId: 10089, megaStone: "Salamencite" },
+  { name: "metagross-mega", displayName: "Mega Metagross", baseSpeciesId: 376, formId: 10076, megaStone: "Metagrossite" },
+  { name: "latias-mega", displayName: "Mega Latias", baseSpeciesId: 380, formId: 10062, megaStone: "Latiasite" },
+  { name: "latios-mega", displayName: "Mega Latios", baseSpeciesId: 381, formId: 10063, megaStone: "Latiosite" },
+  { name: "rayquaza-mega", displayName: "Mega Rayquaza", baseSpeciesId: 384, formId: 10079, megaStone: "Dragon Ascent" }, // No stone, requires Dragon Ascent
+  // Gen 4 Megas
+  { name: "lopunny-mega", displayName: "Mega Lopunny", baseSpeciesId: 428, formId: 10088, megaStone: "Lopunnite" },
+  { name: "garchomp-mega", displayName: "Mega Garchomp", baseSpeciesId: 445, formId: 10058, megaStone: "Garchompite" },
+  { name: "lucario-mega", displayName: "Mega Lucario", baseSpeciesId: 448, formId: 10059, megaStone: "Lucarionite" },
+  { name: "abomasnow-mega", displayName: "Mega Abomasnow", baseSpeciesId: 460, formId: 10060, megaStone: "Abomasite" },
+  { name: "gallade-mega", displayName: "Mega Gallade", baseSpeciesId: 475, formId: 10068, megaStone: "Galladite" },
+  // Gen 5 Megas
+  { name: "audino-mega", displayName: "Mega Audino", baseSpeciesId: 531, formId: 10069, megaStone: "Audinite" },
+  // Gen 6 Megas
+  { name: "diancie-mega", displayName: "Mega Diancie", baseSpeciesId: 719, formId: 10075, megaStone: "Diancite" },
+  // Primal Reversions (similar mechanic)
+  { name: "groudon-primal", displayName: "Primal Groudon", baseSpeciesId: 383, formId: 10078, megaStone: "Red Orb" },
+  { name: "kyogre-primal", displayName: "Primal Kyogre", baseSpeciesId: 382, formId: 10077, megaStone: "Blue Orb" },
+];
+
+/**
+ * Map from Mega Pokemon name to its Mega Stone
+ */
+export const MEGA_STONE_MAP: Record<string, string> = Object.fromEntries(
+  MEGA_POKEMON.map(m => [m.name, m.megaStone])
+);
+
+/**
+ * Check if a Pokemon is a Mega Pokemon
+ */
+export function isMegaPokemon(pokemonName: string | null): boolean {
+  if (!pokemonName) return false;
+  return pokemonName.includes("-mega") || pokemonName.includes("-primal");
+}
+
+/**
+ * Get the Mega Stone required for a Mega Pokemon
+ */
+export function getMegaStone(pokemonName: string | null): string | null {
+  if (!pokemonName) return null;
+  return MEGA_STONE_MAP[pokemonName] || null;
+}
+
+/**
+ * Get Mega Pokemon info by name
+ */
+export function getMegaPokemonInfo(pokemonName: string): MegaPokemonInfo | null {
+  return MEGA_POKEMON.find(m => m.name === pokemonName) || null;
+}
+
+/**
+ * Regional variant data - maps regional form names to their info
+ * Includes base species ID for display and formId for sprites
+ */
+export interface RegionalVariantInfo {
+  name: string;           // API name (e.g., "raichu-alola")
+  displayName: string;    // Display name (e.g., "Alolan Raichu")
+  baseSpeciesId: number;  // Base Pokemon ID for display (e.g., #26 for Raichu)
+  formId: number;         // PokeAPI form ID for sprite lookup
+  region: "alola" | "galar" | "hisui" | "paldea";
+  minGeneration: number;  // First generation this form appears in
+}
+
+export const REGIONAL_VARIANTS: RegionalVariantInfo[] = [
+  // ===== ALOLAN FORMS (Gen 7+) =====
+  { name: "rattata-alola", displayName: "Alolan Rattata", baseSpeciesId: 19, formId: 10091, region: "alola", minGeneration: 7 },
+  { name: "raticate-alola", displayName: "Alolan Raticate", baseSpeciesId: 20, formId: 10092, region: "alola", minGeneration: 7 },
+  { name: "raichu-alola", displayName: "Alolan Raichu", baseSpeciesId: 26, formId: 10100, region: "alola", minGeneration: 7 },
+  { name: "sandshrew-alola", displayName: "Alolan Sandshrew", baseSpeciesId: 27, formId: 10101, region: "alola", minGeneration: 7 },
+  { name: "sandslash-alola", displayName: "Alolan Sandslash", baseSpeciesId: 28, formId: 10102, region: "alola", minGeneration: 7 },
+  { name: "vulpix-alola", displayName: "Alolan Vulpix", baseSpeciesId: 37, formId: 10103, region: "alola", minGeneration: 7 },
+  { name: "ninetales-alola", displayName: "Alolan Ninetales", baseSpeciesId: 38, formId: 10104, region: "alola", minGeneration: 7 },
+  { name: "diglett-alola", displayName: "Alolan Diglett", baseSpeciesId: 50, formId: 10105, region: "alola", minGeneration: 7 },
+  { name: "dugtrio-alola", displayName: "Alolan Dugtrio", baseSpeciesId: 51, formId: 10106, region: "alola", minGeneration: 7 },
+  { name: "meowth-alola", displayName: "Alolan Meowth", baseSpeciesId: 52, formId: 10107, region: "alola", minGeneration: 7 },
+  { name: "persian-alola", displayName: "Alolan Persian", baseSpeciesId: 53, formId: 10108, region: "alola", minGeneration: 7 },
+  { name: "geodude-alola", displayName: "Alolan Geodude", baseSpeciesId: 74, formId: 10109, region: "alola", minGeneration: 7 },
+  { name: "graveler-alola", displayName: "Alolan Graveler", baseSpeciesId: 75, formId: 10110, region: "alola", minGeneration: 7 },
+  { name: "golem-alola", displayName: "Alolan Golem", baseSpeciesId: 76, formId: 10111, region: "alola", minGeneration: 7 },
+  { name: "grimer-alola", displayName: "Alolan Grimer", baseSpeciesId: 88, formId: 10112, region: "alola", minGeneration: 7 },
+  { name: "muk-alola", displayName: "Alolan Muk", baseSpeciesId: 89, formId: 10113, region: "alola", minGeneration: 7 },
+  { name: "exeggutor-alola", displayName: "Alolan Exeggutor", baseSpeciesId: 103, formId: 10114, region: "alola", minGeneration: 7 },
+  { name: "marowak-alola", displayName: "Alolan Marowak", baseSpeciesId: 105, formId: 10115, region: "alola", minGeneration: 7 },
+
+  // ===== GALARIAN FORMS (Gen 8+) =====
+  { name: "meowth-galar", displayName: "Galarian Meowth", baseSpeciesId: 52, formId: 10161, region: "galar", minGeneration: 8 },
+  { name: "ponyta-galar", displayName: "Galarian Ponyta", baseSpeciesId: 77, formId: 10162, region: "galar", minGeneration: 8 },
+  { name: "rapidash-galar", displayName: "Galarian Rapidash", baseSpeciesId: 78, formId: 10163, region: "galar", minGeneration: 8 },
+  { name: "slowpoke-galar", displayName: "Galarian Slowpoke", baseSpeciesId: 79, formId: 10164, region: "galar", minGeneration: 8 },
+  { name: "slowbro-galar", displayName: "Galarian Slowbro", baseSpeciesId: 80, formId: 10165, region: "galar", minGeneration: 8 },
+  { name: "farfetchd-galar", displayName: "Galarian Farfetch'd", baseSpeciesId: 83, formId: 10166, region: "galar", minGeneration: 8 },
+  { name: "weezing-galar", displayName: "Galarian Weezing", baseSpeciesId: 110, formId: 10167, region: "galar", minGeneration: 8 },
+  { name: "mr-mime-galar", displayName: "Galarian Mr. Mime", baseSpeciesId: 122, formId: 10168, region: "galar", minGeneration: 8 },
+  { name: "articuno-galar", displayName: "Galarian Articuno", baseSpeciesId: 144, formId: 10169, region: "galar", minGeneration: 8 },
+  { name: "zapdos-galar", displayName: "Galarian Zapdos", baseSpeciesId: 145, formId: 10170, region: "galar", minGeneration: 8 },
+  { name: "moltres-galar", displayName: "Galarian Moltres", baseSpeciesId: 146, formId: 10171, region: "galar", minGeneration: 8 },
+  { name: "slowking-galar", displayName: "Galarian Slowking", baseSpeciesId: 199, formId: 10172, region: "galar", minGeneration: 8 },
+  { name: "corsola-galar", displayName: "Galarian Corsola", baseSpeciesId: 222, formId: 10173, region: "galar", minGeneration: 8 },
+  { name: "zigzagoon-galar", displayName: "Galarian Zigzagoon", baseSpeciesId: 263, formId: 10174, region: "galar", minGeneration: 8 },
+  { name: "linoone-galar", displayName: "Galarian Linoone", baseSpeciesId: 264, formId: 10175, region: "galar", minGeneration: 8 },
+  { name: "darumaka-galar", displayName: "Galarian Darumaka", baseSpeciesId: 554, formId: 10176, region: "galar", minGeneration: 8 },
+  { name: "darmanitan-galar-standard", displayName: "Galarian Darmanitan", baseSpeciesId: 555, formId: 10177, region: "galar", minGeneration: 8 },
+  { name: "yamask-galar", displayName: "Galarian Yamask", baseSpeciesId: 562, formId: 10178, region: "galar", minGeneration: 8 },
+  { name: "stunfisk-galar", displayName: "Galarian Stunfisk", baseSpeciesId: 618, formId: 10179, region: "galar", minGeneration: 8 },
+
+  // ===== HISUIAN FORMS (Gen 8 Legends/Gen 9+) =====
+  { name: "growlithe-hisui", displayName: "Hisuian Growlithe", baseSpeciesId: 58, formId: 10229, region: "hisui", minGeneration: 8 },
+  { name: "arcanine-hisui", displayName: "Hisuian Arcanine", baseSpeciesId: 59, formId: 10230, region: "hisui", minGeneration: 8 },
+  { name: "voltorb-hisui", displayName: "Hisuian Voltorb", baseSpeciesId: 100, formId: 10231, region: "hisui", minGeneration: 8 },
+  { name: "electrode-hisui", displayName: "Hisuian Electrode", baseSpeciesId: 101, formId: 10232, region: "hisui", minGeneration: 8 },
+  { name: "typhlosion-hisui", displayName: "Hisuian Typhlosion", baseSpeciesId: 157, formId: 10233, region: "hisui", minGeneration: 8 },
+  { name: "qwilfish-hisui", displayName: "Hisuian Qwilfish", baseSpeciesId: 211, formId: 10234, region: "hisui", minGeneration: 8 },
+  { name: "sneasel-hisui", displayName: "Hisuian Sneasel", baseSpeciesId: 215, formId: 10235, region: "hisui", minGeneration: 8 },
+  { name: "samurott-hisui", displayName: "Hisuian Samurott", baseSpeciesId: 503, formId: 10236, region: "hisui", minGeneration: 8 },
+  { name: "lilligant-hisui", displayName: "Hisuian Lilligant", baseSpeciesId: 549, formId: 10237, region: "hisui", minGeneration: 8 },
+  { name: "zorua-hisui", displayName: "Hisuian Zorua", baseSpeciesId: 570, formId: 10238, region: "hisui", minGeneration: 8 },
+  { name: "zoroark-hisui", displayName: "Hisuian Zoroark", baseSpeciesId: 571, formId: 10239, region: "hisui", minGeneration: 8 },
+  { name: "braviary-hisui", displayName: "Hisuian Braviary", baseSpeciesId: 628, formId: 10240, region: "hisui", minGeneration: 8 },
+  { name: "sliggoo-hisui", displayName: "Hisuian Sliggoo", baseSpeciesId: 705, formId: 10241, region: "hisui", minGeneration: 8 },
+  { name: "goodra-hisui", displayName: "Hisuian Goodra", baseSpeciesId: 706, formId: 10242, region: "hisui", minGeneration: 8 },
+  { name: "avalugg-hisui", displayName: "Hisuian Avalugg", baseSpeciesId: 713, formId: 10243, region: "hisui", minGeneration: 8 },
+  { name: "decidueye-hisui", displayName: "Hisuian Decidueye", baseSpeciesId: 724, formId: 10244, region: "hisui", minGeneration: 8 },
+
+  // ===== PALDEAN FORMS (Gen 9+) =====
+  { name: "wooper-paldea", displayName: "Paldean Wooper", baseSpeciesId: 194, formId: 10253, region: "paldea", minGeneration: 9 },
+  { name: "tauros-paldea-combat-breed", displayName: "Paldean Tauros (Combat)", baseSpeciesId: 128, formId: 10250, region: "paldea", minGeneration: 9 },
+  { name: "tauros-paldea-blaze-breed", displayName: "Paldean Tauros (Blaze)", baseSpeciesId: 128, formId: 10251, region: "paldea", minGeneration: 9 },
+  { name: "tauros-paldea-aqua-breed", displayName: "Paldean Tauros (Aqua)", baseSpeciesId: 128, formId: 10252, region: "paldea", minGeneration: 9 },
+];
+
+/**
+ * Check if a Pokemon is a regional variant
+ */
+export function isRegionalVariant(pokemonName: string | null): boolean {
+  if (!pokemonName) return false;
+  return pokemonName.includes("-alola") ||
+         pokemonName.includes("-galar") ||
+         pokemonName.includes("-hisui") ||
+         pokemonName.includes("-paldea");
+}
+
+/**
+ * Get regional variant info by name
+ */
+export function getRegionalVariantInfo(pokemonName: string): RegionalVariantInfo | null {
+  return REGIONAL_VARIANTS.find(v => v.name === pokemonName) || null;
+}
+
+/**
+ * Get all regional variants available in a generation
+ */
+export function getRegionalVariantsForGeneration(gen: number): RegionalVariantInfo[] {
+  return REGIONAL_VARIANTS.filter(v => v.minGeneration <= gen);
+}
+
+/**
  * Z-Crystals mapped to their types for Z-Move selection
  */
 export const Z_CRYSTALS: Record<string, string> = {
@@ -456,6 +664,17 @@ const ITEMS_BY_GEN: string[][] = [
     "Black Sludge", "Red Card", "Eject Button", "Roseli Berry", "Kee Berry",
     "Maranga Berry", "Lum Berry", "Sitrus Berry", "Chesto Berry",
     "Red Orb", "Blue Orb", // Primal orbs
+    // Mega Stones (Gen 6 XY + ORAS)
+    "Venusaurite", "Charizardite X", "Charizardite Y", "Blastoisinite",
+    "Beedrillite", "Pidgeotite", "Alakazite", "Slowbronite", "Gengarite",
+    "Kangaskhanite", "Pinsirite", "Gyaradosite", "Aerodactylite",
+    "Mewtwonite X", "Mewtwonite Y", "Ampharosite", "Steelixite", "Scizorite",
+    "Heracronite", "Houndoominite", "Tyranitarite", "Sceptilite", "Blazikenite",
+    "Swampertite", "Gardevoirite", "Sablenite", "Mawilite", "Aggronite",
+    "Medichamite", "Manectite", "Sharpedoite", "Cameruptite", "Altarianite",
+    "Banettite", "Absolite", "Glalitite", "Salamencite", "Metagrossite",
+    "Latiasite", "Latiosite", "Lopunnite", "Garchompite", "Lucarionite",
+    "Abomasite", "Galladite", "Audinite", "Diancite",
   ],
   // Gen 7 (SM) - adds Z-Crystals, terrain seeds
   [
