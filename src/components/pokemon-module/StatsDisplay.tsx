@@ -69,6 +69,12 @@ const EV_PRESETS = [
   { label: "HP/SpD", evs: { hp: 252, attack: 0, defense: 4, specialAttack: 0, specialDefense: 252, speed: 0 } },
 ];
 
+// Helper to parse input values and strip leading zeros
+const parseInputValue = (value: string): number => {
+  const stripped = value.replace(/^0+/, "") || "0";
+  return parseInt(stripped, 10) || 0;
+};
+
 export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props) {
   const { tabs, activeTabId, setLevel, setIv, setEv, setNature, setAllIvs, setAllEvs, setAbility, setItem, setModuleMove } = useModuleStore();
   const { globalGeneration } = useGenerationStore();
@@ -328,19 +334,19 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                 {calcValue}
               </span>
               <input
-                type="number"
-                min={0}
-                max={31}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={statModifiers.ivs[key]}
-                onChange={(e) => setIv(moduleId, key, parseInt(e.target.value) || 0)}
+                onChange={(e) => setIv(moduleId, key, Math.max(0, Math.min(31, parseInputValue(e.target.value))))}
                 className="w-9 bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-[11px] text-white text-center focus:outline-none focus:border-blue-500"
               />
               <input
-                type="number"
-                min={0}
-                max={252}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={statModifiers.evs[key]}
-                onChange={(e) => setEv(moduleId, key, parseInt(e.target.value) || 0)}
+                onChange={(e) => setEv(moduleId, key, Math.max(0, Math.min(252, parseInputValue(e.target.value))))}
                 className="w-10 bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-[11px] text-white text-center focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -371,11 +377,11 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
         <div className="flex items-center gap-1.5">
           <label className="text-[10px] text-slate-400">Lv</label>
           <input
-            type="number"
-            min={1}
-            max={100}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={statModifiers.level}
-            onChange={(e) => setLevel(moduleId, parseInt(e.target.value) || 1)}
+            onChange={(e) => setLevel(moduleId, Math.max(1, Math.min(100, parseInputValue(e.target.value) || 1)))}
             className="w-12 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white text-center focus:outline-none focus:border-blue-500"
           />
         </div>
