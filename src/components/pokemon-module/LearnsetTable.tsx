@@ -35,6 +35,7 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
   const [activeMethod, setActiveMethod] = useState<LearnMethod>("level-up");
   const [sortKey, setSortKey] = useState<SortKey>("level");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [openTooltipId, setOpenTooltipId] = useState<number | null>(null);
 
   const filteredLearnset = useMemo(() => {
     if (!learnset) return [];
@@ -226,9 +227,10 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
             {filteredLearnset.map((entry, idx) => (
               <tr
                 key={`${entry.move.id}-${idx}`}
-                className={`border-b border-slate-800 hover:bg-slate-800/50 ${
+                className={`border-b border-slate-800 hover:bg-slate-800/50 relative cursor-pointer ${
                   isSTAB(entry.move.type) ? "bg-slate-800/30" : ""
                 }`}
+                onClick={() => setOpenTooltipId(openTooltipId === entry.move.id ? null : entry.move.id)}
               >
                 {activeMethod === "level-up" && (
                   <td className="py-1.5 px-2 text-slate-400">
@@ -240,12 +242,20 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
                     {entry.machineNumber ?? "-"}
                   </td>
                 )}
-                <td className="py-1.5 px-2 text-white">
+                <td className="py-1.5 px-2 text-white relative">
                   {entry.move.displayName}
-                  {isSTAB(entry.move.type) && (
+                  {isSTAB(entry.move.type) && entry.move.damageClass !== "status" && (
                     <span className="ml-1 text-[10px] text-yellow-400 font-semibold">
                       STAB
                     </span>
+                  )}
+                  {/* Floating tooltip on click */}
+                  {entry.move.description && openTooltipId === entry.move.id && (
+                    <div className="absolute left-0 bottom-full mb-1 z-20">
+                      <div className="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 shadow-lg max-w-xs">
+                        <p className="text-[11px] text-slate-300 whitespace-normal">{entry.move.description}</p>
+                      </div>
+                    </div>
                   )}
                 </td>
                 <td className="py-1.5 px-2">
