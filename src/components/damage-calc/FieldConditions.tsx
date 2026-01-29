@@ -1,7 +1,9 @@
 "use client";
 
 import { useModuleStore } from "@/stores/moduleStore";
+import { useGenerationStore } from "@/stores/generationStore";
 import { DamageCalcFieldConfig, DamageCalcSideConfig } from "@/types/module";
+import { getGenerationFeatures, WeatherType } from "@/lib/utils/generationConfig";
 
 interface Props {
   moduleId: string;
@@ -68,6 +70,8 @@ function Counter({
 
 export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel }: Props) {
   const { setDamageCalcField, setDamageCalcBothLevels } = useModuleStore();
+  const { globalGeneration } = useGenerationStore();
+  const genFeatures = getGenerationFeatures(globalGeneration);
 
   // Check if both levels are the same for highlighting presets
   const bothSameLevel = attackerLevel === defenderLevel;
@@ -84,8 +88,20 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
     updateField({ defenderSide: { ...field.defenderSide, ...updates } });
   };
 
+  // Handle weather toggle - if current weather is not available in this gen, reset to None
+  const handleWeatherToggle = (weather: WeatherType) => {
+    if (field.weather === weather) {
+      updateField({ weather: "None" });
+    } else {
+      updateField({ weather });
+    }
+  };
+
+  // Check if current weather is valid for this generation
+  const isWeatherAvailable = (weather: WeatherType) => genFeatures.weatherTypes.includes(weather);
+
   return (
-    <div className="bg-slate-800 rounded-lg p-3 space-y-2">
+    <div className="bg-slate-800 rounded-lg p-2 space-y-1.5">
       {/* Level Presets Row */}
       <div className="flex items-center justify-center gap-1">
         <span className="text-[10px] text-slate-500 mr-1">Level</span>
@@ -125,88 +141,144 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
         </Toggle>
       </div>
 
-      {/* Weather Row */}
-      <div className="flex items-center justify-center gap-1 flex-wrap">
-        <Toggle
-          active={field.weather === "None"}
-          onClick={() => updateField({ weather: "None" })}
-        >
-          None
-        </Toggle>
-        <Toggle
-          active={field.weather === "Sun"}
-          onClick={() => updateField({ weather: "Sun" })}
-        >
-          Sun
-        </Toggle>
-        <Toggle
-          active={field.weather === "Rain"}
-          onClick={() => updateField({ weather: "Rain" })}
-        >
-          Rain
-        </Toggle>
-        <Toggle
-          active={field.weather === "Sand"}
-          onClick={() => updateField({ weather: "Sand" })}
-        >
-          Sand
-        </Toggle>
-        <Toggle
-          active={field.weather === "Snow"}
-          onClick={() => updateField({ weather: "Snow" })}
-        >
-          Snow
-        </Toggle>
-      </div>
+      {/* Weather Row - Only show if generation has weather */}
+      {genFeatures.hasWeather && (
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          <Toggle
+            active={field.weather === "None"}
+            onClick={() => updateField({ weather: "None" })}
+          >
+            None
+          </Toggle>
+          {isWeatherAvailable("Sun") && (
+            <Toggle
+              active={field.weather === "Sun"}
+              onClick={() => handleWeatherToggle("Sun")}
+            >
+              Sun
+            </Toggle>
+          )}
+          {isWeatherAvailable("Rain") && (
+            <Toggle
+              active={field.weather === "Rain"}
+              onClick={() => handleWeatherToggle("Rain")}
+            >
+              Rain
+            </Toggle>
+          )}
+          {isWeatherAvailable("Sand") && (
+            <Toggle
+              active={field.weather === "Sand"}
+              onClick={() => handleWeatherToggle("Sand")}
+            >
+              Sand
+            </Toggle>
+          )}
+          {isWeatherAvailable("Hail") && (
+            <Toggle
+              active={field.weather === "Hail"}
+              onClick={() => handleWeatherToggle("Hail")}
+            >
+              Hail
+            </Toggle>
+          )}
+          {isWeatherAvailable("Snow") && (
+            <Toggle
+              active={field.weather === "Snow"}
+              onClick={() => handleWeatherToggle("Snow")}
+            >
+              Snow
+            </Toggle>
+          )}
+        </div>
+      )}
 
-      {/* Terrain Row */}
-      <div className="flex items-center justify-center gap-1 flex-wrap">
-        <Toggle
-          active={field.terrain === "Electric"}
-          onClick={() => updateField({ terrain: field.terrain === "Electric" ? "None" : "Electric" })}
-        >
-          Electric
-        </Toggle>
-        <Toggle
-          active={field.terrain === "Grassy"}
-          onClick={() => updateField({ terrain: field.terrain === "Grassy" ? "None" : "Grassy" })}
-        >
-          Grassy
-        </Toggle>
-        <Toggle
-          active={field.terrain === "Misty"}
-          onClick={() => updateField({ terrain: field.terrain === "Misty" ? "None" : "Misty" })}
-        >
-          Misty
-        </Toggle>
-        <Toggle
-          active={field.terrain === "Psychic"}
-          onClick={() => updateField({ terrain: field.terrain === "Psychic" ? "None" : "Psychic" })}
-        >
-          Psychic
-        </Toggle>
-      </div>
+      {/* Primal Weather Row - Gen 6-8 only */}
+      {(isWeatherAvailable("Harsh Sunshine") || isWeatherAvailable("Heavy Rain") || isWeatherAvailable("Strong Winds")) && (
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          {isWeatherAvailable("Harsh Sunshine") && (
+            <Toggle
+              active={field.weather === "Harsh Sunshine"}
+              onClick={() => handleWeatherToggle("Harsh Sunshine")}
+            >
+              Harsh Sun
+            </Toggle>
+          )}
+          {isWeatherAvailable("Heavy Rain") && (
+            <Toggle
+              active={field.weather === "Heavy Rain"}
+              onClick={() => handleWeatherToggle("Heavy Rain")}
+            >
+              Heavy Rain
+            </Toggle>
+          )}
+          {isWeatherAvailable("Strong Winds") && (
+            <Toggle
+              active={field.weather === "Strong Winds"}
+              onClick={() => handleWeatherToggle("Strong Winds")}
+            >
+              Strong Winds
+            </Toggle>
+          )}
+        </div>
+      )}
 
-      {/* Global Effects Row */}
-      <div className="flex items-center justify-center gap-1">
-        <Toggle
-          active={field.isMagicRoom}
-          onClick={() => updateField({ isMagicRoom: !field.isMagicRoom })}
-        >
-          Magic Room
-        </Toggle>
-        <Toggle
-          active={field.isWonderRoom}
-          onClick={() => updateField({ isWonderRoom: !field.isWonderRoom })}
-        >
-          Wonder Room
-        </Toggle>
-        <Toggle
-          active={field.isGravity}
-          onClick={() => updateField({ isGravity: !field.isGravity })}
-        >
-          Gravity
-        </Toggle>
+      {/* Terrain Row - Gen 6+ only */}
+      {genFeatures.hasTerrains && (
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          <Toggle
+            active={field.terrain === "Electric"}
+            onClick={() => updateField({ terrain: field.terrain === "Electric" ? "None" : "Electric" })}
+          >
+            Electric
+          </Toggle>
+          <Toggle
+            active={field.terrain === "Grassy"}
+            onClick={() => updateField({ terrain: field.terrain === "Grassy" ? "None" : "Grassy" })}
+          >
+            Grassy
+          </Toggle>
+          <Toggle
+            active={field.terrain === "Misty"}
+            onClick={() => updateField({ terrain: field.terrain === "Misty" ? "None" : "Misty" })}
+          >
+            Misty
+          </Toggle>
+          <Toggle
+            active={field.terrain === "Psychic"}
+            onClick={() => updateField({ terrain: field.terrain === "Psychic" ? "None" : "Psychic" })}
+          >
+            Psychic
+          </Toggle>
+        </div>
+      )}
+
+      {/* Global Effects Row - conditionally show based on generation */}
+      <div className="flex items-center justify-center gap-1 flex-wrap">
+        {genFeatures.hasMagicRoom && (
+          <Toggle
+            active={field.isMagicRoom}
+            onClick={() => updateField({ isMagicRoom: !field.isMagicRoom })}
+          >
+            Magic Room
+          </Toggle>
+        )}
+        {genFeatures.hasWonderRoom && (
+          <Toggle
+            active={field.isWonderRoom}
+            onClick={() => updateField({ isWonderRoom: !field.isWonderRoom })}
+          >
+            Wonder Room
+          </Toggle>
+        )}
+        {genFeatures.hasGravity && (
+          <Toggle
+            active={field.isGravity}
+            onClick={() => updateField({ isGravity: !field.isGravity })}
+          >
+            Gravity
+          </Toggle>
+        )}
         <Toggle
           active={field.isCritical}
           onClick={() => updateField({ isCritical: !field.isCritical })}
@@ -234,20 +306,22 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
               Light Screen
             </Toggle>
           </div>
-          <div className="flex flex-wrap gap-1 justify-center">
-            <Toggle
-              active={field.attackerSide.isTailwind}
-              onClick={() => updateAttackerSide({ isTailwind: !field.attackerSide.isTailwind })}
-            >
-              Tailwind
-            </Toggle>
-            <Toggle
-              active={field.attackerSide.isFlowerGift}
-              onClick={() => updateAttackerSide({ isFlowerGift: !field.attackerSide.isFlowerGift })}
-            >
-              Flower Gift
-            </Toggle>
-          </div>
+          {genFeatures.hasTailwind && (
+            <div className="flex flex-wrap gap-1 justify-center">
+              <Toggle
+                active={field.attackerSide.isTailwind}
+                onClick={() => updateAttackerSide({ isTailwind: !field.attackerSide.isTailwind })}
+              >
+                Tailwind
+              </Toggle>
+              <Toggle
+                active={field.attackerSide.isFlowerGift}
+                onClick={() => updateAttackerSide({ isFlowerGift: !field.attackerSide.isFlowerGift })}
+              >
+                Flower Gift
+              </Toggle>
+            </div>
+          )}
           {field.gameType === "Doubles" && (
             <>
               <div className="flex justify-center">
@@ -302,27 +376,33 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
             </Toggle>
           </div>
           <div className="flex flex-wrap gap-1 justify-center">
-            <Toggle
-              active={field.defenderSide.isAuroraVeil}
-              onClick={() => updateDefenderSide({ isAuroraVeil: !field.defenderSide.isAuroraVeil })}
-            >
-              Aurora Veil
-            </Toggle>
-            <Toggle
-              active={field.defenderSide.isTailwind}
-              onClick={() => updateDefenderSide({ isTailwind: !field.defenderSide.isTailwind })}
-            >
-              Tailwind
-            </Toggle>
+            {genFeatures.hasAuroraVeil && (
+              <Toggle
+                active={field.defenderSide.isAuroraVeil}
+                onClick={() => updateDefenderSide({ isAuroraVeil: !field.defenderSide.isAuroraVeil })}
+              >
+                Aurora Veil
+              </Toggle>
+            )}
+            {genFeatures.hasTailwind && (
+              <Toggle
+                active={field.defenderSide.isTailwind}
+                onClick={() => updateDefenderSide({ isTailwind: !field.defenderSide.isTailwind })}
+              >
+                Tailwind
+              </Toggle>
+            )}
           </div>
-          <div className="flex flex-wrap gap-1 justify-center">
-            <Toggle
-              active={field.defenderSide.isFlowerGift}
-              onClick={() => updateDefenderSide({ isFlowerGift: !field.defenderSide.isFlowerGift })}
-            >
-              Flower Gift
-            </Toggle>
-          </div>
+          {genFeatures.hasTailwind && (
+            <div className="flex flex-wrap gap-1 justify-center">
+              <Toggle
+                active={field.defenderSide.isFlowerGift}
+                onClick={() => updateDefenderSide({ isFlowerGift: !field.defenderSide.isFlowerGift })}
+              >
+                Flower Gift
+              </Toggle>
+            </div>
+          )}
           {field.gameType === "Doubles" && (
             <>
               <div className="flex justify-center">

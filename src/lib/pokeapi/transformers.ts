@@ -289,6 +289,18 @@ export async function transformMove(
     (e) => e.language.name === "en"
   );
 
+  // Replace $effect_chance placeholder with actual value
+  let description = englishEffect?.short_effect || "No description available.";
+  if (description.includes("$effect_chance")) {
+    if (data.effect_chance !== null) {
+      description = description.replace(/\$effect_chance/g, String(data.effect_chance));
+    } else {
+      // Fallback: remove the placeholder if no effect_chance data
+      description = description.replace(/\$effect_chance%/g, "a");
+      description = description.replace(/\$effect_chance/g, "");
+    }
+  }
+
   return {
     id: data.id,
     name: data.name,
@@ -298,7 +310,7 @@ export async function transformMove(
     power: data.power,
     accuracy: data.accuracy,
     pp: data.pp,
-    description: englishEffect?.short_effect || "No description available.",
+    description,
     priority: data.priority,
   };
 }

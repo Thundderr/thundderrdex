@@ -112,6 +112,17 @@ function convertToSmogonPokemon(
       options.item = config.item;
     }
 
+    // Terastallize (Gen 9)
+    if (config.teraType && typeof config.teraType === "string" && config.teraType.trim()) {
+      options.teraType = config.teraType;
+    }
+
+    // Dynamax (Gen 8)
+    if (config.isDynamaxed) {
+      options.isDynamaxed = true;
+      options.dynamaxLevel = config.dynamaxLevel ?? 10;
+    }
+
     // Create the actual Pokemon with all options
     const pokemon = new Pokemon(gen, pokemonName, options as any);
 
@@ -132,9 +143,11 @@ function convertWeather(weather: DamageCalcFieldConfig["weather"]): SmogonWeathe
     Sun: "Sun",
     Rain: "Rain",
     Sand: "Sand",
+    Hail: "Hail",
     Snow: "Snow",
     "Harsh Sunshine": "Harsh Sunshine",
     "Heavy Rain": "Heavy Rain",
+    "Strong Winds": "Strong Winds",
   };
   return weatherMap[weather];
 }
@@ -209,17 +222,45 @@ export function useDamageCalc(
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
 
+      // Build move options based on gimmicks
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const moveOptions: Record<string, any> = {
+        isCrit: fieldConfig.isCritical,
+      };
+
+      // Z-Move (Gen 7) - pass useZ and the item
+      if (attackerConfig.useZMove && globalGeneration === 7) {
+        moveOptions.useZ = true;
+        if (attackerConfig.item) {
+          moveOptions.item = attackerConfig.item;
+        }
+      }
+
+      // Max Move (Gen 8) - pass useMax and species for G-Max moves
+      if (attackerConfig.isDynamaxed && globalGeneration === 8) {
+        moveOptions.useMax = true;
+        if (attackerConfig.pokemonName) {
+          // Convert Pokemon name to proper format for species
+          const speciesName = attackerConfig.pokemonName
+            .trim()
+            .toLowerCase()
+            .split("-")
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join("-");
+          moveOptions.species = speciesName;
+        }
+        if (attackerConfig.ability) {
+          moveOptions.ability = attackerConfig.ability;
+        }
+      }
+
       let move: Move;
       try {
-        move = new Move(gen, formattedMoveName, {
-          isCrit: fieldConfig.isCritical,
-        });
+        move = new Move(gen, formattedMoveName, moveOptions);
       } catch {
         // Try with original name as fallback
         try {
-          move = new Move(gen, moveName, {
-            isCrit: fieldConfig.isCritical,
-          });
+          move = new Move(gen, moveName, moveOptions);
         } catch {
           return null;
         }

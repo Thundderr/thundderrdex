@@ -96,6 +96,7 @@ export interface PokeAPIMoveDetail {
   accuracy: number | null;
   pp: number;
   priority: number;
+  effect_chance: number | null;
   effect_entries: {
     effect: string;
     short_effect: string;

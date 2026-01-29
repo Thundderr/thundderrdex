@@ -15,6 +15,7 @@ import { NATURES, getNatureByName, STAT_DISPLAY_NAMES, StatKey } from "@/data/na
 import { TYPE_COLORS } from "@/data/typeChart";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
+import { getGenerationFeatures, POKEMON_TYPES, getZCrystals, isZCrystal, getItemsForGeneration, getCommonItemsForGeneration, getDynamaxHpMultiplier, canGigantamax, getMaxMoveName, getZMoveName, getGMaxMove } from "@/lib/utils/generationConfig";
 
 interface Props {
   moduleId: string;
@@ -75,29 +76,6 @@ const STATUS_OPTIONS: DamageCalcStatus[] = [
   "Frozen",
 ];
 
-// Common competitive items
-const COMMON_ITEMS = [
-  "Choice Band",
-  "Choice Specs",
-  "Choice Scarf",
-  "Life Orb",
-  "Leftovers",
-  "Heavy-Duty Boots",
-  "Assault Vest",
-  "Focus Sash",
-  "Rocky Helmet",
-  "Eviolite",
-  "Black Sludge",
-  "Flame Orb",
-  "Toxic Orb",
-  "Light Clay",
-  "Expert Belt",
-  "Weakness Policy",
-  "Air Balloon",
-  "Sitrus Berry",
-  "Lum Berry",
-];
-
 // Boost options for dropdown
 const BOOST_OPTIONS = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
 
@@ -122,6 +100,7 @@ function DamageClassIcon({ damageClass }: { damageClass: string }) {
 export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   const { setDamageCalcAttacker, setDamageCalcDefender, setDamageCalcMove } = useModuleStore();
   const { globalGeneration, setGeneration } = useGenerationStore();
+  const genFeatures = getGenerationFeatures(globalGeneration);
   const { data: pokemonList } = usePokemonList();
   const { data: pokemon } = usePokemon(config.pokemonName);
   const { data: learnset, isLoading: learnsetLoading } = useLearnset(config.pokemonName);
@@ -146,6 +125,13 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
 
   // Load Set dropdown state
   const [showSetsDropdown, setShowSetsDropdown] = useState(false);
+
+  // Item search state
+  const [isItemSearching, setIsItemSearching] = useState(false);
+  const [itemQuery, setItemQuery] = useState("");
+  const [itemHighlightedIndex, setItemHighlightedIndex] = useState(0);
+  const itemInputRef = useRef<HTMLInputElement>(null);
+  const itemListRef = useRef<HTMLUListElement>(null);
   const { data: smogonSets, isLoading: setsLoading } = useSmogonSets(config.pokemonName);
 
   const setConfig = isAttacker ? setDamageCalcAttacker : setDamageCalcDefender;
@@ -268,6 +254,27 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
 
     return speed;
   }, [calculatedStats, config.boosts.spe, config.status, config.item]);
+
+  // Get available items for the current generation
+  const allItemsForGen = useMemo(() => {
+    return getItemsForGeneration(globalGeneration);
+  }, [globalGeneration]);
+
+  const commonItemsForGen = useMemo(() => {
+    return getCommonItemsForGeneration(globalGeneration);
+  }, [globalGeneration]);
+
+  // Filter items based on search query
+  const filteredItemOptions = useMemo(() => {
+    if (!itemQuery.trim()) {
+      // Show common items when not searching
+      return commonItemsForGen;
+    }
+    const lowerQuery = itemQuery.toLowerCase().trim();
+    return allItemsForGen
+      .filter((item) => item.toLowerCase().includes(lowerQuery))
+      .slice(0, 12);
+  }, [itemQuery, allItemsForGen, commonItemsForGen]);
 
   // Filter Pokemon search results
   const filteredResults = useMemo(() => {
@@ -394,6 +401,50 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
     }
   };
 
+  // Item search handlers
+  const handleItemKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setItemHighlightedIndex((i) => Math.min(i + 1, filteredItemOptions.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setItemHighlightedIndex((i) => Math.max(i - 1, 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (filteredItemOptions[itemHighlightedIndex]) {
+          updateConfig({ item: filteredItemOptions[itemHighlightedIndex] });
+          setIsItemSearching(false);
+          setItemQuery("");
+        }
+        break;
+      case "Escape":
+        setIsItemSearching(false);
+        setItemQuery("");
+        break;
+    }
+  };
+
+  const selectItem = (item: string) => {
+    updateConfig({ item });
+    setIsItemSearching(false);
+    setItemQuery("");
+    setItemHighlightedIndex(0);
+  };
+
+  useEffect(() => {
+    setItemHighlightedIndex(0);
+  }, [itemQuery]);
+
+  useEffect(() => {
+    if (itemListRef.current && filteredItemOptions.length > 0) {
+      const item = itemListRef.current.children[itemHighlightedIndex] as HTMLElement;
+      item?.scrollIntoView({ block: "nearest" });
+    }
+  }, [itemHighlightedIndex, filteredItemOptions.length]);
+
   useEffect(() => {
     setHighlightedIndex(0);
   }, [query]);
@@ -430,8 +481,54 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   }, [moveHighlightedIndex, filteredMoveOptions.length]);
 
   const evTotal = Object.values(config.evs).reduce((sum, v) => sum + v, 0);
-  const maxHp = calculatedStats?.hp || 100;
+  const baseMaxHp = calculatedStats?.hp || 100;
+
+  // Calculate Dynamax HP if applicable
+  const isDynamaxed = config.isDynamaxed && genFeatures.hasDynamax;
+  const dynamaxMultiplier = isDynamaxed ? getDynamaxHpMultiplier(config.dynamaxLevel) : 1;
+  const maxHp = Math.floor(baseMaxHp * dynamaxMultiplier);
   const currentHp = Math.floor((config.currentHpPercent / 100) * maxHp);
+
+  // Check if Pokemon can Gigantamax
+  const pokemonCanGmax = config.pokemonName ? canGigantamax(config.pokemonName) : false;
+  const gmaxMoveInfo = config.pokemonName ? getGMaxMove(config.pokemonName) : null;
+
+  // Starter G-Max moves that always have 160 BP
+  const FIXED_GMAX_POWER_POKEMON = ["rillaboom", "cinderace", "inteleon"];
+  const hasFixedGmaxPower = config.pokemonName ?
+    FIXED_GMAX_POWER_POKEMON.some(p => config.pokemonName?.toLowerCase().includes(p)) : false;
+
+  // Get transformed move name for display (Z-Move or Max/G-Max Move)
+  const getTransformedMoveName = (moveData: Move | null): { name: string; isTransformed: boolean; isGmax: boolean } => {
+    if (!moveData) return { name: "", isTransformed: false, isGmax: false };
+
+    const isStatus = moveData.power === null || moveData.power === 0;
+
+    // Z-Move transformation (Gen 7)
+    if (config.useZMove && genFeatures.hasZMoves && isAttacker) {
+      return {
+        name: isStatus ? `Z-${moveData.displayName}` : getZMoveName(moveData.type),
+        isTransformed: true,
+        isGmax: false,
+      };
+    }
+
+    // Max Move / G-Max Move transformation (Gen 8)
+    if (config.isDynamaxed && genFeatures.hasDynamax) {
+      if (isStatus) {
+        return { name: "Max Guard", isTransformed: true, isGmax: false };
+      }
+
+      // Check if using Gigantamax and this move type matches the G-Max move type
+      if (config.useGigantamax && pokemonCanGmax && gmaxMoveInfo && moveData.type === gmaxMoveInfo.type) {
+        return { name: gmaxMoveInfo.move, isTransformed: true, isGmax: true };
+      }
+
+      return { name: getMaxMoveName(moveData.type), isTransformed: true, isGmax: false };
+    }
+
+    return { name: moveData.displayName, isTransformed: false, isGmax: false };
+  };
 
   // Showdown format serializer
   const serializeToShowdown = (): string => {
@@ -635,9 +732,11 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
       }
     }
 
-    // Validate item is in common items (or set to null if not found)
-    if (item && !COMMON_ITEMS.includes(item)) {
-      item = null; // Item not in our list, ignore
+    // Validate item exists in the current generation
+    if (item && !allItemsForGen.includes(item)) {
+      // Try case-insensitive match
+      const matchedItem = allItemsForGen.find(i => i.toLowerCase() === item!.toLowerCase());
+      item = matchedItem || null;
     }
 
     // Validate nature
@@ -810,36 +909,157 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
           )}
         </div>
       ) : pokemon ? (
-        <div
-          className={`flex items-center gap-3 cursor-pointer hover:bg-slate-700/50 rounded p-1 -m-1 ${!pokemonExistsInGen ? "opacity-60" : ""}`}
-          onClick={startSearch}
-        >
-          <div className="relative flex-shrink-0">
-            <Image
-              src={pokemon.sprites.front_default || ""}
-              alt={pokemon.displayName}
-              width={48}
-              height={48}
-              className={`pixelated ${!pokemonExistsInGen ? "grayscale" : ""}`}
-              unoptimized
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm font-medium truncate ${!pokemonExistsInGen ? "text-slate-400 line-through" : "text-white"}`}>
-              {pokemon.displayName}
-            </p>
-            <div className="flex gap-1 mt-1">
-              {genTypes.map((type) => (
-                <span
-                  key={type.name}
-                  className="px-1.5 py-0.5 text-[10px] rounded text-white"
-                  style={{ backgroundColor: TYPE_COLORS[type.name] }}
-                >
-                  {type.name.toUpperCase()}
-                </span>
-              ))}
+        <div className={`flex items-start gap-2 ${!pokemonExistsInGen ? "opacity-60" : ""}`}>
+          {/* Pokemon Info (clickable to search) */}
+          <div
+            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-slate-700/50 rounded p-1 -m-1"
+            onClick={startSearch}
+          >
+            <div className="relative flex-shrink-0">
+              <Image
+                src={pokemon.sprites.front_default || ""}
+                alt={pokemon.displayName}
+                width={48}
+                height={48}
+                className={`pixelated ${!pokemonExistsInGen ? "grayscale" : ""}`}
+                unoptimized
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium truncate ${!pokemonExistsInGen ? "text-slate-400 line-through" : "text-white"}`}>
+                {pokemon.displayName}
+              </p>
+              <div className="flex gap-1 mt-1">
+                {genTypes.map((type) => (
+                  <span
+                    key={type.name}
+                    className="px-1.5 py-0.5 text-[10px] rounded text-white"
+                    style={{ backgroundColor: TYPE_COLORS[type.name] }}
+                  >
+                    {type.name.toUpperCase()}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
+
+          {/* Gimmick Controls (Gen 7+) */}
+          {pokemonExistsInGen && (genFeatures.hasTera || genFeatures.hasZMoves || genFeatures.hasDynamax) && (
+            <div className="flex-shrink-0 flex flex-col gap-1">
+              {/* Terastallize - Gen 9 */}
+              {genFeatures.hasTera && (
+                <select
+                  value={config.teraType || ""}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    updateConfig({ teraType: e.target.value || null });
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`w-24 bg-slate-700 border rounded px-1.5 py-1 text-[10px] text-white focus:outline-none focus:border-purple-400 ${
+                    config.teraType ? "border-purple-500" : "border-slate-600"
+                  }`}
+                  title="Tera Type"
+                >
+                  <option value="">No Tera</option>
+                  {POKEMON_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      Tera {type}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Z-Move - Gen 7 (attacker only) */}
+              {genFeatures.hasZMoves && isAttacker && (
+                <label
+                  className="flex items-center gap-1.5 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={config.useZMove}
+                    onChange={(e) => updateConfig({ useZMove: e.target.checked })}
+                    className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-slate-800"
+                  />
+                  <span className={`text-[10px] ${config.useZMove ? "text-yellow-400 font-medium" : "text-slate-400"}`}>
+                    Z-Move
+                  </span>
+                </label>
+              )}
+
+              {/* Dynamax/Gigantamax - Gen 8 */}
+              {genFeatures.hasDynamax && (
+                <div className="flex flex-col items-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+                  {/* Dynamax option */}
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={config.isDynamaxed && !config.useGigantamax}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          updateConfig({ isDynamaxed: true, useGigantamax: false });
+                        } else {
+                          updateConfig({ isDynamaxed: false });
+                        }
+                      }}
+                      className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-red-500 focus:ring-red-500 focus:ring-offset-slate-800"
+                    />
+                    <span className={`text-[10px] ${
+                      config.isDynamaxed && !config.useGigantamax
+                        ? "text-red-400 font-medium"
+                        : "text-slate-400"
+                    }`}>
+                      Dynamax
+                    </span>
+                  </label>
+                  {/* G-Max option (only for Pokemon that can Gigantamax) */}
+                  {pokemonCanGmax && (
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.isDynamaxed && config.useGigantamax}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            updateConfig({ isDynamaxed: true, useGigantamax: true });
+                          } else {
+                            updateConfig({ isDynamaxed: false, useGigantamax: false });
+                          }
+                        }}
+                        className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-slate-800"
+                      />
+                      <span className={`text-[10px] ${
+                        config.isDynamaxed && config.useGigantamax
+                          ? "text-purple-400 font-medium"
+                          : "text-slate-400"
+                      }`}>
+                        G-Max
+                      </span>
+                    </label>
+                  )}
+                  {/* Dynamax Level selector */}
+                  {config.isDynamaxed && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-slate-500">Lv</span>
+                      <select
+                        value={config.dynamaxLevel ?? 10}
+                        onChange={(e) => updateConfig({ dynamaxLevel: parseInt(e.target.value) })}
+                        className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-[10px] text-white focus:outline-none focus:border-red-400"
+                        title={`${((1.5 + (config.dynamaxLevel ?? 10) * 0.05) * 100).toFixed(0)}% HP`}
+                      >
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                          <option key={level} value={level}>
+                            {level}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Gen switch button for Pokemon not in current gen */}
           {!pokemonExistsInGen && (
             <button
               onClick={(e) => {
@@ -1106,21 +1326,79 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
             </select>
           </div>
 
-          {/* Item Row */}
+          {/* Item Row - Searchable */}
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-slate-400 w-14">Item</label>
-            <select
-              value={config.item || ""}
-              onChange={(e) => updateConfig({ item: e.target.value || null })}
-              className="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="">None</option>
-              {COMMON_ITEMS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1 relative">
+              {isItemSearching ? (
+                <div>
+                  <input
+                    ref={itemInputRef}
+                    type="text"
+                    value={itemQuery}
+                    onChange={(e) => setItemQuery(e.target.value)}
+                    onBlur={() =>
+                      setTimeout(() => {
+                        setIsItemSearching(false);
+                        setItemQuery("");
+                      }, 200)
+                    }
+                    onKeyDown={handleItemKeyDown}
+                    placeholder="Search items..."
+                    className="w-full px-2 py-1.5 bg-slate-700 border border-blue-500 rounded text-white placeholder-slate-400 focus:outline-none text-xs"
+                    autoFocus
+                  />
+                  {filteredItemOptions.length > 0 && (
+                    <ul
+                      ref={itemListRef}
+                      className="absolute z-50 w-full bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-48 overflow-auto"
+                    >
+                      {filteredItemOptions.map((item, index) => (
+                        <li
+                          key={item}
+                          onMouseEnter={() => setItemHighlightedIndex(index)}
+                          onClick={() => selectItem(item)}
+                          className={`px-3 py-1.5 cursor-pointer text-xs ${
+                            index === itemHighlightedIndex
+                              ? "bg-slate-700 text-white"
+                              : "text-slate-300 hover:bg-slate-700/50"
+                          }`}
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsItemSearching(true);
+                    setItemQuery("");
+                    setItemHighlightedIndex(0);
+                    setTimeout(() => itemInputRef.current?.focus(), 0);
+                  }}
+                  className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
+                    config.item
+                      ? "bg-slate-700 border border-slate-600 text-white hover:bg-slate-600"
+                      : "bg-slate-700 border border-slate-600 text-slate-400 hover:bg-slate-600 hover:text-white"
+                  }`}
+                >
+                  {config.item || "None"}
+                </button>
+              )}
+            </div>
+            {config.item && (
+              <button
+                onClick={() => updateConfig({ item: null })}
+                className="p-1 text-slate-500 hover:text-red-400 rounded"
+                title="Remove item"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Status Row */}
@@ -1149,7 +1427,9 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
           {/* Current HP Section */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <label className="text-[11px] text-slate-400 w-14">HP</label>
+              <label className={`text-[11px] w-14 ${isDynamaxed ? "text-red-400 font-medium" : "text-slate-400"}`}>
+                {isDynamaxed ? "D-Max HP" : "HP"}
+              </label>
               <div className="flex items-center gap-1 flex-1">
                 <input
                   type="text"
@@ -1160,9 +1440,16 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                     const hp = Math.max(0, Math.min(maxHp, parseInputValue(e.target.value)));
                     updateConfig({ currentHpPercent: Math.round((hp / maxHp) * 100) });
                   }}
-                  className="w-14 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-white text-center focus:outline-none focus:border-blue-500"
+                  className={`w-14 bg-slate-700 border rounded px-2 py-1 text-xs text-center focus:outline-none ${
+                    isDynamaxed ? "border-red-600/50 text-red-400 focus:border-red-500" : "border-slate-600 text-white focus:border-blue-500"
+                  }`}
                 />
-                <span className="text-[11px] text-slate-400">/{maxHp}</span>
+                <span className={`text-[11px] ${isDynamaxed ? "text-red-400" : "text-slate-400"}`}>/{maxHp}</span>
+                {isDynamaxed && (
+                  <span className="text-[9px] text-slate-500 ml-0.5">
+                    (base: {baseMaxHp})
+                  </span>
+                )}
                 <span className="text-[11px] text-slate-500 ml-1">(</span>
                 <input
                   type="text"
@@ -1180,10 +1467,13 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
               </div>
             </div>
             {/* Health Bar */}
-            <div className="h-3 bg-slate-700 rounded overflow-hidden">
+            <div className={`h-3 rounded overflow-hidden ${isDynamaxed ? "bg-red-900/50" : "bg-slate-700"}`}>
               <div
                 className={`h-full transition-all ${
-                  config.currentHpPercent > 50 ? "bg-green-500" :
+                  isDynamaxed
+                    ? config.currentHpPercent > 50 ? "bg-red-500" :
+                      config.currentHpPercent > 25 ? "bg-red-600" : "bg-red-700"
+                    : config.currentHpPercent > 50 ? "bg-green-500" :
                   config.currentHpPercent > 25 ? "bg-yellow-500" :
                   "bg-red-500"
                 }`}
@@ -1288,36 +1578,66 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                         )}
                       </div>
                     ) : moveData ? (
-                      <div
-                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[11px] cursor-pointer ${
-                          isAttacker ? "hover:bg-slate-600" : "bg-slate-700/50 hover:bg-slate-700"
-                        }`}
-                        onClick={() => {
-                          selectMoveForCalc(moveName);
-                          setEditingMoveSlot(slotIndex);
-                        }}
-                      >
-                        <TypeBadge type={moveData.type} size="xs" fixedWidth />
-                        <DamageClassIcon damageClass={moveData.damageClass} />
-                        <span className="flex-1 text-white truncate">
-                          {moveData.displayName}
-                        </span>
-                        <span className="text-slate-400 text-[10px]">
-                          {moveData.power} BP
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateMove(slotIndex, null);
-                          }}
-                          className="p-0.5 text-slate-500 hover:text-red-400 rounded"
-                          title="Remove move"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
+                      (() => {
+                        const transformed = getTransformedMoveName(moveData);
+                        const isGimmickActive = (config.useZMove && genFeatures.hasZMoves && isAttacker) ||
+                          (config.isDynamaxed && genFeatures.hasDynamax);
+
+                        return (
+                          <div
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[11px] cursor-pointer ${
+                              isAttacker
+                                ? isGimmickActive
+                                  ? config.useZMove
+                                    ? "bg-yellow-900/30 hover:bg-yellow-900/50 border border-yellow-600/30"
+                                    : transformed.isGmax
+                                      ? "bg-purple-900/30 hover:bg-purple-900/50 border border-purple-600/30"
+                                      : "bg-red-900/30 hover:bg-red-900/50 border border-red-600/30"
+                                  : "hover:bg-slate-600"
+                                : "bg-slate-700/50 hover:bg-slate-700"
+                            }`}
+                            onClick={() => {
+                              selectMoveForCalc(moveName);
+                              setEditingMoveSlot(slotIndex);
+                            }}
+                            title={isGimmickActive ? `${moveData.displayName} → ${transformed.name}` : moveData.displayName}
+                          >
+                            <TypeBadge type={moveData.type} size="xs" fixedWidth />
+                            <DamageClassIcon damageClass={moveData.damageClass} />
+                            <span className={`flex-1 truncate ${
+                              isGimmickActive
+                                ? config.useZMove
+                                  ? "text-yellow-400"
+                                  : transformed.isGmax
+                                    ? "text-purple-400"
+                                    : "text-red-400"
+                                : "text-white"
+                            }`}>
+                              {transformed.name}
+                            </span>
+                            {transformed.isGmax && (
+                              <span className="text-[8px] px-1 py-0.5 bg-purple-600/30 text-purple-300 rounded flex-shrink-0">
+                                G-MAX
+                              </span>
+                            )}
+                            <span className="text-slate-400 text-[10px] flex-shrink-0">
+                              {moveData.power} BP
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateMove(slotIndex, null);
+                              }}
+                              className="p-0.5 text-slate-500 hover:text-red-400 rounded flex-shrink-0"
+                              title="Remove move"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        );
+                      })()
                     ) : (
                       <button
                         onClick={() => setEditingMoveSlot(slotIndex)}

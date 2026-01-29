@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { GENERATIONS } from "@/data/generations";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
+import { clearAllCache } from "@/lib/queryPersister";
 
 // Pokemon generation ranges by Pokedex number
 function getPokemonGeneration(pokedexId: number): number {
@@ -26,11 +28,37 @@ export function Sidebar() {
   const { tabs, activeTabId, getRecentSearches, restoreFromRecent, clearRecentSearches, bringModuleToFront } = useModuleStore();
   const recentSearches = getRecentSearches();
   const { data: pokemonList } = usePokemonList();
+  const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
+  const [showClearCacheConfirm, setShowClearCacheConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleClearCache = async () => {
+    setIsClearing(true);
+    try {
+      // Clear React Query in-memory cache
+      queryClient.clear();
+      // Clear IndexedDB persisted cache
+      const success = await clearAllCache();
+      if (success) {
+        // Reload the page to ensure fresh state
+        window.location.reload();
+      } else {
+        alert("Failed to clear cache. Please try again.");
+        setIsClearing(false);
+        setShowClearCacheConfirm(false);
+      }
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      alert("Failed to clear cache. Please try again.");
+      setIsClearing(false);
+      setShowClearCacheConfirm(false);
+    }
+  };
 
   const currentGen = GENERATIONS.find((g) => g.id === globalGeneration);
 
@@ -200,7 +228,16 @@ export function Sidebar() {
       </div>
 
       {/* Footer - fixed at bottom */}
-      <div className="pt-4 border-t border-slate-800 mt-auto flex-shrink-0">
+      <div className="pt-4 border-t border-slate-800 mt-auto flex-shrink-0 space-y-3">
+        <button
+          onClick={() => setShowClearCacheConfirm(true)}
+          className="w-full px-2 py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded transition-colors flex items-center justify-center gap-1.5"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Clear Cache
+        </button>
         <p className="text-xs text-slate-500">
           Data from{" "}
           <a
@@ -213,6 +250,44 @@ export function Sidebar() {
           </a>
         </p>
       </div>
+
+      {/* Clear Cache Confirmation Modal */}
+      {showClearCacheConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 shadow-xl border border-slate-700">
+            <h3 className="text-lg font-semibold text-white mb-2">Clear All Cache?</h3>
+            <p className="text-sm text-slate-400 mb-4">
+              This will delete all cached Pokemon data and reload the page. The app will need to re-fetch data from PokeAPI, which may take a moment.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearCacheConfirm(false)}
+                disabled={isClearing}
+                className="px-4 py-2 text-sm text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearCache}
+                disabled={isClearing}
+                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isClearing ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Clearing...
+                  </>
+                ) : (
+                  "Clear Cache"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

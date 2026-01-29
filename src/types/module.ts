@@ -47,8 +47,13 @@ export interface DamageCalcPokemonConfig {
   boosts: DamageCalcBoosts;
   status: DamageCalcStatus;
   currentHpPercent: number; // 0-100, for moves like Water Spout, Reversal
-  teraType: string | null; // For Tera typing
+  teraType: string | null; // For Tera typing (Gen 9)
   moves: (string | null)[]; // Up to 4 moves from learnset
+  // Gimmicks
+  useZMove: boolean; // Gen 7: Whether to use Z-Move for selected move
+  isDynamaxed: boolean; // Gen 8: Whether Pokemon is Dynamaxed
+  useGigantamax: boolean; // Gen 8: Whether to use Gigantamax (if available) vs regular Dynamax
+  dynamaxLevel: number; // Gen 8: Dynamax level 0-10 (affects HP boost)
 }
 
 export interface DamageCalcSideConfig {
@@ -65,7 +70,7 @@ export interface DamageCalcSideConfig {
 
 export interface DamageCalcFieldConfig {
   gameType: "Singles" | "Doubles";
-  weather: "None" | "Sun" | "Rain" | "Sand" | "Snow" | "Harsh Sunshine" | "Heavy Rain";
+  weather: "None" | "Sun" | "Rain" | "Sand" | "Hail" | "Snow" | "Harsh Sunshine" | "Heavy Rain" | "Strong Winds";
   terrain: "None" | "Electric" | "Grassy" | "Misty" | "Psychic";
   isGravity: boolean;
   isMagicRoom: boolean;

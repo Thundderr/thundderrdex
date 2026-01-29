@@ -25,7 +25,7 @@ const createTeamBuilderModule = (): TeamBuilderModule => ({
 
 const DEFAULT_DAMAGE_CALC_POKEMON: DamageCalcPokemonConfig = {
   pokemonName: null,
-  level: 50,
+  level: 100,
   nature: "Hardy",
   ability: null,
   item: null,
@@ -36,6 +36,11 @@ const DEFAULT_DAMAGE_CALC_POKEMON: DamageCalcPokemonConfig = {
   currentHpPercent: 100,
   teraType: null,
   moves: [null, null, null, null],
+  // Gimmicks
+  useZMove: false,
+  isDynamaxed: false,
+  useGigantamax: false,
+  dynamaxLevel: 10,
 };
 
 const DEFAULT_SIDE_CONFIG = {

@@ -22,7 +22,7 @@ export interface StatValues {
 
 // Default stat modifiers
 export const DEFAULT_STAT_MODIFIERS: StatModifiers = {
-  level: 50,
+  level: 100,
   ivs: {
     hp: 31,
     attack: 31,
