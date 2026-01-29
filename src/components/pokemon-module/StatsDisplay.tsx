@@ -11,6 +11,7 @@ import { TYPE_COLORS } from "@/data/typeChart";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import { filterItems } from "@/data/items";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
+import { isMegaPokemon, getMegaStone } from "@/lib/utils/generationConfig";
 
 // Category icon matching LearnsetTable
 function DamageClassIcon({ damageClass }: { damageClass: string }) {
@@ -247,6 +248,25 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
     }
   }, [isSearchingItem]);
 
+  // Check if current Pokemon is a Mega (for locking item)
+  const isCurrentMega = isMegaPokemon(pokemonName);
+  const megaStone = pokemonName ? getMegaStone(pokemonName) : null;
+
+  // Auto-set Mega Stone when a Mega Pokemon is selected
+  useEffect(() => {
+    if (isCurrentMega && megaStone && statModifiers?.item !== megaStone) {
+      setItem(moduleId, megaStone);
+    }
+  }, [isCurrentMega, megaStone, moduleId, setItem, statModifiers?.item]);
+
+  // Auto-set first ability when Pokemon changes and no ability is selected
+  const hasSingleAbility = abilities && abilities.length === 1;
+  useEffect(() => {
+    if (abilities && abilities.length > 0 && !statModifiers?.ability) {
+      setAbility(moduleId, abilities[0].name);
+    }
+  }, [abilities, moduleId, setAbility, statModifiers?.ability]);
+
   if (!statModifiers || !calculatedStats) return null;
 
   const calculatedTotal =
@@ -334,18 +354,16 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
         <span className="text-right text-white font-mono text-xs font-bold">
           {stats.total}
         </span>
-        <div className="flex items-center justify-end pr-1">
-          <span className={`text-[10px] ${
-            evTotal > 510 ? "text-red-400" : evTotal === 510 ? "text-green-400" : "text-slate-400"
-          }`}>
-            EVs: {evTotal}/510
-          </span>
-        </div>
+        <span></span>
         <span className="text-right text-white font-mono text-xs font-bold">
           {calculatedTotal}
         </span>
         <span></span>
-        <span></span>
+        <span className={`text-[10px] text-center ${
+          evTotal > 510 ? "text-red-400" : evTotal === 510 ? "text-green-400" : "text-slate-400"
+        }`}>
+          {evTotal}
+        </span>
       </div>
 
       {/* Level and Nature Controls */}
@@ -428,23 +446,40 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
         {abilities && abilities.length > 0 && (
           <div className="flex items-center gap-1.5 flex-1">
             <label className="text-[10px] text-slate-400">Ability</label>
-            <select
-              value={statModifiers.ability || ""}
-              onChange={(e) => setAbility(moduleId, e.target.value || null)}
-              className="flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="">-</option>
-              {abilities.map((ability) => (
-                <option key={ability.name} value={ability.name}>
-                  {formatPokemonName(ability.name)}{ability.isHidden ? " (H)" : ""}
-                </option>
-              ))}
-            </select>
+            {hasSingleAbility ? (
+              // Single ability: show as locked text
+              <div className="flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-300 cursor-default">
+                {formatPokemonName(abilities[0].name)}
+              </div>
+            ) : (
+              <select
+                value={statModifiers.ability || ""}
+                onChange={(e) => setAbility(moduleId, e.target.value)}
+                className="flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                {abilities.map((ability) => (
+                  <option key={ability.name} value={ability.name}>
+                    {formatPokemonName(ability.name)}{ability.isHidden ? " (H)" : ""}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         )}
         <div className="flex items-center gap-1.5 flex-1 relative">
           <label className="text-[10px] text-slate-400">Item</label>
-          {isSearchingItem ? (
+          {isCurrentMega ? (
+            // Mega Pokemon: show locked item
+            <div
+              className="flex-1 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-800 border border-amber-600/50 text-amber-400 cursor-not-allowed"
+              title="Mega Pokemon require their Mega Stone"
+            >
+              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="truncate">{statModifiers.item}</span>
+            </div>
+          ) : isSearchingItem ? (
             <div className="flex-1 relative">
               <input
                 ref={itemInputRef}

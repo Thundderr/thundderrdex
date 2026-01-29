@@ -1355,18 +1355,24 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
           {/* Ability Row */}
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-slate-400 w-14">Ability</label>
-            <select
-              value={config.ability || ""}
-              onChange={(e) => updateConfig({ ability: e.target.value || null })}
-              className="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="">None</option>
-              {abilities.map((ability) => (
-                <option key={ability} value={ability}>
-                  {ability}
-                </option>
-              ))}
-            </select>
+            {abilities.length === 1 ? (
+              // Single ability: show as locked text
+              <div className="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-300 cursor-default">
+                {abilities[0]}
+              </div>
+            ) : (
+              <select
+                value={config.ability || ""}
+                onChange={(e) => updateConfig({ ability: e.target.value })}
+                className="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                {abilities.map((ability) => (
+                  <option key={ability} value={ability}>
+                    {ability}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Item Row - Searchable (locked for Mega Pokemon) */}
