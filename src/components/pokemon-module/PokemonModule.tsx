@@ -834,7 +834,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       </div>
 
       {/* Content */}
-      <div className="relative p-4 min-h-[600px]">
+      <div className="relative p-4">
           {/* Invalid generation overlay */}
           {pokemon && !pokemonExistsInGen && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">

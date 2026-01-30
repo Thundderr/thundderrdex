@@ -194,7 +194,7 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
       ref={setRefs}
       style={style}
       onClick={() => selectModule(module.id)}
-      className={`col-span-1 md:col-span-2 xl:col-span-3 bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+      className={`col-span-full max-w-4xl bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
