@@ -1226,7 +1226,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(module.id, tab.id)}
-                    className={`px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                    className={`px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap flex-1 text-center ${
                       module.activeTab === tab.id
                         ? "text-blue-400 border-b-2 border-blue-400 -mb-px"
                         : "text-slate-400 hover:text-white"
