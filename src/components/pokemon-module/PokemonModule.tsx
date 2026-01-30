@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { usePokemon } from "@/hooks/usePokemon";
 import { usePokemonList } from "@/hooks/usePokemonList";
+import { useEvolution, EvolutionNode } from "@/hooks/useEvolution";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
@@ -33,6 +34,7 @@ const TABS: { id: ModuleTab; label: string }[] = [
   { id: "types", label: "Defenses" },
   { id: "moves", label: "Moves" },
   { id: "locations", label: "Locations" },
+  { id: "evolution", label: "Evo" },
 ];
 
 // Pokemon generation ranges by Pokedex number
@@ -73,8 +75,300 @@ function getPokemonGenerationRange(pokemonName: string, pokedexId: number): { mi
   return { minGen: getPokemonGeneration(pokedexId), maxGen: null };
 }
 
+// Pokemon Card Component for evolution display
+interface EvoPokemonCardProps {
+  node: EvolutionNode;
+  isCurrent: boolean;
+  onSelect: (name: string) => void;
+  size?: "normal" | "small";
+}
+
+function EvoPokemonCard({ node, isCurrent, onSelect, size = "normal" }: EvoPokemonCardProps) {
+  const imgSize = size === "small" ? 56 : 72;
+  return (
+    <button
+      onClick={() => onSelect(node.name)}
+      className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+        isCurrent
+          ? "bg-blue-600/30 ring-2 ring-blue-500"
+          : "bg-slate-800 hover:bg-slate-700"
+      }`}
+    >
+      <Image
+        src={node.spriteUrl}
+        alt={node.displayName}
+        width={imgSize}
+        height={imgSize}
+        className="pixelated"
+        unoptimized
+      />
+      <span className={`text-xs font-medium mt-1 ${isCurrent ? "text-blue-300" : "text-white"}`}>
+        {node.displayName}
+      </span>
+    </button>
+  );
+}
+
+// Grid layout for Pokemon with many evolutions (like Eevee)
+interface CircularEvolutionProps {
+  parent: EvolutionNode;
+  children: EvolutionNode[];
+  currentPokemonName: string;
+  onSelect: (name: string) => void;
+}
+
+function CircularEvolution({ parent, children, currentPokemonName, onSelect }: CircularEvolutionProps) {
+  // For 8 evolutions: 3x3 grid with parent in center
+  // Grid positions: 0,1,2 (top), 3,center,4 (middle), 5,6,7 (bottom)
+  // Map children to positions around the center
+  const gridOrder = [0, 1, 2, 7, -1, 3, 6, 5, 4]; // -1 is center (parent)
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {gridOrder.map((childIdx, gridPos) => {
+        // Center position - place parent
+        if (childIdx === -1) {
+          return (
+            <div key="center" className="flex items-center justify-center">
+              <EvoPokemonCard
+                node={parent}
+                isCurrent={parent.name === currentPokemonName}
+                onSelect={onSelect}
+              />
+            </div>
+          );
+        }
+
+        // Check if we have a child for this position
+        if (childIdx < children.length) {
+          const child = children[childIdx];
+          return (
+            <div key={child.name} className="flex flex-col items-center justify-center">
+              <EvoPokemonCard
+                node={child}
+                isCurrent={child.name === currentPokemonName}
+                onSelect={onSelect}
+                size="small"
+              />
+              <div className="text-[8px] text-center leading-tight mt-0.5 h-6 overflow-hidden">
+                <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
+                {child.evolutionMethod?.details && (
+                  <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        // Empty cell for grids with fewer than 8 evolutions
+        return <div key={gridPos} />;
+      })}
+    </div>
+  );
+}
+
+// Branching evolution layout (2-4 children, like Wurmple)
+interface BranchingEvolutionProps {
+  children: EvolutionNode[];
+  currentPokemonName: string;
+  onSelect: (name: string) => void;
+}
+
+function BranchingEvolution({ children, currentPokemonName, onSelect }: BranchingEvolutionProps) {
+  const childWidth = 90;
+  const totalWidth = children.length * childWidth;
+
+  return (
+    <div className="flex flex-col items-center">
+      {/* Branching lines SVG - straight angled lines */}
+      <svg
+        className="h-8"
+        style={{ width: totalWidth }}
+        viewBox={`0 0 ${totalWidth} 32`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <marker id="arrow" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+            <polygon points="0 0, 6 2.5, 0 5" fill="#475569" />
+          </marker>
+        </defs>
+        {children.map((_, index) => {
+          const startX = totalWidth / 2;
+          const endX = childWidth / 2 + index * childWidth;
+          return (
+            <line
+              key={index}
+              x1={startX}
+              y1={0}
+              x2={endX}
+              y2={32}
+              stroke="#475569"
+              strokeWidth="2"
+              markerEnd="url(#arrow)"
+            />
+          );
+        })}
+      </svg>
+
+      {/* Children with methods */}
+      <div className="flex gap-1">
+        {children.map((child) => (
+          <div key={child.name} className="flex flex-col items-center" style={{ width: childWidth }}>
+            <div className="text-[9px] text-center leading-tight mb-1 max-w-[85px] h-7 flex flex-col justify-end">
+              <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
+              {child.evolutionMethod?.details && (
+                <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>
+              )}
+            </div>
+            <EvoPokemonCard
+              node={child}
+              isCurrent={child.name === currentPokemonName}
+              onSelect={onSelect}
+              size="small"
+            />
+            {/* Recurse if this child has evolutions */}
+            {child.evolvesTo.length === 1 && (
+              <LinearEvolution
+                nodes={child.evolvesTo}
+                currentPokemonName={currentPokemonName}
+                onSelect={onSelect}
+              />
+            )}
+            {child.evolvesTo.length > 1 && child.evolvesTo.length <= 4 && (
+              <BranchingEvolution
+                children={child.evolvesTo}
+                currentPokemonName={currentPokemonName}
+                onSelect={onSelect}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Linear evolution (single path)
+interface LinearEvolutionProps {
+  nodes: EvolutionNode[];
+  currentPokemonName: string;
+  onSelect: (name: string) => void;
+}
+
+function LinearEvolution({ nodes, currentPokemonName, onSelect }: LinearEvolutionProps) {
+  return (
+    <>
+      {nodes.map((node) => (
+        <div key={node.name} className="flex flex-col items-center">
+          {/* Arrow and method */}
+          {node.evolutionMethod && (
+            <div className="flex flex-col items-center my-2">
+              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+              <div className="text-[10px] text-slate-400 text-center max-w-[100px] leading-tight">
+                <span className="text-blue-400 font-medium">{node.evolutionMethod.trigger}</span>
+                {node.evolutionMethod.details && (
+                  <span className="block text-slate-500">{node.evolutionMethod.details}</span>
+                )}
+              </div>
+            </div>
+          )}
+          <EvoPokemonCard
+            node={node}
+            isCurrent={node.name === currentPokemonName}
+            onSelect={onSelect}
+          />
+          {/* Recurse */}
+          {node.evolvesTo.length === 1 && (
+            <LinearEvolution
+              nodes={node.evolvesTo}
+              currentPokemonName={currentPokemonName}
+              onSelect={onSelect}
+            />
+          )}
+          {node.evolvesTo.length > 1 && node.evolvesTo.length <= 4 && (
+            <BranchingEvolution
+              children={node.evolvesTo}
+              currentPokemonName={currentPokemonName}
+              onSelect={onSelect}
+            />
+          )}
+          {node.evolvesTo.length > 4 && (
+            <div className="mt-4">
+              <CircularEvolution
+                parent={node}
+                children={node.evolvesTo}
+                currentPokemonName={currentPokemonName}
+                onSelect={onSelect}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+// Main Evolution Tree Component
+interface EvolutionTreeProps {
+  root: EvolutionNode;
+  currentPokemonName: string;
+  onSelect: (name: string) => void;
+}
+
+function EvolutionTree({ root, currentPokemonName, onSelect }: EvolutionTreeProps) {
+  // Check if root has many direct evolutions (like Eevee)
+  if (root.evolvesTo.length > 4) {
+    return (
+      <CircularEvolution
+        parent={root}
+        children={root.evolvesTo}
+        currentPokemonName={currentPokemonName}
+        onSelect={onSelect}
+      />
+    );
+  }
+
+  // Check if root has branching evolutions (2-4)
+  if (root.evolvesTo.length > 1) {
+    return (
+      <div className="flex flex-col items-center">
+        <EvoPokemonCard
+          node={root}
+          isCurrent={root.name === currentPokemonName}
+          onSelect={onSelect}
+        />
+        <BranchingEvolution
+          children={root.evolvesTo}
+          currentPokemonName={currentPokemonName}
+          onSelect={onSelect}
+        />
+      </div>
+    );
+  }
+
+  // Linear evolution chain
+  return (
+    <div className="flex flex-col items-center">
+      <EvoPokemonCard
+        node={root}
+        isCurrent={root.name === currentPokemonName}
+        onSelect={onSelect}
+      />
+      {root.evolvesTo.length === 1 && (
+        <LinearEvolution
+          nodes={root.evolvesTo}
+          currentPokemonName={currentPokemonName}
+          onSelect={onSelect}
+        />
+      )}
+    </div>
+  );
+}
+
 export function PokemonModule({ module, isOverlay = false }: Props) {
-  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule, setStatModifiers } =
+  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule, setStatModifiers, addPokemonModule } =
     useModuleStore();
   const isSelected = selectedModuleId === module.id;
   const moduleContainerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +378,9 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     isLoading,
     error,
   } = usePokemon(module.pokemonName);
+
+  // Fetch evolution data
+  const { data: evolutionData } = useEvolution(module.pokemonName);
 
   // Get types for the selected generation
   const genTypes = useMemo(() => {
@@ -924,12 +1221,12 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-1 mb-4 border-b border-slate-700">
+              <div className="flex mb-4 border-b border-slate-700">
                 {TABS.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(module.id, tab.id)}
-                    className={`px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                       module.activeTab === tab.id
                         ? "text-blue-400 border-b-2 border-blue-400 -mb-px"
                         : "text-slate-400 hover:text-white"
@@ -959,6 +1256,21 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                 )}
                 {module.activeTab === "locations" && module.pokemonName && (
                   <LocationsPanel pokemonName={module.pokemonName} />
+                )}
+                {module.activeTab === "evolution" && (
+                  <div className="flex items-center justify-center py-4">
+                    {evolutionData?.root ? (
+                      <EvolutionTree
+                        root={evolutionData.root}
+                        currentPokemonName={evolutionData.currentPokemonName}
+                        onSelect={addPokemonModule}
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-400 text-center py-4">
+                        Loading evolution data...
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </>

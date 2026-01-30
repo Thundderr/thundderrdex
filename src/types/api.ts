@@ -284,3 +284,55 @@ export interface PokeAPILocationAreaList {
     url: string;
   }[];
 }
+
+// Pokemon Species (for evolution chain)
+export interface PokeAPIPokemonSpecies {
+  id: number;
+  name: string;
+  evolution_chain: {
+    url: string;
+  } | null;
+  evolves_from_species: {
+    name: string;
+    url: string;
+  } | null;
+}
+
+// Evolution Chain
+export interface PokeAPIEvolutionDetail {
+  trigger: {
+    name: string;
+    url: string;
+  };
+  min_level: number | null;
+  item: { name: string; url: string } | null;
+  held_item: { name: string; url: string } | null;
+  known_move: { name: string; url: string } | null;
+  known_move_type: { name: string; url: string } | null;
+  min_happiness: number | null;
+  min_beauty: number | null;
+  min_affection: number | null;
+  time_of_day: string;
+  location: { name: string; url: string } | null;
+  gender: number | null;
+  relative_physical_stats: number | null;
+  party_species: { name: string; url: string } | null;
+  party_type: { name: string; url: string } | null;
+  trade_species: { name: string; url: string } | null;
+  needs_overworld_rain: boolean;
+  turn_upside_down: boolean;
+}
+
+export interface PokeAPIEvolutionChainLink {
+  species: {
+    name: string;
+    url: string;
+  };
+  evolution_details: PokeAPIEvolutionDetail[];
+  evolves_to: PokeAPIEvolutionChainLink[];
+}
+
+export interface PokeAPIEvolutionChain {
+  id: number;
+  chain: PokeAPIEvolutionChainLink;
+}

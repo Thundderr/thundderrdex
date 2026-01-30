@@ -7,6 +7,8 @@ import {
   PokeAPILocationEncounter,
   PokeAPILocationArea,
   PokeAPILocationAreaList,
+  PokeAPIPokemonSpecies,
+  PokeAPIEvolutionChain,
 } from "@/types/api";
 
 const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -108,5 +110,21 @@ export async function fetchLocationAreaList(
 ): Promise<PokeAPILocationAreaList> {
   return fetchWithCache<PokeAPILocationAreaList>(
     `${POKEAPI_BASE}/location-area?limit=${limit}&offset=${offset}`
+  );
+}
+
+export async function fetchPokemonSpecies(
+  nameOrId: string | number
+): Promise<PokeAPIPokemonSpecies> {
+  return fetchWithCache<PokeAPIPokemonSpecies>(
+    `${POKEAPI_BASE}/pokemon-species/${nameOrId}`
+  );
+}
+
+export async function fetchEvolutionChain(
+  id: number
+): Promise<PokeAPIEvolutionChain> {
+  return fetchWithCache<PokeAPIEvolutionChain>(
+    `${POKEAPI_BASE}/evolution-chain/${id}`
   );
 }

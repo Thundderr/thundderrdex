@@ -116,6 +116,7 @@ interface ModuleStore {
   selectModule: (id: string) => void;
   // Module methods
   addModule: (type?: ModuleType) => void;
+  addPokemonModule: (pokemonName: string) => void;
   clearNewlyCreatedModule: () => void;
   addTypeChartModule: () => void;
   addTeamBuilderModule: () => void;
@@ -320,6 +321,18 @@ export const useModuleStore = create<ModuleStore>()(
       // Module methods (operate on active tab)
       addModule: (type: ModuleType = "pokemon") => {
         const newModule = createDefaultModule(type);
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      addPokemonModule: (pokemonName: string) => {
+        const newModule: PokemonModule = {
+          ...createDefaultModule("pokemon"),
+          pokemonName,
+        };
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
           newlyCreatedModuleId: newModule.id,
