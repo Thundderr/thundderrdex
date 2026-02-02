@@ -1,11 +1,31 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useModuleStore } from "@/stores/moduleStore";
 import { GenerationSelector } from "./GenerationSelector";
 
 export function Header() {
   const { addModule, addTypeChartModule, addNatureChartModule, addTeamBuilderModule, addDamageCalcModule, addLocationModule } = useModuleStore();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showDivider, setShowDivider] = useState(false);
+
+  // Show divider only when the container is scrollable (content overflows)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const checkOverflow = () => {
+      setShowDivider(container.scrollWidth > container.clientWidth);
+    };
+
+    // Check on mount and resize
+    checkOverflow();
+    const observer = new ResizeObserver(checkOverflow);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 px-4 py-2 sticky top-0 z-40 flex-shrink-0">
@@ -14,12 +34,12 @@ export function Header() {
           ThundderrDex
         </Link>
         {/* Scrollable area for gen selector + module buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto flex-nowrap flex-1 pb-1">
+        <div ref={scrollContainerRef} className="flex items-center gap-2 overflow-x-auto flex-nowrap flex-1 pb-1">
           <GenerationSelector />
-          {/* Spacer pushes buttons right on wide screens, shrinks when tight */}
-          <div className="flex-1 min-w-0" />
-          {/* Divider only shows on smaller screens where scrolling kicks in */}
-          <div className="w-px h-6 bg-slate-700 flex-shrink-0 xl:hidden" />
+          {/* Spacer - expands to push buttons right, shows divider only when scrollable */}
+          <div className="flex-1 min-w-[17px] flex items-center justify-center">
+            {showDivider && <div className="w-px h-6 bg-slate-700" />}
+          </div>
           <button
             onClick={() => addModule()}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
