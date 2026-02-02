@@ -27,6 +27,19 @@ export interface GenerationFeatures {
   hasMagicRoom: boolean;
   hasWonderRoom: boolean;
 
+  // Entry hazards
+  hasSpikes: boolean; // Gen 2+
+  hasStealthRock: boolean; // Gen 4+
+  hasGMaxHazards: boolean; // Gen 8 only (Steelsurge, Vinelash, etc.)
+
+  // Status effects
+  hasLeechSeed: boolean; // Gen 1+
+  hasForesight: boolean; // Gen 2+
+
+  // Aura/Field abilities
+  hasAuras: boolean; // Gen 6+ (Fairy Aura, Dark Aura, Aura Break)
+  hasRuinAbilities: boolean; // Gen 9 (Beads/Sword/Tablets/Vessel of Ruin)
+
   // Gimmicks
   hasZMoves: boolean;
   hasDynamax: boolean;
@@ -58,6 +71,19 @@ export function getGenerationFeatures(gen: number): GenerationFeatures {
     hasGravity: gen >= 4,
     hasMagicRoom: gen >= 5,
     hasWonderRoom: gen >= 5,
+
+    // Entry hazards
+    hasSpikes: gen >= 2,
+    hasStealthRock: gen >= 4,
+    hasGMaxHazards: gen === 8, // G-Max Steelsurge, Vine Lash, etc.
+
+    // Status effects
+    hasLeechSeed: true, // Gen 1+
+    hasForesight: gen >= 2,
+
+    // Aura/Field abilities
+    hasAuras: gen >= 6, // Fairy Aura, Dark Aura, Aura Break
+    hasRuinAbilities: gen >= 9, // Beads/Sword/Tablets/Vessel of Ruin
 
     // Gimmicks - each exclusive to their generation
     hasZMoves: gen === 7,

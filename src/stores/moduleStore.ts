@@ -43,16 +43,36 @@ const DEFAULT_DAMAGE_CALC_POKEMON: DamageCalcPokemonConfig = {
   dynamaxLevel: 10,
 };
 
-const DEFAULT_SIDE_CONFIG = {
+const DEFAULT_SIDE_CONFIG: DamageCalcSideConfig = {
+  // Screens
   isReflect: false,
   isLightScreen: false,
   isAuroraVeil: false,
+
+  // Entry Hazards
+  spikes: 0,
+  isSR: false,
+  steelsurge: false,
+  vinelash: false,
+  wildfire: false,
+  cannonade: false,
+  volcalith: false,
+
+  // Protection & Status
+  isProtected: false,
+  isSeeded: false,
+  isForesight: false,
+
+  // Support
   isTailwind: false,
-  helpingHandCount: 0,
-  isFriendGuard: false,
+  isHelpingHand: false,
   isFlowerGift: false,
+  isFriendGuard: false,
   isPowerSpot: false,
   isBattery: false,
+
+  // Switching
+  isSwitching: null,
 };
 
 const DEFAULT_DAMAGE_CALC_FIELD: DamageCalcFieldConfig = {
@@ -62,6 +82,18 @@ const DEFAULT_DAMAGE_CALC_FIELD: DamageCalcFieldConfig = {
   isGravity: false,
   isMagicRoom: false,
   isWonderRoom: false,
+
+  // Aura effects (Gen 6+)
+  isFairyAura: false,
+  isDarkAura: false,
+  isAuraBreak: false,
+
+  // Ruin abilities (Gen 9)
+  isBeadsOfRuin: false,
+  isSwordOfRuin: false,
+  isTabletsOfRuin: false,
+  isVesselOfRuin: false,
+
   attackerSide: { ...DEFAULT_SIDE_CONFIG },
   defenderSide: { ...DEFAULT_SIDE_CONFIG },
   isCritical: false,

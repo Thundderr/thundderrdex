@@ -57,15 +57,35 @@ export interface DamageCalcPokemonConfig {
 }
 
 export interface DamageCalcSideConfig {
+  // Screens
   isReflect: boolean;
   isLightScreen: boolean;
   isAuroraVeil: boolean;
+
+  // Entry Hazards
+  spikes: number; // 0-3 layers
+  isSR: boolean; // Stealth Rock
+  steelsurge: boolean; // Gen 8 G-Max Steelsurge
+  vinelash: boolean; // Gen 8 G-Max Vine Lash
+  wildfire: boolean; // Gen 8 G-Max Wildfire
+  cannonade: boolean; // Gen 8 G-Max Cannonade
+  volcalith: boolean; // Gen 8 G-Max Volcalith
+
+  // Protection & Status
+  isProtected: boolean;
+  isSeeded: boolean; // Leech Seed
+  isForesight: boolean;
+
+  // Support
   isTailwind: boolean;
-  helpingHandCount: number; // 0-2 for doubles (can stack)
-  isFriendGuard: boolean;
+  isHelpingHand: boolean;
   isFlowerGift: boolean;
+  isFriendGuard: boolean;
   isPowerSpot: boolean;
   isBattery: boolean;
+
+  // Switching
+  isSwitching: "out" | "in" | null;
 }
 
 export interface DamageCalcFieldConfig {
@@ -75,6 +95,18 @@ export interface DamageCalcFieldConfig {
   isGravity: boolean;
   isMagicRoom: boolean;
   isWonderRoom: boolean;
+
+  // Aura effects (Gen 6+)
+  isFairyAura: boolean;
+  isDarkAura: boolean;
+  isAuraBreak: boolean;
+
+  // Ruin abilities (Gen 9)
+  isBeadsOfRuin: boolean; // Sp.Def -25%
+  isSwordOfRuin: boolean; // Def -25%
+  isTabletsOfRuin: boolean; // Atk -25%
+  isVesselOfRuin: boolean; // Sp.Atk -25%
+
   attackerSide: DamageCalcSideConfig;
   defenderSide: DamageCalcSideConfig;
   isCritical: boolean;

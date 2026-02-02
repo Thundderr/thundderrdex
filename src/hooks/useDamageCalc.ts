@@ -273,19 +273,68 @@ export function useDamageCalc(
         isGravity: fieldConfig.isGravity,
         isMagicRoom: fieldConfig.isMagicRoom,
         isWonderRoom: fieldConfig.isWonderRoom,
+        // Aura effects (Gen 6+)
+        isFairyAura: fieldConfig.isFairyAura,
+        isDarkAura: fieldConfig.isDarkAura,
+        isAuraBreak: fieldConfig.isAuraBreak,
+        // Ruin abilities (Gen 9)
+        isBeadsOfRuin: fieldConfig.isBeadsOfRuin,
+        isSwordOfRuin: fieldConfig.isSwordOfRuin,
+        isTabletsOfRuin: fieldConfig.isTabletsOfRuin,
+        isVesselOfRuin: fieldConfig.isVesselOfRuin,
         attackerSide: {
+          // Entry hazards
+          spikes: fieldConfig.attackerSide.spikes,
+          isSR: fieldConfig.attackerSide.isSR,
+          steelsurge: fieldConfig.attackerSide.steelsurge,
+          vinelash: fieldConfig.attackerSide.vinelash,
+          wildfire: fieldConfig.attackerSide.wildfire,
+          cannonade: fieldConfig.attackerSide.cannonade,
+          volcalith: fieldConfig.attackerSide.volcalith,
+          // Screens
+          isReflect: fieldConfig.attackerSide.isReflect,
+          isLightScreen: fieldConfig.attackerSide.isLightScreen,
+          isAuroraVeil: fieldConfig.attackerSide.isAuroraVeil,
+          // Protection & Status
+          isProtected: fieldConfig.attackerSide.isProtected,
+          isSeeded: fieldConfig.attackerSide.isSeeded,
+          isForesight: fieldConfig.attackerSide.isForesight,
+          // Support
           isTailwind: fieldConfig.attackerSide.isTailwind,
-          isHelpingHand: fieldConfig.attackerSide.helpingHandCount >= 1,
+          isHelpingHand: fieldConfig.attackerSide.isHelpingHand,
           isFlowerGift: fieldConfig.attackerSide.isFlowerGift,
+          isFriendGuard: fieldConfig.attackerSide.isFriendGuard,
           isPowerSpot: fieldConfig.attackerSide.isPowerSpot,
           isBattery: fieldConfig.attackerSide.isBattery,
+          // Switching
+          isSwitching: fieldConfig.attackerSide.isSwitching || undefined,
         },
         defenderSide: {
+          // Entry hazards
+          spikes: fieldConfig.defenderSide.spikes,
+          isSR: fieldConfig.defenderSide.isSR,
+          steelsurge: fieldConfig.defenderSide.steelsurge,
+          vinelash: fieldConfig.defenderSide.vinelash,
+          wildfire: fieldConfig.defenderSide.wildfire,
+          cannonade: fieldConfig.defenderSide.cannonade,
+          volcalith: fieldConfig.defenderSide.volcalith,
+          // Screens
           isReflect: fieldConfig.defenderSide.isReflect,
           isLightScreen: fieldConfig.defenderSide.isLightScreen,
           isAuroraVeil: fieldConfig.defenderSide.isAuroraVeil,
+          // Protection & Status
+          isProtected: fieldConfig.defenderSide.isProtected,
+          isSeeded: fieldConfig.defenderSide.isSeeded,
+          isForesight: fieldConfig.defenderSide.isForesight,
+          // Support
           isTailwind: fieldConfig.defenderSide.isTailwind,
+          isHelpingHand: fieldConfig.defenderSide.isHelpingHand,
+          isFlowerGift: fieldConfig.defenderSide.isFlowerGift,
           isFriendGuard: fieldConfig.defenderSide.isFriendGuard,
+          isPowerSpot: fieldConfig.defenderSide.isPowerSpot,
+          isBattery: fieldConfig.defenderSide.isBattery,
+          // Switching
+          isSwitching: fieldConfig.defenderSide.isSwitching || undefined,
         },
       });
 
