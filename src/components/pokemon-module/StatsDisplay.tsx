@@ -605,45 +605,45 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                       {filteredMoves.length > 0 && (
                         <ul
                           ref={moveListRef}
-                          className={`absolute z-50 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto ${
+                          className={`absolute z-50 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto min-w-[320px] ${
                             isLeftColumn ? "left-0" : "right-0"
                           }`}
                           style={{ width: "calc(200% + 6px)" }}
                         >
                           {/* Header row */}
-                          <li className="flex items-center gap-1.5 px-2.5 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
-                            <span className="flex-1">Move</span>
-                            <span className="w-[52px] text-center">Type</span>
-                            <span className="w-4 text-center">Cat</span>
-                            <span className="w-8 text-right">Pwr</span>
-                            <span className="w-8 text-right">Acc</span>
-                            <span className="w-6 text-right">PP</span>
+                          <li className="flex items-center gap-1 px-2 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
+                            <span className="w-[115px] flex-shrink-0">Move</span>
+                            <span className="w-[52px] text-center flex-shrink-0">Type</span>
+                            <span className="w-5 text-center flex-shrink-0">Cat</span>
+                            <span className="flex-1 text-right">Pwr</span>
+                            <span className="w-6 text-right flex-shrink-0">Acc</span>
+                            <span className="w-5 text-right flex-shrink-0">PP</span>
                           </li>
                           {filteredMoves.map((move, index) => (
                             <li
                               key={move.name}
                               onMouseEnter={() => setHighlightedMoveIndex(index)}
                               onClick={() => handleMoveSelect(slotIndex, move.name)}
-                              className={`px-2.5 py-1.5 cursor-pointer ${
+                              className={`px-2 py-1.5 cursor-pointer ${
                                 index === highlightedMoveIndex ? "bg-slate-700" : "hover:bg-slate-700/50"
                               }`}
                             >
                               {/* Main stats row */}
-                              <div className="flex items-center gap-1.5 text-[11px]">
-                                <span className="flex-1 text-white truncate">{formatPokemonName(move.name)}</span>
-                                <span className="w-[52px] flex justify-center">
+                              <div className="flex items-center gap-1 text-[11px]">
+                                <span className="w-[115px] text-white flex-shrink-0">{formatPokemonName(move.name)}</span>
+                                <span className="w-[52px] flex justify-center flex-shrink-0">
                                   <TypeBadge type={move.type} size="xs" fixedWidth />
                                 </span>
-                                <span className="w-4 flex justify-center">
+                                <span className="w-5 flex justify-center flex-shrink-0">
                                   <DamageClassIcon damageClass={move.damageClass} />
                                 </span>
-                                <span className="w-8 text-right text-slate-300 font-mono text-[10px]">
+                                <span className="flex-1 text-right text-slate-300 font-mono text-[10px]">
                                   {move.power ?? "-"}
                                 </span>
-                                <span className="w-8 text-right text-slate-300 font-mono text-[10px]">
+                                <span className="w-6 text-right text-slate-300 font-mono text-[10px] flex-shrink-0">
                                   {move.accuracy ?? "-"}
                                 </span>
-                                <span className="w-6 text-right text-slate-400 font-mono text-[10px]">
+                                <span className="w-5 text-right text-slate-400 font-mono text-[10px] flex-shrink-0">
                                   {move.pp}
                                 </span>
                               </div>
