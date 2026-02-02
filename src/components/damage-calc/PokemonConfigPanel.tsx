@@ -1229,12 +1229,11 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
           {/* Stats Table */}
           <div className="border border-slate-700 rounded overflow-hidden text-[11px]">
             {/* Header */}
-            <div className="grid grid-cols-[60px_36px_36px_44px_44px_44px_40px] bg-slate-900/50 text-slate-400 uppercase">
+            <div className="grid grid-cols-[60px_36px_36px_44px_44px_36px] bg-slate-900/50 text-slate-400 uppercase">
               <div className="px-2 py-1"></div>
               <div className="px-1 py-1 text-center">Base</div>
               <div className="px-1 py-1 text-center">IVs</div>
               <div className="px-1 py-1 text-center">EVs</div>
-              <div className="px-1 py-1 text-center"></div>
               <div className="px-1 py-1 text-center"></div>
               <div className="px-1 py-1 text-center"></div>
             </div>
@@ -1243,17 +1242,25 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
               const boostKey = STAT_TO_BOOST[stat];
               const boostValue = boostKey ? config.boosts[boostKey as keyof typeof config.boosts] : 0;
               const baseStat = pokemon.stats[stat];
-              const calculatedStat = calculatedStats ? calculatedStats[stat] : 0;
+              const rawStat = calculatedStats ? calculatedStats[stat] : 0;
+              // Apply boost modifier (HP can't be boosted)
+              let calculatedStat = rawStat;
+              if (stat !== "hp" && boostValue !== 0) {
+                if (boostValue > 0) {
+                  calculatedStat = Math.floor(rawStat * (2 + boostValue) / 2);
+                } else {
+                  calculatedStat = Math.floor(rawStat * 2 / (2 + Math.abs(boostValue)));
+                }
+              }
               const nature = currentNature;
               const statKey = stat as StatKey;
               const isIncreased = stat !== "hp" && nature.increasedStat === statKey;
               const isDecreased = stat !== "hp" && nature.decreasedStat === statKey;
-              const isSpeedRow = stat === "speed";
 
               return (
                 <div
                   key={stat}
-                  className="grid grid-cols-[60px_36px_36px_44px_44px_44px_40px] border-t border-slate-700/50"
+                  className="grid grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700/50"
                 >
                   <div className={`px-2 py-1.5 font-medium ${
                     isIncreased ? "text-green-400" : isDecreased ? "text-red-400" : "text-slate-300"
@@ -1283,20 +1290,26 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                       className="w-full bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-white text-center focus:outline-none focus:border-blue-500"
                     />
                   </div>
-                  <div className="px-1 py-1.5 text-center text-white font-medium">
+                  <div className={`px-1 py-1.5 text-center font-medium ${
+                    boostValue > 0 ? "text-green-400" : boostValue < 0 ? "text-red-400" : "text-white"
+                  }`}>
                     {calculatedStat}
                   </div>
-                  <div className="px-0.5 py-1">
+                  <div className="py-1">
                     {boostKey ? (
                       <select
                         value={boostValue}
                         onChange={(e) => updateBoost(boostKey, parseInt(e.target.value))}
-                        className={`w-full bg-slate-700 border border-slate-600 rounded px-0 py-0.5 text-center focus:outline-none focus:border-blue-500 ${
-                          boostValue > 0 ? "text-green-400" : boostValue < 0 ? "text-red-400" : "text-slate-400"
+                        className={`w-full bg-slate-700 border border-slate-600 rounded px-0 py-0.5 text-[10px] text-center focus:outline-none focus:border-blue-500 ${
+                          boostValue > 0 ? "text-green-400" : boostValue < 0 ? "text-red-400" : "text-slate-500"
                         }`}
                       >
                         {BOOST_OPTIONS.map((b) => (
-                          <option key={b} value={b}>
+                          <option
+                            key={b}
+                            value={b}
+                            style={{ color: b > 0 ? '#4ade80' : b < 0 ? '#f87171' : '#64748b' }}
+                          >
                             {b > 0 ? `+${b}` : b === 0 ? "--" : b}
                           </option>
                         ))}
@@ -1305,18 +1318,11 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                       <span className="block text-center text-slate-600">--</span>
                     )}
                   </div>
-                  <div className="px-1 py-1.5 text-center">
-                    {isSpeedRow && effectiveSpeed !== null && effectiveSpeed !== calculatedStat && (
-                      <span className="text-cyan-400 font-medium" title="Effective Speed">
-                        {effectiveSpeed}
-                      </span>
-                    )}
-                  </div>
                 </div>
               );
             })}
             {/* Total Row */}
-            <div className="grid grid-cols-[60px_36px_36px_44px_44px_44px_40px] border-t border-slate-700 bg-slate-900/30">
+            <div className="grid grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700 bg-slate-900/30">
               <div className="px-2 py-1.5 text-slate-400 font-medium">Total</div>
               <div className="px-1 py-1.5 text-center text-slate-500">
                 {pokemon.stats.total}
@@ -1327,7 +1333,6 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
               }`}>
                 {evTotal}
               </div>
-              <div className="px-1 py-1.5"></div>
               <div className="px-1 py-1.5"></div>
               <div className="px-1 py-1.5"></div>
             </div>

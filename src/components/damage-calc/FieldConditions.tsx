@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { DamageCalcFieldConfig, DamageCalcSideConfig } from "@/types/module";
 import { getGenerationFeatures, WeatherType } from "@/lib/utils/generationConfig";
+
+const FIELD_SECTIONS_STORAGE_KEY = "damageCalc_fieldSections";
 
 interface Props {
   moduleId: string;
@@ -50,13 +52,13 @@ function Counter({
   label: string;
 }) {
   return (
-    <div className="flex items-center gap-1">
-      <span className="text-[10px] text-slate-500 mr-0.5">{label}</span>
+    <div className="flex items-center gap-0.5">
+      <span className="text-[9px] text-slate-500 mr-0.5">{label}</span>
       {Array.from({ length: max + 1 }, (_, i) => (
         <button
           key={i}
           onClick={() => onChange(i)}
-          className={`w-5 h-5 text-[10px] font-medium border transition-colors rounded ${
+          className={`w-4 h-4 text-[9px] font-medium border transition-colors rounded ${
             value === i
               ? "bg-slate-600 text-white border-slate-500"
               : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700"
@@ -69,22 +71,73 @@ function Counter({
   );
 }
 
-// Collapsible section component
+// Load saved section states from localStorage
+function loadSectionStates(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const saved = localStorage.getItem(FIELD_SECTIONS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Save section states to localStorage
+function saveSectionState(sectionId: string, isOpen: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    const current = loadSectionStates();
+    current[sectionId] = isOpen;
+    localStorage.setItem(FIELD_SECTIONS_STORAGE_KEY, JSON.stringify(current));
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+// Collapsible section component with localStorage persistence
 function CollapsibleSection({
   title,
-  defaultOpen = false,
+  sectionId,
   children,
 }: {
   title: string;
-  defaultOpen?: boolean;
+  sectionId: string;
   children: React.ReactNode;
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load saved state on mount
+  useEffect(() => {
+    const saved = loadSectionStates();
+    if (sectionId in saved) {
+      setIsOpen(saved[sectionId]);
+    }
+    setIsHydrated(true);
+  }, [sectionId]);
+
+  const handleToggle = () => {
+    const newState = !isOpen;
+    setIsOpen(newState);
+    saveSectionState(sectionId, newState);
+  };
+
+  // Don't render content until hydrated to avoid flash
+  if (!isHydrated) {
+    return (
+      <div className="border-t border-slate-700">
+        <button className="w-full flex items-center gap-2 py-1.5 px-2 text-[10px] text-slate-400">
+          <span className="text-[8px]">▶</span>
+          <span className="uppercase tracking-wide">{title}</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-slate-700">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="w-full flex items-center gap-2 py-1.5 px-2 text-[10px] text-slate-400 hover:text-white transition-colors"
       >
         <span className="text-[8px]">{isOpen ? "▼" : "▶"}</span>
@@ -275,9 +328,9 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
         </Toggle>
       </div>
 
-      {/* Auras & Abilities Section - Collapsed by default */}
+      {/* Auras & Abilities Section */}
       {(genFeatures.hasAuras || genFeatures.hasRuinAbilities) && (
-        <CollapsibleSection title="Auras & Abilities" defaultOpen={false}>
+        <CollapsibleSection title="Auras & Abilities" sectionId="auras">
           <div className="space-y-1.5">
             {/* Auras (Gen 6+) */}
             {genFeatures.hasAuras && (
@@ -321,8 +374,8 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
         <h4 className="text-[10px] text-slate-500 uppercase text-center">Defender</h4>
       </div>
 
-      {/* Hazards Section - Expanded by default */}
-      <CollapsibleSection title="Hazards" defaultOpen={true}>
+      {/* Hazards Section */}
+      <CollapsibleSection title="Hazards" sectionId="hazards">
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Hazards */}
           <div className="space-y-1.5">
@@ -371,8 +424,8 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
         </div>
       </CollapsibleSection>
 
-      {/* Screens Section - Expanded by default */}
-      <CollapsibleSection title="Screens" defaultOpen={true}>
+      {/* Screens Section */}
+      <CollapsibleSection title="Screens" sectionId="screens">
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Screens */}
           <div className="flex flex-wrap gap-1 justify-center">
@@ -405,8 +458,8 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
         </div>
       </CollapsibleSection>
 
-      {/* Status & Protection Section - Collapsed by default */}
-      <CollapsibleSection title="Status & Protection" defaultOpen={false}>
+      {/* Status & Protection Section */}
+      <CollapsibleSection title="Status & Protection" sectionId="status">
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Status */}
           <div className="flex flex-wrap gap-1 justify-center">
@@ -443,8 +496,8 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
         </div>
       </CollapsibleSection>
 
-      {/* Support Section - Expanded by default */}
-      <CollapsibleSection title="Support" defaultOpen={true}>
+      {/* Support Section */}
+      <CollapsibleSection title="Support" sectionId="support">
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Support */}
           <div className="space-y-1.5">
@@ -507,8 +560,8 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
         </div>
       </CollapsibleSection>
 
-      {/* Switching Section - Collapsed by default */}
-      <CollapsibleSection title="Switching" defaultOpen={false}>
+      {/* Switching Section */}
+      <CollapsibleSection title="Switching" sectionId="switching">
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Switching */}
           <div className="flex flex-wrap gap-1 justify-center">

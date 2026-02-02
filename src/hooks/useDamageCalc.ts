@@ -19,6 +19,13 @@ export interface DamageCalcResult {
     n: number;
     text: string;
   } | null;
+  // Hazard damage on switch-in (percentage of max HP)
+  hazardPercent: number;
+  hazardBreakdown: {
+    stealthRock: number;
+    spikes: number;
+    steelsurge: number;
+  };
 }
 
 // @smogon/calc status names
@@ -162,6 +169,84 @@ function convertTerrain(terrain: DamageCalcFieldConfig["terrain"]): SmogonTerrai
     Psychic: "Psychic",
   };
   return terrainMap[terrain];
+}
+
+// Type effectiveness chart for Stealth Rock (Rock type)
+const ROCK_EFFECTIVENESS: Record<string, number> = {
+  // 4x weak (50% damage)
+  "Bug": 2, "Fire": 2, "Flying": 2, "Ice": 2,
+  // 2x resist (6.25% damage)
+  "Fighting": 0.5, "Ground": 0.5, "Steel": 0.5,
+  // Neutral (12.5% damage)
+  "Normal": 1, "Grass": 1, "Poison": 1, "Ghost": 1, "Water": 1,
+  "Psychic": 1, "Dragon": 1, "Dark": 1, "Fairy": 1, "Electric": 1,
+};
+
+// Calculate hazard damage percentage
+function calculateHazardDamage(
+  defender: Pokemon,
+  fieldConfig: DamageCalcFieldConfig
+): { total: number; stealthRock: number; spikes: number; steelsurge: number } {
+  let stealthRock = 0;
+  let spikes = 0;
+  let steelsurge = 0;
+
+  // Check for immunities
+  const ability = defender.ability?.toLowerCase() || "";
+  const item = defender.item?.toLowerCase() || "";
+  const isImmune = ability === "magic guard" || item === "heavy-duty boots";
+
+  if (isImmune) {
+    return { total: 0, stealthRock: 0, spikes: 0, steelsurge: 0 };
+  }
+
+  const types = defender.types;
+  const isFlying = types.some(t => t?.toLowerCase() === "flying");
+  const isGrounded = !isFlying && ability !== "levitate";
+
+  // Stealth Rock damage (Rock type effectiveness)
+  if (fieldConfig.defenderSide.isSR) {
+    let effectiveness = 1;
+    for (const type of types) {
+      if (type) {
+        const typeName = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+        effectiveness *= ROCK_EFFECTIVENESS[typeName] ?? 1;
+      }
+    }
+    stealthRock = 12.5 * effectiveness; // Base 12.5%, modified by effectiveness
+  }
+
+  // Spikes damage (only grounded Pokemon)
+  if (isGrounded && fieldConfig.defenderSide.spikes > 0) {
+    const spikesLayers = fieldConfig.defenderSide.spikes;
+    if (spikesLayers === 1) spikes = 12.5;      // 1/8
+    else if (spikesLayers === 2) spikes = 16.67; // 1/6
+    else if (spikesLayers >= 3) spikes = 25;     // 1/4
+  }
+
+  // Steelsurge damage (Steel type effectiveness, Gen 8)
+  if (fieldConfig.defenderSide.steelsurge) {
+    // Steelsurge works like Stealth Rock but with Steel type
+    // For simplicity, use base 12.5% - would need full Steel effectiveness chart for accuracy
+    let steelEffectiveness = 1;
+    for (const type of types) {
+      if (type) {
+        const t = type.toLowerCase();
+        // Steel is super effective against Ice, Rock, Fairy
+        if (t === "ice" || t === "rock" || t === "fairy") steelEffectiveness *= 2;
+        // Steel is resisted by Steel, Fire, Water, Electric
+        else if (t === "steel" || t === "fire" || t === "water" || t === "electric") steelEffectiveness *= 0.5;
+      }
+    }
+    steelsurge = 12.5 * steelEffectiveness;
+  }
+
+  return {
+    total: stealthRock + spikes + steelsurge,
+    stealthRock,
+    spikes,
+    steelsurge,
+  };
 }
 
 // Parse KO chance from result
@@ -350,6 +435,9 @@ export function useDamageCalc(
       const minPercent = (minDamage / defenderMaxHp) * 100;
       const maxPercent = (maxDamage / defenderMaxHp) * 100;
 
+      // Calculate hazard damage
+      const hazardDamage = calculateHazardDamage(defender, fieldConfig);
+
       return {
         damage: result.damage,
         minDamage,
@@ -360,6 +448,12 @@ export function useDamageCalc(
         fullDesc: result.fullDesc(),
         moveDesc: result.moveDesc(),
         koChance: parseKoChance(result),
+        hazardPercent: hazardDamage.total,
+        hazardBreakdown: {
+          stealthRock: hazardDamage.stealthRock,
+          spikes: hazardDamage.spikes,
+          steelsurge: hazardDamage.steelsurge,
+        },
       };
     } catch {
       return null;

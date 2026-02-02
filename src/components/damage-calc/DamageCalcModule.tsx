@@ -267,15 +267,10 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
               </button>
             </div>
 
-            {/* Field Conditions (with level presets) */}
-            <FieldConditions
-              moduleId={module.id}
-              field={module.field}
-              attackerLevel={module.attacker.level}
-              defenderLevel={module.defender.level}
-            />
+            {/* 1. Damage Results - At the top */}
+            <DamageResults result={damageResult} />
 
-            {/* Move Quick Select - 2x2 grid */}
+            {/* 2. Move Quick Select - 2x2 grid */}
             {module.attacker.moves?.some((m) => m) && (
               <div className="grid grid-cols-2 gap-1">
                 {module.attacker.moves.map((moveName, idx) => {
@@ -419,8 +414,13 @@ export function DamageCalcModule({ module, isOverlay = false }: Props) {
               </div>
             )}
 
-            {/* Damage Results */}
-            <DamageResults result={damageResult} />
+            {/* 3. Field Conditions - At the bottom */}
+            <FieldConditions
+              moduleId={module.id}
+              field={module.field}
+              attackerLevel={module.attacker.level}
+              defenderLevel={module.defender.level}
+            />
           </div>
 
           {/* Defender Panel */}
