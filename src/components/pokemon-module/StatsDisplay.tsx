@@ -13,6 +13,28 @@ import { filterItems } from "@/data/items";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { isMegaPokemon, getMegaStone } from "@/lib/utils/generationConfig";
 
+// Item icon using PokeAPI sprites (kebab-case format)
+function ItemIcon({ item, size = 24 }: { item: string; size?: number }) {
+  // Convert item name to PokeAPI format (lowercase, hyphens between words)
+  const itemId = item.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${itemId}.png`;
+
+  return (
+    <img
+      src={spriteUrl}
+      alt={item}
+      width={size}
+      height={size}
+      className="pixelated flex-shrink-0"
+      style={{ imageRendering: 'pixelated' }}
+      onError={(e) => {
+        // Hide on error (item sprite not found)
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+}
+
 // Category icon matching LearnsetTable
 function DamageClassIcon({ damageClass }: { damageClass: string }) {
   const config = {
@@ -477,13 +499,16 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
           {isCurrentMega ? (
             // Mega Pokemon: show locked item
             <div
-              className="flex-1 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-800 border border-amber-600/50 text-amber-400 cursor-not-allowed"
+              className="flex-1 flex items-center justify-between px-1.5 py-0.5 rounded text-xs bg-slate-800 border border-amber-600/50 text-amber-400 cursor-not-allowed"
               title="Mega Pokemon require their Mega Stone"
             >
-              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-1 min-w-0">
+                {statModifiers.item && <ItemIcon item={statModifiers.item} size={16} />}
+                <span className="truncate">{statModifiers.item}</span>
+              </div>
+              <svg className="w-3 h-3 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              <span className="truncate">{statModifiers.item}</span>
             </div>
           ) : isSearchingItem ? (
             <div className="flex-1 relative">
@@ -511,10 +536,11 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                       key={item}
                       onMouseEnter={() => setHighlightedItemIndex(index)}
                       onClick={() => handleItemSelect(item)}
-                      className={`px-2 py-1 text-xs cursor-pointer ${
+                      className={`flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer ${
                         index === highlightedItemIndex ? "bg-slate-700" : "hover:bg-slate-700/50"
                       }`}
                     >
+                      <ItemIcon item={item} size={16} />
                       <span className="text-white">{item}</span>
                     </li>
                   ))}
@@ -524,9 +550,16 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
           ) : (
             <button
               onClick={() => setIsSearchingItem(true)}
-              className="flex-1 text-left bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white hover:bg-slate-700 transition-colors truncate"
+              className="flex-1 flex items-center gap-1.5 text-left bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white hover:bg-slate-700 transition-colors"
             >
-              {statModifiers.item || <span className="text-slate-500">None</span>}
+              {statModifiers.item ? (
+                <>
+                  <ItemIcon item={statModifiers.item} size={16} />
+                  <span className="truncate">{statModifiers.item}</span>
+                </>
+              ) : (
+                <span className="text-slate-500">None</span>
+              )}
             </button>
           )}
         </div>

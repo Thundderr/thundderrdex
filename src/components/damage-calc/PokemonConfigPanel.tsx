@@ -164,6 +164,8 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
 
   // Load Set dropdown state
   const [showSetsDropdown, setShowSetsDropdown] = useState(false);
+  const [setsDropdownPos, setSetsDropdownPos] = useState({ top: 0, left: 0, right: 0 });
+  const loadSetButtonRef = useRef<HTMLButtonElement>(null);
 
   // Item search state
   const [isItemSearching, setIsItemSearching] = useState(false);
@@ -368,7 +370,8 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   };
 
   const handleSelect = (name: string) => {
-    setConfig(moduleId, { ...config, pokemonName: name, ability: null });
+    // Clear item when changing Pokemon (Mega auto-fill handled by useEffect)
+    setConfig(moduleId, { ...config, pokemonName: name, ability: null, item: null });
     setQuery("");
     setIsSearching(false);
     setHighlightedIndex(0);
@@ -539,13 +542,13 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   }, [moveHighlightedIndex, filteredMoveOptions.length]);
 
   const evTotal = Object.values(config.evs).reduce((sum, v) => sum + v, 0);
-  const baseMaxHp = calculatedStats?.hp || 100;
+  const baseMaxHp = calculatedStats?.hp ?? 0;
 
   // Calculate Dynamax HP if applicable
   const isDynamaxed = config.isDynamaxed && genFeatures.hasDynamax;
   const dynamaxMultiplier = isDynamaxed ? getDynamaxHpMultiplier(config.dynamaxLevel) : 1;
-  const maxHp = Math.floor(baseMaxHp * dynamaxMultiplier);
-  const currentHp = Math.floor((config.currentHpPercent / 100) * maxHp);
+  const maxHp = baseMaxHp > 0 ? Math.floor(baseMaxHp * dynamaxMultiplier) : 0;
+  const currentHp = maxHp > 0 ? Math.floor(((config.currentHpPercent ?? 100) / 100) * maxHp) : 0;
 
   // Check if Pokemon can Gigantamax
   const pokemonCanGmax = config.pokemonName ? canGigantamax(config.pokemonName) : false;
@@ -1184,7 +1187,18 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
             {/* Load Set Button with Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setShowSetsDropdown(!showSetsDropdown)}
+                ref={loadSetButtonRef}
+                onClick={() => {
+                  if (!showSetsDropdown && loadSetButtonRef.current) {
+                    const rect = loadSetButtonRef.current.getBoundingClientRect();
+                    setSetsDropdownPos({
+                      top: rect.bottom + 4,
+                      left: rect.left,
+                      right: window.innerWidth - rect.right,
+                    });
+                  }
+                  setShowSetsDropdown(!showSetsDropdown);
+                }}
                 onBlur={() => setTimeout(() => setShowSetsDropdown(false), 200)}
                 className="px-2 py-1 text-[10px] font-medium rounded border transition-colors bg-blue-600 text-white border-blue-500 hover:bg-blue-500"
                 title="Load competitive set"
@@ -1192,7 +1206,13 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                 Load Set
               </button>
               {showSetsDropdown && (
-                <div className="absolute z-50 right-0 top-full mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
+                <div
+                  className="fixed z-[100] w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-64 overflow-auto"
+                  style={isAttacker
+                    ? { top: setsDropdownPos.top, left: setsDropdownPos.left }
+                    : { top: setsDropdownPos.top, right: setsDropdownPos.right }
+                  }
+                >
                   <div className="py-1">
                     {/* Blank/Reset option */}
                     <button
@@ -1519,8 +1539,8 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
           {/* Current HP Section */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <label className={`text-[11px] w-14 ${isDynamaxed ? "text-red-400 font-medium" : "text-slate-400"}`}>
-                {isDynamaxed ? "D-Max HP" : "HP"}
+              <label className={`text-[11px] whitespace-nowrap ${isDynamaxed ? "text-red-400 font-medium" : "text-slate-400"}`}>
+                {isDynamaxed ? "D-Max" : "HP"}
               </label>
               <div className="flex items-center gap-1 flex-1">
                 <input
@@ -1530,19 +1550,19 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                   value={currentHp}
                   onChange={(e) => {
                     const hp = Math.max(0, Math.min(maxHp, parseInputValue(e.target.value)));
-                    updateConfig({ currentHpPercent: Math.round((hp / maxHp) * 100) });
+                    if (maxHp > 0) {
+                      updateConfig({ currentHpPercent: Math.round((hp / maxHp) * 100) });
+                    }
                   }}
-                  className={`w-14 bg-slate-700 border rounded px-2 py-1 text-xs text-center focus:outline-none ${
+                  className={`w-12 bg-slate-700 border rounded px-1 py-1 text-xs text-center focus:outline-none ${
                     isDynamaxed ? "border-red-600/50 text-red-400 focus:border-red-500" : "border-slate-600 text-white focus:border-blue-500"
                   }`}
                 />
-                <span className={`text-[11px] ${isDynamaxed ? "text-red-400" : "text-slate-400"}`}>/{maxHp}</span>
+                <span className={`text-[11px] whitespace-nowrap ${isDynamaxed ? "text-red-400" : "text-slate-400"}`}>/{maxHp}</span>
                 {isDynamaxed && (
-                  <span className="text-[9px] text-slate-500 ml-0.5">
-                    (base: {baseMaxHp})
-                  </span>
+                  <span className="text-[9px] text-slate-500 whitespace-nowrap">(base:{baseMaxHp})</span>
                 )}
-                <span className="text-[11px] text-slate-500 ml-1">(</span>
+                <span className="text-[11px] text-slate-500">(</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -1553,7 +1573,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
                       currentHpPercent: Math.max(0, Math.min(100, parseInputValue(e.target.value))),
                     })
                   }
-                  className="w-12 bg-slate-700 border border-slate-600 rounded px-1 py-1 text-xs text-white text-center focus:outline-none focus:border-blue-500"
+                  className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-1 text-xs text-white text-center focus:outline-none focus:border-blue-500"
                 />
                 <span className="text-[11px] text-slate-500">%)</span>
               </div>

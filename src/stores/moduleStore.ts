@@ -657,7 +657,13 @@ export const useModuleStore = create<ModuleStore>()(
               tab.id === state.activeTabId
                 ? {
                     ...tab,
-                    modules: tab.modules.map((m) => (m.id === id ? { ...m, pokemonName } : m)),
+                    modules: tab.modules.map((m) => {
+                      if (m.id === id && m.moduleType === "pokemon") {
+                        // Clear item when changing Pokemon (Mega auto-fill handled by component)
+                        return { ...m, pokemonName, statModifiers: { ...m.statModifiers, item: null } };
+                      }
+                      return m;
+                    }),
                     recentSearches: newRecentSearches,
                   }
                 : tab
@@ -666,7 +672,13 @@ export const useModuleStore = create<ModuleStore>()(
         } else {
           set({
             tabs: updateActiveTabModules(state, (modules) =>
-              modules.map((m) => (m.id === id ? { ...m, pokemonName } : m))
+              modules.map((m) => {
+                if (m.id === id && m.moduleType === "pokemon") {
+                  // Clear item when changing Pokemon (Mega auto-fill handled by component)
+                  return { ...m, pokemonName, statModifiers: { ...m.statModifiers, item: null } };
+                }
+                return m.id === id ? { ...m, pokemonName } : m;
+              })
             ),
           });
         }
