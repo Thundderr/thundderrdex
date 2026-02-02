@@ -189,6 +189,8 @@ interface ModuleStore {
   // Recent searches
   restoreFromRecent: (pokemonName: string) => void;
   clearRecentSearches: () => void;
+  // Generation change reset
+  resetDamageCalcGimmicks: () => void;
 }
 
 // Helper to get active tab
@@ -979,6 +981,37 @@ export const useModuleStore = create<ModuleStore>()(
       clearRecentSearches: () => {
         set((state) => ({
           tabs: updateActiveTabRecents(state, () => []),
+        }));
+      },
+
+      resetDamageCalcGimmicks: () => {
+        set((state) => ({
+          tabs: state.tabs.map((tab) => ({
+            ...tab,
+            modules: tab.modules.map((m) => {
+              if (m.moduleType === "damage-calc") {
+                const dmgModule = m as DamageCalcModule;
+                return {
+                  ...dmgModule,
+                  attacker: {
+                    ...dmgModule.attacker,
+                    useZMove: false,
+                    isDynamaxed: false,
+                    useGigantamax: false,
+                    teraType: null,
+                  },
+                  defender: {
+                    ...dmgModule.defender,
+                    useZMove: false,
+                    isDynamaxed: false,
+                    useGigantamax: false,
+                    teraType: null,
+                  },
+                };
+              }
+              return m;
+            }),
+          })),
         }));
       },
     }),

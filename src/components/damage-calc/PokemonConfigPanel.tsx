@@ -1538,11 +1538,9 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
 
           {/* Current HP Section */}
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <label className={`text-[11px] whitespace-nowrap ${isDynamaxed ? "text-red-400 font-medium" : "text-slate-400"}`}>
-                {isDynamaxed ? "D-Max" : "HP"}
-              </label>
-              <div className="flex items-center gap-1 flex-1">
+            <div className="flex items-center gap-1 mb-1 flex-nowrap">
+              <label className={`text-[11px] whitespace-nowrap ${isDynamaxed ? "text-red-400 font-medium" : "text-slate-400"}`}>HP</label>
+              <div className="flex items-center gap-1 flex-1 flex-nowrap">
                 <input
                   type="text"
                   inputMode="numeric"

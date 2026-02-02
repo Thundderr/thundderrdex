@@ -359,10 +359,12 @@ export function getGMaxMove(pokemonName: string): { move: string; type: string; 
 
 /**
  * Calculate Dynamax HP multiplier based on Dynamax level (0-10)
- * At level 10, HP is doubled (2x)
+ * Formula matches Smogon: (150 + 5 * level) / 100
+ * At level 10: 2.0x HP, at level 0: 1.5x HP
  */
-export function getDynamaxHpMultiplier(dynamaxLevel: number): number {
-  return 1 + (0.05 * Math.min(10, Math.max(0, dynamaxLevel)));
+export function getDynamaxHpMultiplier(dynamaxLevel: number = 10): number {
+  const level = Math.min(10, Math.max(0, dynamaxLevel ?? 10));
+  return (150 + 5 * level) / 100;
 }
 
 /**
