@@ -18,6 +18,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
     requestRemoveTab,
     addModule,
     addTypeChartModule,
+    addNatureChartModule,
     addTeamBuilderModule,
     addDamageCalcModule,
     addLocationModule,
@@ -74,6 +75,10 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
           case "c":
             e.preventDefault();
             addTypeChartModule();
+            break;
+          case "n":
+            e.preventDefault();
+            addNatureChartModule();
             break;
           case "b":
             e.preventDefault();
@@ -179,6 +184,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       requestRemoveTab,
       addModule,
       addTypeChartModule,
+      addNatureChartModule,
       addTeamBuilderModule,
       addDamageCalcModule,
       addLocationModule,

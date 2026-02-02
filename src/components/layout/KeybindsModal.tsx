@@ -12,6 +12,7 @@ const GLOBAL_SHORTCUTS = [
   { key: "Shift + X", description: "Close current tab" },
   { key: "Shift + P", description: "New Pokemon module" },
   { key: "Shift + C", description: "New Type Chart module" },
+  { key: "Shift + N", description: "New Nature Chart module" },
   { key: "Shift + B", description: "New Team Coverage module" },
   { key: "Shift + E", description: "New Damage Calc module" },
   { key: "Shift + O", description: "New Location module" },

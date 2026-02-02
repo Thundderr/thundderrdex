@@ -8,15 +8,18 @@ export function Header() {
   const { addModule, addTypeChartModule, addNatureChartModule, addTeamBuilderModule, addDamageCalcModule, addLocationModule } = useModuleStore();
 
   return (
-    <header className="bg-slate-900 border-b border-slate-800 px-4 py-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-xl font-bold text-white hover:text-slate-200">
-            ThundderrDex
-          </Link>
+    <header className="bg-slate-900 border-b border-slate-800 px-4 py-2 sticky top-0 z-40 flex-shrink-0">
+      <div className="flex items-center gap-3">
+        <Link href="/" className="text-xl font-bold text-white hover:text-slate-200 flex-shrink-0">
+          ThundderrDex
+        </Link>
+        {/* Scrollable area for gen selector + module buttons */}
+        <div className="flex items-center gap-2 overflow-x-auto flex-nowrap flex-1 pb-1">
           <GenerationSelector />
-        </div>
-        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto flex-nowrap">
+          {/* Spacer pushes buttons right on wide screens, shrinks when tight */}
+          <div className="flex-1 min-w-0" />
+          {/* Divider only shows on smaller screens where scrolling kicks in */}
+          <div className="w-px h-6 bg-slate-700 flex-shrink-0 xl:hidden" />
           <button
             onClick={() => addModule()}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
