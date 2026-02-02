@@ -216,20 +216,33 @@ export function getZMovePower(basePower: number | null): number | null {
 /**
  * Calculate Max Move power based on original move's base power
  * Status moves become Max Guard
- * Power scaling based on official game data:
- * 10-40 BP → 90, 45-50 BP → 100, 55-60 BP → 110, 65-70 BP → 120,
- * 75-100 BP → 130, 110-140 BP → 140, 150+ BP → 150
+ *
+ * Fighting (Max Knuckle) and Poison (Max Ooze) have REDUCED power scaling.
+ * All other types use standard scaling.
  */
-export function getMaxMovePower(basePower: number | null, _moveType?: string): number | null {
+export function getMaxMovePower(basePower: number | null, moveType?: string): number | null {
   if (basePower === null || basePower === 0) return null; // Becomes Max Guard
 
+  const type = moveType?.toLowerCase();
+
+  // Fighting and Poison have reduced Max Move power
+  if (type === "fighting" || type === "poison") {
+    if (basePower <= 40) return 70;
+    if (basePower <= 50) return 75;
+    if (basePower <= 60) return 80;
+    if (basePower <= 70) return 85;
+    if (basePower <= 100) return 90;
+    return 95; // 101+ BP caps at 95
+  }
+
+  // Standard scaling for other types
   if (basePower <= 40) return 90;
   if (basePower <= 50) return 100;
   if (basePower <= 60) return 110;
   if (basePower <= 70) return 120;
   if (basePower <= 100) return 130;
   if (basePower <= 140) return 140;
-  return 150; // 150+ BP
+  return 150; // 141+ BP
 }
 
 /**

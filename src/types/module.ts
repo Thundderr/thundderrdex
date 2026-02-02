@@ -1,7 +1,7 @@
 import { StatModifiers, StatValues } from "@/lib/utils/statCalculator";
 
 export type ModuleTab = "stats" | "abilities" | "types" | "moves" | "locations" | "evolution";
-export type ModuleType = "pokemon" | "type-chart" | "team-builder" | "damage-calc" | "location";
+export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location";
 
 // Base module interface
 export interface BaseModule {
@@ -12,7 +12,7 @@ export interface BaseModule {
 
 // Pokemon module specific fields
 export interface PokemonModule extends BaseModule {
-  moduleType: "pokemon" | "type-chart";
+  moduleType: "pokemon" | "type-chart" | "nature-chart";
   pokemonName: string | null;
   activeTab: ModuleTab;
   statModifiers: StatModifiers;

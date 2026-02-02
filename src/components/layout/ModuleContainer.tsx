@@ -20,6 +20,7 @@ import {
 import { useModuleStore } from "@/stores/moduleStore";
 import { PokemonModule } from "@/components/pokemon-module/PokemonModule";
 import { TypeChartModule } from "@/components/pokemon-module/TypeChartModule";
+import { NatureChartModule } from "@/components/pokemon-module/NatureChartModule";
 import { TeamBuilderModule } from "@/components/pokemon-module/TeamBuilderModule";
 import { DamageCalcModule } from "@/components/damage-calc/DamageCalcModule";
 import { LocationModule } from "@/components/location-module/LocationModule";
@@ -130,6 +131,9 @@ export function ModuleContainer() {
             if (module.moduleType === "type-chart") {
               return <TypeChartModule key={module.id} module={module} />;
             }
+            if (module.moduleType === "nature-chart") {
+              return <NatureChartModule key={module.id} module={module} />;
+            }
             if (module.moduleType === "team-builder") {
               return <TeamBuilderModule key={module.id} module={module} />;
             }
@@ -147,6 +151,8 @@ export function ModuleContainer() {
         {activeModule ? (
           activeModule.moduleType === "type-chart" ? (
             <TypeChartModule module={activeModule} isOverlay />
+          ) : activeModule.moduleType === "nature-chart" ? (
+            <NatureChartModule module={activeModule} isOverlay />
           ) : activeModule.moduleType === "team-builder" ? (
             <TeamBuilderModule module={activeModule} isOverlay />
           ) : activeModule.moduleType === "damage-calc" ? (

@@ -8,7 +8,7 @@ const MAX_RECENT_SEARCHES = 20;
 
 const createDefaultModule = (type: ModuleType = "pokemon"): PokemonModule => ({
   id: uuidv4(),
-  moduleType: type as "pokemon" | "type-chart",
+  moduleType: type as "pokemon" | "type-chart" | "nature-chart",
   pokemonName: null,
   isMinimized: false,
   activeTab: "stats",
@@ -151,6 +151,7 @@ interface ModuleStore {
   addPokemonModule: (pokemonName: string) => void;
   clearNewlyCreatedModule: () => void;
   addTypeChartModule: () => void;
+  addNatureChartModule: () => void;
   addTeamBuilderModule: () => void;
   removeModule: (id: string) => void;
   updateModule: (id: string, updates: Partial<PokemonModule>) => void;
@@ -380,6 +381,15 @@ export const useModuleStore = create<ModuleStore>()(
 
       addTypeChartModule: () => {
         const newModule = createDefaultModule("type-chart");
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      addNatureChartModule: () => {
+        const newModule = createDefaultModule("nature-chart");
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
           newlyCreatedModuleId: newModule.id,
