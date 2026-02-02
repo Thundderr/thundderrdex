@@ -139,7 +139,7 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
   // Filter moves for current generation and search query
   // Also filters out moves already selected in other slots (duplicate prevention)
   const filteredMoves = useMemo(() => {
-    if (!learnset || !moveQuery.trim()) return [];
+    if (!learnset) return [];
 
     // Get currently selected moves (excluding the slot being edited)
     const selectedMoves = new Set(
@@ -149,19 +149,27 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
 
     const lowerQuery = moveQuery.toLowerCase().trim();
     const seen = new Set<string>();
-    return learnset
+    const filtered = learnset
       .filter((entry) => entry.generation === globalGeneration)
-      .filter((entry) => entry.move.name.toLowerCase().includes(lowerQuery))
       .filter((entry) => {
         // Deduplicate moves (same move can be learned via different methods)
         if (seen.has(entry.move.name)) return false;
         seen.add(entry.move.name);
         // Filter out already selected moves
         if (selectedMoves.has(entry.move.name)) return false;
+        // Filter by query if provided
+        if (lowerQuery && !entry.move.name.toLowerCase().includes(lowerQuery)) return false;
         return true;
       })
-      .slice(0, 8)
       .map((entry) => entry.move);
+
+    // Sort by power descending (like damage calc), then by name
+    return filtered.sort((a, b) => {
+      const powerA = a.power || 0;
+      const powerB = b.power || 0;
+      if (powerB !== powerA) return powerB - powerA;
+      return a.displayName.localeCompare(b.displayName);
+    });
   }, [learnset, moveQuery, globalGeneration, statModifiers?.moves, searchingMoveSlot]);
 
   // Handle move selection
