@@ -180,6 +180,7 @@ interface ModuleStore {
   setPokemon: (id: string, pokemonName: string) => void;
   setActiveTab: (id: string, tab: ModuleTab) => void;
   toggleMinimize: (id: string) => void;
+  toggleExtended: (id: string) => void;
   reorderModules: (activeId: string, overId: string) => void;
   bringModuleToFront: (id: string) => void;
   // Stat modifier methods
@@ -726,6 +727,14 @@ export const useModuleStore = create<ModuleStore>()(
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
             modules.map((m) => (m.id === id ? { ...m, isMinimized: !m.isMinimized } : m))
+          ),
+        }));
+      },
+
+      toggleExtended: (id) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => (m.id === id ? { ...m, isExtended: !m.isExtended } : m))
           ),
         }));
       },

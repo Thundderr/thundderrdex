@@ -194,7 +194,7 @@ function VersionSection({ versionGroup, onPokemonClick }: {
 }
 
 export function LocationModule({ module, isOverlay = false }: Props) {
-  const { removeModule, setLocationArea, selectedModuleId, selectModule, addModule, setPokemon, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
+  const { removeModule, setLocationArea, selectedModuleId, selectModule, addModule, setPokemon, newlyCreatedModuleId, clearNewlyCreatedModule, toggleExtended } = useModuleStore();
   const isSelected = selectedModuleId === module.id;
   const moduleContainerRef = useRef<HTMLDivElement>(null);
 
@@ -330,6 +330,8 @@ export function LocationModule({ module, isOverlay = false }: Props) {
       style={style}
       onClick={() => selectModule(module.id)}
       className={`bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+        module.isExtended ? "col-span-1 md:col-span-2" : ""
+      } ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
@@ -366,6 +368,20 @@ export function LocationModule({ module, isOverlay = false }: Props) {
           )}
         </div>
 
+        {/* Extend Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleExtended(module.id); }}
+          className={`p-1.5 rounded transition-colors flex-shrink-0 ${module.isExtended ? "bg-blue-600/20 text-blue-400" : "text-slate-400 hover:text-white hover:bg-slate-700"}`}
+          title={module.isExtended ? "Collapse module" : "Extend module"}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {module.isExtended ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+            )}
+          </svg>
+        </button>
         {/* Close Button */}
         <button
           onClick={(e) => {

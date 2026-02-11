@@ -8,6 +8,7 @@ export interface BaseModule {
   id: string;
   moduleType: ModuleType;
   isMinimized: boolean;
+  isExtended?: boolean;
 }
 
 // Pokemon module specific fields

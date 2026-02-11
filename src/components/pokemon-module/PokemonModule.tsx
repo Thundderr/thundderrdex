@@ -368,7 +368,7 @@ function EvolutionTree({ root, currentPokemonName, onSelect }: EvolutionTreeProp
 }
 
 export function PokemonModule({ module, isOverlay = false }: Props) {
-  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule, setStatModifiers, addPokemonModule } =
+  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule, setStatModifiers, addPokemonModule, toggleExtended } =
     useModuleStore();
   const isSelected = selectedModuleId === module.id;
   const moduleContainerRef = useRef<HTMLDivElement>(null);
@@ -886,6 +886,8 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       data-module-id={module.id}
       onClick={() => selectModule(module.id)}
       className={`bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+        module.isExtended ? "col-span-1 md:col-span-2" : ""
+      } ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
@@ -1111,6 +1113,19 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
             </>
           )}
           <button
+            onClick={(e) => { e.stopPropagation(); toggleExtended(module.id); }}
+            className={`p-1.5 rounded transition-colors ${module.isExtended ? "bg-blue-600/20 text-blue-400" : "text-slate-400 hover:text-white hover:bg-slate-700"}`}
+            title={module.isExtended ? "Collapse module" : "Extend module"}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {module.isExtended ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+              )}
+            </svg>
+          </button>
+          <button
             onClick={() => removeModule(module.id)}
             className="p-1.5 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
             title="Remove module"
@@ -1166,101 +1181,106 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
           )}
 
           {pokemon && (
-            <>
-              {/* Pokemon Info Header */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative w-20 h-20 bg-slate-800 rounded-lg flex items-center justify-center">
-                  {pokemon.sprites.official_artwork ? (
-                    <Image
-                      src={pokemon.sprites.official_artwork}
-                      alt={pokemon.displayName}
-                      width={80}
-                      height={80}
-                      className="object-contain"
-                      unoptimized
-                    />
-                  ) : pokemon.sprites.front_default ? (
-                    <Image
-                      src={pokemon.sprites.front_default}
-                      alt={pokemon.displayName}
-                      width={80}
-                      height={80}
-                      className="pixelated"
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="text-slate-500">?</span>
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">
-                    {pokemon.displayName}
-                  </h2>
-                  <p className="text-sm text-slate-400 mb-1">
-                    #{getDisplayId(module.pokemonName ?? "", pokemon.id).toString().padStart(4, "0")}
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    {genTypes.map((type) => (
-                      <TypeBadge key={type.name} type={type.name} size="sm" />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex mb-4 border-b border-slate-700">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(module.id, tab.id)}
-                    className={`px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap flex-1 text-center ${
-                      module.activeTab === tab.id
-                        ? "text-blue-400 border-b-2 border-blue-400 -mb-px"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div>
-                {module.activeTab === "stats" && (
-                  <StatsDisplay stats={pokemon.stats} moduleId={module.id} abilities={pokemon.abilities} pokemonName={module.pokemonName} />
-                )}
-                {module.activeTab === "abilities" && (
-                  <AbilitiesPanel abilities={pokemon.abilities} />
-                )}
-                {module.activeTab === "types" && (
-                  <TypeEffectivenessDisplay pokemon={pokemon} />
-                )}
-                {module.activeTab === "moves" && module.pokemonName && (
-                  <LearnsetTable
-                    pokemonName={module.pokemonName}
-                    pokemonTypes={genTypes}
-                  />
-                )}
-                {module.activeTab === "locations" && module.pokemonName && (
-                  <LocationsPanel pokemonName={module.pokemonName} />
-                )}
-                {module.activeTab === "evolution" && (
-                  <div className="flex items-center justify-center py-4">
-                    {evolutionData?.root ? (
-                      <EvolutionTree
-                        root={evolutionData.root}
-                        currentPokemonName={evolutionData.currentPokemonName}
-                        onSelect={addPokemonModule}
+            <div className={module.isExtended ? "flex gap-4" : ""}>
+              {/* Pokemon Info Sidebar (when extended) or Header (when normal) */}
+              <div className={module.isExtended ? "w-48 flex-shrink-0" : ""}>
+                <div className={`flex ${module.isExtended ? "flex-col items-center text-center" : "items-center"} gap-4 mb-4`}>
+                  <div className={`relative ${module.isExtended ? "w-32 h-32" : "w-20 h-20"} bg-slate-800 rounded-lg flex items-center justify-center`}>
+                    {pokemon.sprites.official_artwork ? (
+                      <Image
+                        src={pokemon.sprites.official_artwork}
+                        alt={pokemon.displayName}
+                        width={module.isExtended ? 128 : 80}
+                        height={module.isExtended ? 128 : 80}
+                        className="object-contain"
+                        unoptimized
+                      />
+                    ) : pokemon.sprites.front_default ? (
+                      <Image
+                        src={pokemon.sprites.front_default}
+                        alt={pokemon.displayName}
+                        width={module.isExtended ? 128 : 80}
+                        height={module.isExtended ? 128 : 80}
+                        className="pixelated"
+                        unoptimized
                       />
                     ) : (
-                      <p className="text-sm text-slate-400 text-center py-4">
-                        Loading evolution data...
-                      </p>
+                      <span className="text-slate-500">?</span>
                     )}
                   </div>
-                )}
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      {pokemon.displayName}
+                    </h2>
+                    <p className="text-sm text-slate-400 mb-1">
+                      #{getDisplayId(module.pokemonName ?? "", pokemon.id).toString().padStart(4, "0")}
+                    </p>
+                    <div className={`flex items-center gap-1.5 ${module.isExtended ? "justify-center" : ""}`}>
+                      {genTypes.map((type) => (
+                        <TypeBadge key={type.name} type={type.name} size="sm" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </>
+
+              {/* Main Content (tabs + tab content) */}
+              <div className={module.isExtended ? "flex-1 min-w-0" : ""}>
+                {/* Tabs */}
+                <div className="flex mb-4 border-b border-slate-700">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(module.id, tab.id)}
+                      className={`px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap flex-1 text-center ${
+                        module.activeTab === tab.id
+                          ? "text-blue-400 border-b-2 border-blue-400 -mb-px"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tab Content */}
+                <div>
+                  {module.activeTab === "stats" && (
+                    <StatsDisplay stats={pokemon.stats} moduleId={module.id} abilities={pokemon.abilities} pokemonName={module.pokemonName} />
+                  )}
+                  {module.activeTab === "abilities" && (
+                    <AbilitiesPanel abilities={pokemon.abilities} />
+                  )}
+                  {module.activeTab === "types" && (
+                    <TypeEffectivenessDisplay pokemon={pokemon} />
+                  )}
+                  {module.activeTab === "moves" && module.pokemonName && (
+                    <LearnsetTable
+                      pokemonName={module.pokemonName}
+                      pokemonTypes={genTypes}
+                    />
+                  )}
+                  {module.activeTab === "locations" && module.pokemonName && (
+                    <LocationsPanel pokemonName={module.pokemonName} />
+                  )}
+                  {module.activeTab === "evolution" && (
+                    <div className="flex items-center justify-center py-4">
+                      {evolutionData?.root ? (
+                        <EvolutionTree
+                          root={evolutionData.root}
+                          currentPokemonName={evolutionData.currentPokemonName}
+                          onSelect={addPokemonModule}
+                        />
+                      ) : (
+                        <p className="text-sm text-slate-400 text-center py-4">
+                          Loading evolution data...
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {!pokemon && !isLoading && !error && (

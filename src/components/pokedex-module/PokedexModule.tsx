@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
@@ -15,7 +15,9 @@ interface Props {
 export function PokedexModule({ module, isOverlay = false }: Props) {
   const { toggleMinimize, removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
   const moduleContainerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const isSelected = selectedModuleId === module.id;
+  const [contentMaxH, setContentMaxH] = useState(600);
 
   const {
     attributes,
@@ -43,6 +45,27 @@ export function PokedexModule({ module, isOverlay = false }: Props) {
     }
   }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
 
+  // Observe the module's actual rendered height (set by grid row)
+  // and compute available height for the Pokedex content
+  useEffect(() => {
+    const container = moduleContainerRef.current;
+    if (!container) return;
+
+    const update = () => {
+      const moduleH = container.getBoundingClientRect().height;
+      const headerH = headerRef.current?.getBoundingClientRect().height ?? 40;
+      // 32px for p-4 padding (16 top + 16 bottom), 40px for gen buttons row
+      const available = moduleH - headerH - 32 - 40;
+      // Only update if grid gave us more than the default
+      setContentMaxH(Math.max(available, 600));
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [module.isMinimized]);
+
   const setRefs = (node: HTMLDivElement | null) => {
     setNodeRef(node);
     (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
@@ -60,7 +83,7 @@ export function PokedexModule({ module, isOverlay = false }: Props) {
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
+      <div ref={headerRef} className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
         <div
           {...attributes}
           {...listeners}
@@ -139,7 +162,7 @@ export function PokedexModule({ module, isOverlay = false }: Props) {
       {/* Content */}
       {!module.isMinimized && (
         <div className="p-4">
-          <Pokedex />
+          <Pokedex maxHeight={contentMaxH} />
         </div>
       )}
     </div>

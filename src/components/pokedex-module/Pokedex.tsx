@@ -8,7 +8,7 @@ import { useModuleStore } from "@/stores/moduleStore";
 import { GENERATIONS } from "@/data/generations";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
 
-export function Pokedex() {
+export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
   const { data: allPokemon, isLoading } = usePokemonList();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const { addPokemonModule } = useModuleStore();
@@ -108,7 +108,8 @@ export function Pokedex() {
       {/* Scrollable Pokemon Grid */}
       <div
         ref={scrollContainerRef}
-        className="overflow-y-auto max-h-[600px] rounded-lg"
+        className="overflow-y-auto rounded-lg"
+        style={{ maxHeight }}
       >
         {GENERATIONS.map((gen) => {
           const pokemon = pokemonByGen.get(gen.id) || [];
