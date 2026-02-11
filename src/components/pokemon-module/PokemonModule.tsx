@@ -1200,24 +1200,9 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                     #{getDisplayId(module.pokemonName ?? "", pokemon.id).toString().padStart(4, "0")}
                   </p>
                   <div className="flex items-center gap-1.5">
-                    {pokemon.types.map((type) => {
-                      const availableTypes = TYPES_BY_GENERATION[globalGeneration] || [];
-                      const typeExistsInGen = availableTypes.includes(type.name);
-                      return (
-                        <div key={type.name} className="relative">
-                          <TypeBadge type={type.name} size="sm" />
-                          {!typeExistsInGen && (
-                            <div
-                              className="absolute inset-0 flex items-center justify-center"
-                              title={`${type.name.charAt(0).toUpperCase() + type.name.slice(1)} didn't exist in Gen ${globalGeneration}`}
-                            >
-                              <div className="absolute inset-0 bg-black/50 rounded" />
-                              <div className="absolute w-full h-0.5 bg-red-500 rotate-[-20deg] shadow-sm" />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {genTypes.map((type) => (
+                      <TypeBadge key={type.name} type={type.name} size="sm" />
+                    ))}
                   </div>
                 </div>
               </div>
