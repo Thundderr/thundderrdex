@@ -1,7 +1,7 @@
 import { StatModifiers, StatValues } from "@/lib/utils/statCalculator";
 
 export type ModuleTab = "stats" | "abilities" | "types" | "moves" | "locations" | "evolution";
-export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location";
+export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location" | "pokedex";
 
 // Base module interface
 export interface BaseModule {
@@ -126,8 +126,13 @@ export interface LocationModule extends BaseModule {
   locationAreaName: string | null; // e.g., "viridian-forest-area"
 }
 
+// Pokedex module specific fields
+export interface PokedexModule extends BaseModule {
+  moduleType: "pokedex";
+}
+
 // Union type for all modules
-export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule;
+export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule | PokedexModule;
 
 export interface RecentSearch {
   pokemonName: string;

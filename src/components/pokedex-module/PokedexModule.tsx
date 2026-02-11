@@ -4,15 +4,15 @@ import { useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
-import { PokemonModule } from "@/types/module";
-import { TypeChart } from "@/components/type-chart/TypeChart";
+import { PokedexModule as PokedexModuleType } from "@/types/module";
+import { Pokedex } from "./Pokedex";
 
 interface Props {
-  module: PokemonModule;
+  module: PokedexModuleType;
   isOverlay?: boolean;
 }
 
-export function TypeChartModule({ module, isOverlay = false }: Props) {
+export function PokedexModule({ module, isOverlay = false }: Props) {
   const { toggleMinimize, removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
   const moduleContainerRef = useRef<HTMLDivElement>(null);
   const isSelected = selectedModuleId === module.id;
@@ -34,7 +34,6 @@ export function TypeChartModule({ module, isOverlay = false }: Props) {
         opacity: isDragging ? 0 : 1,
       };
 
-  // Auto-scroll for newly created modules
   useEffect(() => {
     if (newlyCreatedModuleId === module.id && !isOverlay) {
       clearNewlyCreatedModule();
@@ -44,7 +43,6 @@ export function TypeChartModule({ module, isOverlay = false }: Props) {
     }
   }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
 
-  // Combine refs for both dnd-kit and scroll functionality
   const setRefs = (node: HTMLDivElement | null) => {
     setNodeRef(node);
     (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
@@ -84,7 +82,7 @@ export function TypeChartModule({ module, isOverlay = false }: Props) {
         </div>
 
         <div className="flex-1 mx-2 text-sm font-medium text-white truncate">
-          Type Chart
+          Pokedex
         </div>
 
         <div className="flex items-center gap-1">
@@ -141,7 +139,7 @@ export function TypeChartModule({ module, isOverlay = false }: Props) {
       {/* Content */}
       {!module.isMinimized && (
         <div className="p-4">
-          <TypeChart />
+          <Pokedex />
         </div>
       )}
     </div>

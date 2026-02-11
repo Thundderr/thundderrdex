@@ -863,13 +863,15 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       setTimeout(() => {
         moduleContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
 
-        // Start search after scroll animation
-        setTimeout(() => {
-          startSearch();
-        }, 300);
+        // Start search after scroll animation, but only if no Pokemon is set
+        if (!module.pokemonName) {
+          setTimeout(() => {
+            startSearch();
+          }, 300);
+        }
       }, 50);
     }
-  }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
+  }, [newlyCreatedModuleId, module.id, module.pokemonName, isOverlay, clearNewlyCreatedModule]);
 
   // Combine refs for both dnd-kit and scroll functionality
   const setRefs = (node: HTMLDivElement | null) => {

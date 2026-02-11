@@ -24,6 +24,7 @@ import { NatureChartModule } from "@/components/pokemon-module/NatureChartModule
 import { TeamBuilderModule } from "@/components/pokemon-module/TeamBuilderModule";
 import { DamageCalcModule } from "@/components/damage-calc/DamageCalcModule";
 import { LocationModule } from "@/components/location-module/LocationModule";
+import { PokedexModule } from "@/components/pokedex-module/PokedexModule";
 
 export function ModuleContainer() {
   const { tabs, activeTabId, reorderModules } = useModuleStore();
@@ -126,7 +127,7 @@ export function ModuleContainer() {
         items={modules.map((m) => m.id)}
         strategy={rectSortingStrategy}
       >
-        <div ref={gridRef} className="grid gap-4 grid-flow-row-dense [grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
+        <div ref={gridRef} className="grid gap-4 grid-flow-row-dense grid-cols-1 md:[grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
           {modules.map((module) => {
             if (module.moduleType === "type-chart") {
               return <TypeChartModule key={module.id} module={module} />;
@@ -142,6 +143,9 @@ export function ModuleContainer() {
             }
             if (module.moduleType === "location") {
               return <LocationModule key={module.id} module={module} />;
+            }
+            if (module.moduleType === "pokedex") {
+              return <PokedexModule key={module.id} module={module} />;
             }
             return <PokemonModule key={module.id} module={module} />;
           })}
@@ -159,6 +163,8 @@ export function ModuleContainer() {
             <DamageCalcModule module={activeModule} isOverlay />
           ) : activeModule.moduleType === "location" ? (
             <LocationModule module={activeModule} isOverlay />
+          ) : activeModule.moduleType === "pokedex" ? (
+            <PokedexModule module={activeModule} isOverlay />
           ) : (
             <PokemonModule module={activeModule} isOverlay />
           )

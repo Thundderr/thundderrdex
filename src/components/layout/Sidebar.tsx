@@ -105,6 +105,8 @@ export function Sidebar() {
         return { label: "Team Coverage", color: "text-purple-300", icon: "👥" };
       case "damage-calc":
         return { label: "Damage Calc", color: "text-orange-300", icon: null, spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" };
+      case "pokedex":
+        return { label: "Pokedex", color: "text-emerald-300", icon: "📖" };
       default:
         return { label: "Module", color: "text-slate-300", icon: "📦" };
     }

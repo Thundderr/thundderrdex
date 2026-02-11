@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
@@ -116,6 +116,12 @@ const createLocationModule = (locationAreaName: string | null = null): LocationM
   locationAreaName,
 });
 
+const createPokedexModule = (): PokedexModule => ({
+  id: uuidv4(),
+  moduleType: "pokedex",
+  isMinimized: false,
+});
+
 const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
   id: uuidv4(),
   name,
@@ -166,6 +172,8 @@ interface ModuleStore {
   setDamageCalcField: (moduleId: string, field: Partial<DamageCalcFieldConfig>) => void;
   setDamageCalcBothLevels: (moduleId: string, level: number) => void;
   swapDamageCalcPokemon: (moduleId: string) => void;
+  // Pokedex module methods
+  addPokedexModule: () => void;
   // Location module methods
   addLocationModule: (locationAreaName?: string | null) => void;
   setLocationArea: (moduleId: string, locationAreaName: string | null) => void;
@@ -538,6 +546,16 @@ export const useModuleStore = create<ModuleStore>()(
               return m;
             })
           ),
+        }));
+      },
+
+      // Pokedex module methods
+      addPokedexModule: () => {
+        const newModule = createPokedexModule();
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
         }));
       },
 
