@@ -9,6 +9,7 @@ import { usePokemonList } from "@/hooks/usePokemonList";
 import { GENERATIONS } from "@/data/generations";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import { clearAllCache } from "@/lib/queryPersister";
+import { DamageCalcModule as DamageCalcModuleType, SavedTeam } from "@/types/module";
 
 // Pokemon generation ranges by Pokedex number
 function getPokemonGeneration(pokedexId: number): number {
@@ -25,13 +26,15 @@ function getPokemonGeneration(pokedexId: number): number {
 
 export function Sidebar() {
   const { globalGeneration, setGeneration } = useGenerationStore();
-  const { tabs, activeTabId, getRecentSearches, restoreFromRecent, clearRecentSearches, bringModuleToFront } = useModuleStore();
+  const { tabs, activeTabId, getRecentSearches, restoreFromRecent, clearRecentSearches, bringModuleToFront, savedTeams, loadTeamIntoSide, deleteTeam } = useModuleStore();
   const recentSearches = getRecentSearches();
   const { data: pokemonList } = usePokemonList();
   const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
   const [showClearCacheConfirm, setShowClearCacheConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [teamActionId, setTeamActionId] = useState<string | null>(null);
+  const [pendingDeleteTeam, setPendingDeleteTeam] = useState<SavedTeam | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -67,6 +70,17 @@ export function Sidebar() {
     const activeTab = tabs.find((t) => t.id === activeTabId);
     return activeTab?.modules || [];
   }, [tabs, activeTabId]);
+
+  const hasFullscreenModule = useMemo(
+    () => modules.some((m) => m.isFullscreen),
+    [modules]
+  );
+
+  // Find the fullscreen damage-calc module with team battle active
+  const fullscreenDmgModule = useMemo(() => {
+    const m = modules.find((m) => m.isFullscreen && m.moduleType === "damage-calc") as DamageCalcModuleType | undefined;
+    return m?.attackerTeam && m?.defenderTeam ? m : null;
+  }, [modules]);
 
   // Create a lookup map from Pokemon name to ID
   const pokemonIdMap = useMemo(() => {
@@ -126,7 +140,7 @@ export function Sidebar() {
 
       {/* Current Modules */}
       {isMounted && modules.length > 0 && (
-        <div className="mb-4 flex-shrink-0 flex flex-col" style={{ maxHeight: '300px' }}>
+        <div className={`mb-4 flex-shrink-0 flex flex-col ${hasFullscreenModule ? "opacity-40 pointer-events-none" : ""}`} style={{ maxHeight: '300px' }}>
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Modules
           </h3>
@@ -174,7 +188,7 @@ export function Sidebar() {
       )}
 
       {/* Recent Searches - takes remaining space */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${hasFullscreenModule ? "opacity-40 pointer-events-none" : ""}`}>
         <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Recent
@@ -228,6 +242,117 @@ export function Sidebar() {
           </p>
         )}
       </div>
+
+      {/* Saved Teams */}
+      {isMounted && savedTeams.length > 0 && (
+        <div className={`mb-4 flex-shrink-0 flex flex-col ${!fullscreenDmgModule ? "opacity-40 pointer-events-none" : ""}`} style={{ maxHeight: '280px' }}>
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            Saved Teams
+          </h3>
+          <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+            {savedTeams.map((team) => {
+              const filledSlots = team.slots.filter((s): s is NonNullable<typeof s> => s !== null && s.config.pokemonName !== null);
+              return (
+                <div key={team.id} className="relative group">
+                  <button
+                    onClick={() => setTeamActionId(teamActionId === team.id ? null : team.id)}
+                    className="w-full text-left px-2 py-1.5 rounded transition-colors hover:bg-slate-800"
+                    title={team.name}
+                  >
+                    {/* Top row: Pokemon icons */}
+                    <div className="flex items-center gap-0.5 mb-0.5 pr-4">
+                      {team.slots.map((slot, i) => {
+                        const name = slot?.config.pokemonName;
+                        const spriteUrl = name ? pokemonSpriteMap.get(name) : null;
+                        return spriteUrl ? (
+                          <Image
+                            key={i}
+                            src={spriteUrl}
+                            alt=""
+                            width={16}
+                            height={16}
+                            className="pixelated"
+                            unoptimized
+                          />
+                        ) : (
+                          <div key={i} className="w-4 h-4 rounded bg-slate-700/40" />
+                        );
+                      })}
+                    </div>
+                    {/* Bottom row: Team name */}
+                    <span className="text-xs text-slate-300 truncate block">{team.name}</span>
+                  </button>
+
+                  {/* Delete trash button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setPendingDeleteTeam(team); }}
+                    className="absolute top-1/2 -translate-y-1/2 right-1 p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-600/20 opacity-0 group-hover:opacity-100 transition-all"
+                    title="Delete team"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+
+                  {/* Action popover */}
+                  {teamActionId === team.id && fullscreenDmgModule && (
+                    <div className="absolute left-full top-0 ml-1 z-20 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 w-40">
+                      <button
+                        onClick={() => {
+                          loadTeamIntoSide(fullscreenDmgModule.id, "attacker", team);
+                          setTeamActionId(null);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                      >
+                        Load as My Team
+                      </button>
+                      <button
+                        onClick={() => {
+                          loadTeamIntoSide(fullscreenDmgModule.id, "defender", team);
+                          setTeamActionId(null);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                      >
+                        Load as Enemy Team
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Team Confirmation Modal */}
+      {pendingDeleteTeam && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 shadow-xl border border-slate-700">
+            <h3 className="text-lg font-semibold text-white mb-2">Delete Team?</h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Are you sure you want to delete &quot;{pendingDeleteTeam.name}&quot;? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setPendingDeleteTeam(null)}
+                className="px-4 py-2 text-sm text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  deleteTeam(pendingDeleteTeam.id);
+                  setPendingDeleteTeam(null);
+                  setTeamActionId(null);
+                }}
+                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer - fixed at bottom */}
       <div className="pt-4 border-t border-slate-800 mt-auto flex-shrink-0 space-y-3">

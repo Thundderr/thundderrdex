@@ -9,6 +9,7 @@ export interface BaseModule {
   moduleType: ModuleType;
   isMinimized: boolean;
   isExtended?: boolean;
+  isFullscreen?: boolean;
 }
 
 // Pokemon module specific fields
@@ -113,12 +114,37 @@ export interface DamageCalcFieldConfig {
   isCritical: boolean;
 }
 
+// Team Battle types (6v6 mode for fullscreen damage calc)
+export interface TeamBattleSlot {
+  config: DamageCalcPokemonConfig;
+}
+
+export interface TeamBattleTeam {
+  slots: (TeamBattleSlot | null)[];  // length 6
+  activeSlotIndex: number | null;     // which slot feeds the calc
+  expandedSlotIndex: number | null;   // which accordion is open
+  loadedFromTeamId: string | null;    // tracks which saved team was loaded
+}
+
+export interface SavedTeam {
+  id: string;
+  name: string;
+  slots: (TeamBattleSlot | null)[];  // length 6
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface DamageCalcModule extends BaseModule {
   moduleType: "damage-calc";
   attacker: DamageCalcPokemonConfig;
   defender: DamageCalcPokemonConfig;
   selectedMove: string | null;
   field: DamageCalcFieldConfig;
+  // Team Battle data (used in fullscreen mode)
+  attackerTeam?: TeamBattleTeam;
+  defenderTeam?: TeamBattleTeam;
+  // When true, attackerTeam acts as defender and vice versa (swap labels only)
+  isSwapped?: boolean;
 }
 
 // Location module specific fields

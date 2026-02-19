@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function NatureChartModule({ module, isOverlay = false }: Props) {
-  const { toggleMinimize, removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
+  const { removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
   const moduleContainerRef = useRef<HTMLDivElement>(null);
   const isSelected = selectedModuleId === module.id;
 
@@ -87,63 +87,31 @@ export function NatureChartModule({ module, isOverlay = false }: Props) {
           Nature Chart
         </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => toggleMinimize(module.id)}
-            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-            title={module.isMinimized ? "Expand" : "Minimize"}
+        <button
+          onClick={() => removeModule(module.id)}
+          className="p-1 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
+          title="Remove module"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {module.isMinimized ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 12H4"
-                />
-              )}
-            </svg>
-          </button>
-          <button
-            onClick={() => removeModule(module.id)}
-            className="p-1 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
-            title="Remove module"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Content */}
-      {!module.isMinimized && (
-        <div className="p-4">
-          <NatureChart />
-        </div>
-      )}
+      <div className="p-4">
+        <NatureChart />
+      </div>
     </div>
   );
 }

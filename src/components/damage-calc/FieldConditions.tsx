@@ -13,6 +13,7 @@ interface Props {
   field: DamageCalcFieldConfig;
   attackerLevel: number;
   defenderLevel: number;
+  allExpanded?: boolean;
 }
 
 // Compact toggle button
@@ -99,10 +100,12 @@ function CollapsibleSection({
   title,
   sectionId,
   children,
+  forceOpen,
 }: {
   title: string;
   sectionId: string;
   children: React.ReactNode;
+  forceOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -122,6 +125,20 @@ function CollapsibleSection({
     saveSectionState(sectionId, newState);
   };
 
+  const effectiveOpen = forceOpen || isOpen;
+
+  // When forced open, skip hydration wait
+  if (forceOpen) {
+    return (
+      <div className="border-t border-slate-700">
+        <div className="py-1.5 px-2 text-[10px] text-slate-400">
+          <span className="uppercase tracking-wide font-medium">{title}</span>
+        </div>
+        <div className="px-2 pb-2">{children}</div>
+      </div>
+    );
+  }
+
   // Don't render content until hydrated to avoid flash
   if (!isHydrated) {
     return (
@@ -140,15 +157,15 @@ function CollapsibleSection({
         onClick={handleToggle}
         className="w-full flex items-center gap-2 py-1.5 px-2 text-[10px] text-slate-400 hover:text-white transition-colors"
       >
-        <span className="text-[8px]">{isOpen ? "▼" : "▶"}</span>
+        <span className="text-[8px]">{effectiveOpen ? "▼" : "▶"}</span>
         <span className="uppercase tracking-wide">{title}</span>
       </button>
-      {isOpen && <div className="px-2 pb-2">{children}</div>}
+      {effectiveOpen && <div className="px-2 pb-2">{children}</div>}
     </div>
   );
 }
 
-export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel }: Props) {
+export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel, allExpanded }: Props) {
   const { setDamageCalcField, setDamageCalcBothLevels } = useModuleStore();
   const { globalGeneration } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
@@ -330,7 +347,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
 
       {/* Auras & Abilities Section */}
       {(genFeatures.hasAuras || genFeatures.hasRuinAbilities) && (
-        <CollapsibleSection title="Auras & Abilities" sectionId="auras">
+        <CollapsibleSection title="Auras & Abilities" sectionId="auras" forceOpen={allExpanded}>
           <div className="space-y-1.5">
             {/* Auras (Gen 6+) */}
             {genFeatures.hasAuras && (
@@ -375,7 +392,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
       </div>
 
       {/* Hazards Section */}
-      <CollapsibleSection title="Hazards" sectionId="hazards">
+      <CollapsibleSection title="Hazards" sectionId="hazards" forceOpen={allExpanded}>
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Hazards */}
           <div className="space-y-1.5">
@@ -425,7 +442,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
       </CollapsibleSection>
 
       {/* Screens Section */}
-      <CollapsibleSection title="Screens" sectionId="screens">
+      <CollapsibleSection title="Screens" sectionId="screens" forceOpen={allExpanded}>
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Screens */}
           <div className="flex flex-wrap gap-1 justify-center">
@@ -459,7 +476,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
       </CollapsibleSection>
 
       {/* Status & Protection Section */}
-      <CollapsibleSection title="Status & Protection" sectionId="status">
+      <CollapsibleSection title="Status & Protection" sectionId="status" forceOpen={allExpanded}>
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Status */}
           <div className="flex flex-wrap gap-1 justify-center">
@@ -497,7 +514,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
       </CollapsibleSection>
 
       {/* Support Section */}
-      <CollapsibleSection title="Support" sectionId="support">
+      <CollapsibleSection title="Support" sectionId="support" forceOpen={allExpanded}>
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Support */}
           <div className="space-y-1.5">
@@ -561,7 +578,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel 
       </CollapsibleSection>
 
       {/* Switching Section */}
-      <CollapsibleSection title="Switching" sectionId="switching">
+      <CollapsibleSection title="Switching" sectionId="switching" forceOpen={allExpanded}>
         <div className="grid grid-cols-2 gap-2">
           {/* Attacker Switching */}
           <div className="flex flex-wrap gap-1 justify-center">

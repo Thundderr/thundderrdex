@@ -21,6 +21,7 @@ interface Props {
   moduleId: string;
   config: DamageCalcPokemonConfig;
   isAttacker: boolean;
+  onConfigChange?: (config: Partial<DamageCalcPokemonConfig>) => void;
 }
 
 // Pokemon generation ranges by Pokedex number
@@ -136,7 +137,7 @@ function ItemIcon({ item, size = 24 }: { item: string; size?: number }) {
   );
 }
 
-export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
+export function PokemonConfigPanel({ moduleId, config, isAttacker, onConfigChange }: Props) {
   const { setDamageCalcAttacker, setDamageCalcDefender, setDamageCalcMove } = useModuleStore();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
@@ -175,7 +176,10 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker }: Props) {
   const itemListRef = useRef<HTMLUListElement>(null);
   const { data: smogonSets, isLoading: setsLoading } = useSmogonSets(config.pokemonName);
 
-  const setConfig = isAttacker ? setDamageCalcAttacker : setDamageCalcDefender;
+  const storeSetConfig = isAttacker ? setDamageCalcAttacker : setDamageCalcDefender;
+  const setConfig = onConfigChange
+    ? (_moduleId: string, updates: Partial<DamageCalcPokemonConfig>) => onConfigChange(updates)
+    : storeSetConfig;
 
   // Get types for the selected generation
   const genTypes = useMemo(() => {

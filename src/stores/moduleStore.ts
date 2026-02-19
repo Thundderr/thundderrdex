@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
@@ -109,6 +109,13 @@ const createDamageCalcModule = (): DamageCalcModule => ({
   field: { ...DEFAULT_DAMAGE_CALC_FIELD },
 });
 
+const createDefaultTeamBattleTeam = (): TeamBattleTeam => ({
+  slots: [null, null, null, null, null, null],
+  activeSlotIndex: null,
+  expandedSlotIndex: null,
+  loadedFromTeamId: null,
+});
+
 const createLocationModule = (locationAreaName: string | null = null): LocationModule => ({
   id: uuidv4(),
   moduleType: "location",
@@ -135,6 +142,8 @@ interface ModuleStore {
   activeTabId: string;
   selectedModuleId: string | null;
   pendingTabRemoval: string | null;
+  // Saved teams (global, not per-tab)
+  savedTeams: SavedTeam[];
   // Tab methods
   addWorkspaceTab: () => void;
   removeWorkspaceTab: (id: string) => void;
@@ -172,6 +181,7 @@ interface ModuleStore {
   setDamageCalcField: (moduleId: string, field: Partial<DamageCalcFieldConfig>) => void;
   setDamageCalcBothLevels: (moduleId: string, level: number) => void;
   swapDamageCalcPokemon: (moduleId: string) => void;
+  swapTeamBattleSides: (moduleId: string) => void;
   // Pokedex module methods
   addPokedexModule: () => void;
   // Location module methods
@@ -181,6 +191,7 @@ interface ModuleStore {
   setActiveTab: (id: string, tab: ModuleTab) => void;
   toggleMinimize: (id: string) => void;
   toggleExtended: (id: string) => void;
+  toggleFullscreen: (id: string) => void;
   reorderModules: (activeId: string, overId: string) => void;
   bringModuleToFront: (id: string) => void;
   // Stat modifier methods
@@ -196,6 +207,19 @@ interface ModuleStore {
   setModuleMove: (id: string, slotIndex: number, moveName: string | null) => void;
   toggleCalculatedStats: (id: string) => void;
   resetStatModifiers: (id: string) => void;
+  // Team Battle methods (6v6 fullscreen damage calc)
+  initTeamBattle: (moduleId: string) => void;
+  setTeamBattleSlot: (moduleId: string, side: "attacker" | "defender", slotIndex: number, config: DamageCalcPokemonConfig) => void;
+  clearTeamBattleSlot: (moduleId: string, side: "attacker" | "defender", slotIndex: number) => void;
+  selectTeamBattleSlot: (moduleId: string, side: "attacker" | "defender", slotIndex: number) => void;
+  expandTeamBattleSlot: (moduleId: string, side: "attacker" | "defender", slotIndex: number | null) => void;
+  updateTeamBattleSlotConfig: (moduleId: string, side: "attacker" | "defender", slotIndex: number, config: Partial<DamageCalcPokemonConfig>) => void;
+  // Saved teams
+  saveTeam: (name: string, slots: (TeamBattleSlot | null)[]) => void;
+  overwriteTeam: (teamId: string, slots: (TeamBattleSlot | null)[]) => void;
+  deleteTeam: (teamId: string) => void;
+  renameTeam: (teamId: string, name: string) => void;
+  loadTeamIntoSide: (moduleId: string, side: "attacker" | "defender", team: SavedTeam) => void;
   // Recent searches
   restoreFromRecent: (pokemonName: string) => void;
   clearRecentSearches: () => void;
@@ -242,6 +266,7 @@ export const useModuleStore = create<ModuleStore>()(
       selectedModuleId: defaultTab.modules[0]?.id || null,
       pendingTabRemoval: null,
       newlyCreatedModuleId: null,
+      savedTeams: [],
 
       // Computed getter for active tab's recent searches
       getRecentSearches: () => {
@@ -550,6 +575,34 @@ export const useModuleStore = create<ModuleStore>()(
         }));
       },
 
+      swapTeamBattleSides: (moduleId) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+              const newSwapped = !(dmg.isSwapped ?? false);
+
+              // Re-sync active slot configs to their new calc fields
+              const atkTeamActive = dmg.attackerTeam?.activeSlotIndex;
+              const defTeamActive = dmg.defenderTeam?.activeSlotIndex;
+              const atkSlotConfig = atkTeamActive != null ? dmg.attackerTeam?.slots[atkTeamActive]?.config : null;
+              const defSlotConfig = defTeamActive != null ? dmg.defenderTeam?.slots[defTeamActive]?.config : null;
+
+              // attackerTeam maps to: attacker (normal) or defender (swapped)
+              const atkCalcKey = newSwapped ? "defender" : "attacker";
+              const defCalcKey = newSwapped ? "attacker" : "defender";
+
+              const result: Record<string, unknown> = { ...dmg, isSwapped: newSwapped, selectedMove: null };
+              if (atkSlotConfig) result[atkCalcKey] = { ...atkSlotConfig };
+              if (defSlotConfig) result[defCalcKey] = { ...defSlotConfig };
+
+              return result as unknown as DamageCalcModule;
+            })
+          ),
+        }));
+      },
+
       // Pokedex module methods
       addPokedexModule: () => {
         const newModule = createPokedexModule();
@@ -735,6 +788,17 @@ export const useModuleStore = create<ModuleStore>()(
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) =>
             modules.map((m) => (m.id === id ? { ...m, isExtended: !m.isExtended } : m))
+          ),
+        }));
+      },
+
+      toggleFullscreen: (id) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => ({
+              ...m,
+              isFullscreen: m.id === id ? !m.isFullscreen : false,
+            }))
           ),
         }));
       },
@@ -1021,6 +1085,247 @@ export const useModuleStore = create<ModuleStore>()(
         }));
       },
 
+      // Team Battle methods
+      initTeamBattle: (moduleId) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+
+              const attackerTeam = dmg.attackerTeam ? { ...dmg.attackerTeam, slots: [...dmg.attackerTeam.slots] } : createDefaultTeamBattleTeam();
+              const defenderTeam = dmg.defenderTeam ? { ...dmg.defenderTeam, slots: [...dmg.defenderTeam.slots] } : createDefaultTeamBattleTeam();
+
+              // If teams already existed, re-sync active slot with current attacker/defender
+              if (dmg.attackerTeam && attackerTeam.activeSlotIndex !== null) {
+                attackerTeam.slots[attackerTeam.activeSlotIndex] = { config: { ...dmg.attacker } };
+              }
+              if (dmg.defenderTeam && defenderTeam.activeSlotIndex !== null) {
+                defenderTeam.slots[defenderTeam.activeSlotIndex] = { config: { ...dmg.defender } };
+              }
+
+              // Seed slot 0 with current attacker/defender if no teams existed
+              if (!dmg.attackerTeam && dmg.attacker.pokemonName) {
+                attackerTeam.slots[0] = { config: { ...dmg.attacker } };
+                attackerTeam.activeSlotIndex = 0;
+              }
+              if (!dmg.defenderTeam && dmg.defender.pokemonName) {
+                defenderTeam.slots[0] = { config: { ...dmg.defender } };
+                defenderTeam.activeSlotIndex = 0;
+              }
+
+              return { ...dmg, attackerTeam, defenderTeam };
+            })
+          ),
+        }));
+      },
+
+      setTeamBattleSlot: (moduleId, side, slotIndex, config) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+              const teamKey = side === "attacker" ? "attackerTeam" : "defenderTeam";
+              const team = dmg[teamKey];
+              if (!team) return m;
+
+              const updatedSlots = [...team.slots];
+              updatedSlots[slotIndex] = { config: { ...config } };
+              return { ...dmg, [teamKey]: { ...team, slots: updatedSlots } };
+            })
+          ),
+        }));
+      },
+
+      clearTeamBattleSlot: (moduleId, side, slotIndex) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+              const isSwapped = dmg.isSwapped ?? false;
+              const teamKey = side === "attacker" ? "attackerTeam" : "defenderTeam";
+              const calcKey = side === "attacker"
+                ? (isSwapped ? "defender" : "attacker")
+                : (isSwapped ? "attacker" : "defender");
+              const team = dmg[teamKey];
+              if (!team) return m;
+
+              const updatedSlots = [...team.slots];
+              updatedSlots[slotIndex] = null;
+              const updatedTeam = { ...team, slots: updatedSlots };
+
+              // If clearing the active slot, reset the calc side
+              const result: Record<string, unknown> = { ...dmg, [teamKey]: updatedTeam };
+              if (team.activeSlotIndex === slotIndex) {
+                updatedTeam.activeSlotIndex = null;
+                result[calcKey] = { ...DEFAULT_DAMAGE_CALC_POKEMON };
+                const isAttackerSide = (side === "attacker" && !isSwapped) || (side === "defender" && isSwapped);
+                if (isAttackerSide) result.selectedMove = null;
+              }
+
+              return result as unknown as DamageCalcModule;
+            })
+          ),
+        }));
+      },
+
+      selectTeamBattleSlot: (moduleId, side, slotIndex) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+              const isSwapped = dmg.isSwapped ?? false;
+              const teamKey = side === "attacker" ? "attackerTeam" : "defenderTeam";
+              const calcKey = side === "attacker"
+                ? (isSwapped ? "defender" : "attacker")
+                : (isSwapped ? "attacker" : "defender");
+              const team = dmg[teamKey];
+              if (!team || !team.slots[slotIndex]) return m;
+
+              const slotConfig = { ...team.slots[slotIndex]!.config };
+              const updatedTeam = { ...team, activeSlotIndex: slotIndex };
+
+              const result: Record<string, unknown> = { ...dmg, [teamKey]: updatedTeam, [calcKey]: slotConfig };
+              // Reset move when the attacker side changes
+              const isAttackerSide = (side === "attacker" && !isSwapped) || (side === "defender" && isSwapped);
+              if (isAttackerSide) result.selectedMove = null;
+
+              return result as unknown as DamageCalcModule;
+            })
+          ),
+        }));
+      },
+
+      expandTeamBattleSlot: (moduleId, side, slotIndex) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+              const teamKey = side === "attacker" ? "attackerTeam" : "defenderTeam";
+              const team = dmg[teamKey];
+              if (!team) return m;
+
+              return { ...dmg, [teamKey]: { ...team, expandedSlotIndex: slotIndex } };
+            })
+          ),
+        }));
+      },
+
+      updateTeamBattleSlotConfig: (moduleId, side, slotIndex, config) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+              const isSwapped = dmg.isSwapped ?? false;
+              const teamKey = side === "attacker" ? "attackerTeam" : "defenderTeam";
+              const calcKey = side === "attacker"
+                ? (isSwapped ? "defender" : "attacker")
+                : (isSwapped ? "attacker" : "defender");
+              const team = dmg[teamKey];
+              if (!team) return m;
+
+              const updatedSlots = [...team.slots];
+              const currentSlot = updatedSlots[slotIndex];
+              const updatedSlotConfig = currentSlot
+                ? { ...currentSlot.config, ...config }
+                : { ...DEFAULT_DAMAGE_CALC_POKEMON, ...config };
+              updatedSlots[slotIndex] = { config: updatedSlotConfig };
+              const updatedTeam = { ...team, slots: updatedSlots };
+
+              const result: Record<string, unknown> = { ...dmg, [teamKey]: updatedTeam };
+
+              // Dual-write: if this is the active slot, also update the calc's attacker/defender
+              if (team.activeSlotIndex === slotIndex) {
+                result[calcKey] = updatedSlotConfig;
+              }
+
+              return result as unknown as DamageCalcModule;
+            })
+          ),
+        }));
+      },
+
+      // Saved teams
+      saveTeam: (name, slots) => {
+        set((state) => ({
+          savedTeams: [
+            ...state.savedTeams,
+            {
+              id: uuidv4(),
+              name,
+              slots: slots.map(s => s ? { config: { ...s.config } } : null),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+          ],
+        }));
+      },
+
+      overwriteTeam: (teamId, slots) => {
+        set((state) => ({
+          savedTeams: state.savedTeams.map(t =>
+            t.id === teamId
+              ? { ...t, slots: slots.map(s => s ? { config: { ...s.config } } : null), updatedAt: Date.now() }
+              : t
+          ),
+        }));
+      },
+
+      deleteTeam: (teamId) => {
+        set((state) => ({
+          savedTeams: state.savedTeams.filter(t => t.id !== teamId),
+        }));
+      },
+
+      renameTeam: (teamId, name) => {
+        set((state) => ({
+          savedTeams: state.savedTeams.map(t =>
+            t.id === teamId ? { ...t, name, updatedAt: Date.now() } : t
+          ),
+        }));
+      },
+
+      loadTeamIntoSide: (moduleId, side, team) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== moduleId || m.moduleType !== "damage-calc") return m;
+              const dmg = m as DamageCalcModule;
+              const isSwapped = dmg.isSwapped ?? false;
+              const teamKey = side === "attacker" ? "attackerTeam" : "defenderTeam";
+              const calcKey = side === "attacker"
+                ? (isSwapped ? "defender" : "attacker")
+                : (isSwapped ? "attacker" : "defender");
+
+              const firstNonNullIndex = team.slots.findIndex(s => s !== null);
+              const newTeam: TeamBattleTeam = {
+                slots: team.slots.map(s => s ? { config: { ...s.config } } : null),
+                activeSlotIndex: firstNonNullIndex >= 0 ? firstNonNullIndex : null,
+                expandedSlotIndex: null,
+                loadedFromTeamId: team.id,
+              };
+
+              const result: Record<string, unknown> = { ...dmg, [teamKey]: newTeam };
+
+              // Auto-select first non-null slot into the calc
+              const firstSlot = firstNonNullIndex >= 0 ? newTeam.slots[firstNonNullIndex] : null;
+              if (firstSlot) {
+                result[calcKey] = { ...firstSlot.config };
+                const isAttackerSide = (side === "attacker" && !isSwapped) || (side === "defender" && isSwapped);
+                if (isAttackerSide) result.selectedMove = null;
+              }
+
+              return result as unknown as DamageCalcModule;
+            })
+          ),
+        }));
+      },
+
       resetDamageCalcGimmicks: () => {
         set((state) => ({
           tabs: state.tabs.map((tab) => ({
@@ -1054,11 +1359,20 @@ export const useModuleStore = create<ModuleStore>()(
     }),
     {
       name: "thundderrdex-modules",
-      version: 3,
+      version: 4,
       partialize: (state) => ({
-        tabs: state.tabs,
+        tabs: state.tabs.map(tab => ({
+          ...tab,
+          modules: tab.modules.map(m => {
+            // Strip isFullscreen so users don't reopen the app in fullscreen
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { isFullscreen, ...rest } = m;
+            return rest as AnyModule;
+          }),
+        })),
         activeTabId: state.activeTabId,
         selectedModuleId: state.selectedModuleId,
+        savedTeams: state.savedTeams,
       }),
       // Migration from old formats to new format with tab-specific recents
       migrate: (persistedState: unknown, version: number) => {
@@ -1077,6 +1391,14 @@ export const useModuleStore = create<ModuleStore>()(
               activeTabId: newTab.id,
             };
           }
+        }
+        if (version === 3) {
+          // Version 3 -> 4: Add savedTeams array
+          const oldState = persistedState as Record<string, unknown>;
+          return {
+            ...oldState,
+            savedTeams: (oldState as { savedTeams?: SavedTeam[] }).savedTeams ?? [],
+          };
         }
         if (version === 2) {
           // Version 2 had global recentSearches, move them to active tab

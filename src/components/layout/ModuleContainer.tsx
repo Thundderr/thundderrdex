@@ -16,6 +16,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
+  useSortable,
 } from "@dnd-kit/sortable";
 import { useModuleStore } from "@/stores/moduleStore";
 import { PokemonModule } from "@/components/pokemon-module/PokemonModule";
@@ -25,6 +26,86 @@ import { TeamBuilderModule } from "@/components/pokemon-module/TeamBuilderModule
 import { DamageCalcModule } from "@/components/damage-calc/DamageCalcModule";
 import { LocationModule } from "@/components/location-module/LocationModule";
 import { PokedexModule } from "@/components/pokedex-module/PokedexModule";
+import { AnyModule } from "@/types/module";
+import { DamageCalcModule as DamageCalcModuleType, PokedexModule as PokedexModuleType } from "@/types/module";
+import { TeamBattlePanel } from "@/components/damage-calc/TeamBattlePanel";
+import { FullscreenDamageCalc } from "@/components/damage-calc/FullscreenDamageCalc";
+
+// Hidden placeholder to keep dnd-kit sortable position tracking intact
+// while a module is rendered in the fullscreen overlay
+function HiddenSortablePlaceholder({ id }: { id: string }) {
+  const { setNodeRef } = useSortable({ id, disabled: true });
+  return <div ref={setNodeRef} className="hidden" />;
+}
+
+// Fullscreen overlay that renders a module at full viewport size
+function FullscreenOverlay({ module }: { module: AnyModule }) {
+  const { toggleFullscreen, initTeamBattle } = useModuleStore();
+  const [contentWidth, setContentWidth] = useState(0);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        toggleFullscreen(module.id);
+      }
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [module.id, toggleFullscreen]);
+
+  // Initialize team battle data for damage calc modules
+  useEffect(() => {
+    if (module.moduleType === "damage-calc") {
+      initTeamBattle(module.id);
+    }
+  }, [module.id, module.moduleType, initTeamBattle]);
+
+  // Track content width for responsive team panels
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el) return;
+    const update = () => setContentWidth(el.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const dmgModule = module.moduleType === "damage-calc" ? module as DamageCalcModuleType : null;
+  const hasTeams = dmgModule?.attackerTeam && dmgModule?.defenderTeam;
+  const showTeamPanels = hasTeams && contentWidth >= 1200;
+  const isSwapped = dmgModule?.isSwapped ?? false;
+
+  return (
+    <div ref={overlayRef} className="absolute inset-0 z-10 bg-slate-900 overflow-hidden">
+      {module.moduleType === "damage-calc" && dmgModule && (
+        showTeamPanels ? (
+          // Team battle layout: [6 Pokemon] | [Damage Calc] | [6 Pokemon]
+          <div className="h-full flex">
+            <div className="flex-1 min-w-0 border-r border-slate-700">
+              <TeamBattlePanel moduleId={module.id} side="attacker" team={dmgModule.attackerTeam!} isAttackerSide={!isSwapped} />
+            </div>
+            <div className="w-[600px] flex-shrink-0 overflow-y-auto">
+              <FullscreenDamageCalc module={dmgModule} />
+            </div>
+            <div className="flex-1 min-w-0 border-l border-slate-700">
+              <TeamBattlePanel moduleId={module.id} side="defender" team={dmgModule.defenderTeam!} isAttackerSide={isSwapped} />
+            </div>
+          </div>
+        ) : (
+          // Standard fullscreen layout (narrow screen or teams not initialized)
+          <div className="h-full max-w-[990px] mx-auto">
+            <DamageCalcModule module={dmgModule} isFullscreen />
+          </div>
+        )
+      )}
+      {module.moduleType === "pokedex" && (
+        <PokedexModule module={module as PokedexModuleType} isFullscreen />
+      )}
+    </div>
+  );
+}
 
 export function ModuleContainer() {
   const { tabs, activeTabId, reorderModules } = useModuleStore();
@@ -38,6 +119,12 @@ export function ModuleContainer() {
     return activeTab?.modules || [];
   }, [tabs, activeTabId]);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Find fullscreen module (if any)
+  const fullscreenModule = useMemo(
+    () => modules.find((m) => m.isFullscreen),
+    [modules]
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -116,60 +203,69 @@ export function ModuleContainer() {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <SortableContext
-        items={modules.map((m) => m.id)}
-        strategy={rectSortingStrategy}
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
-        <div ref={gridRef} className="grid gap-4 grid-flow-row-dense grid-cols-1 md:[grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
-          {modules.map((module) => {
-            if (module.moduleType === "type-chart") {
-              return <TypeChartModule key={module.id} module={module} />;
-            }
-            if (module.moduleType === "nature-chart") {
-              return <NatureChartModule key={module.id} module={module} />;
-            }
-            if (module.moduleType === "team-builder") {
-              return <TeamBuilderModule key={module.id} module={module} />;
-            }
-            if (module.moduleType === "damage-calc") {
-              return <DamageCalcModule key={module.id} module={module} />;
-            }
-            if (module.moduleType === "location") {
-              return <LocationModule key={module.id} module={module} />;
-            }
-            if (module.moduleType === "pokedex") {
-              return <PokedexModule key={module.id} module={module} />;
-            }
-            return <PokemonModule key={module.id} module={module} />;
-          })}
-        </div>
-      </SortableContext>
-      <DragOverlay dropAnimation={null}>
-        {activeModule ? (
-          activeModule.moduleType === "type-chart" ? (
-            <TypeChartModule module={activeModule} isOverlay />
-          ) : activeModule.moduleType === "nature-chart" ? (
-            <NatureChartModule module={activeModule} isOverlay />
-          ) : activeModule.moduleType === "team-builder" ? (
-            <TeamBuilderModule module={activeModule} isOverlay />
-          ) : activeModule.moduleType === "damage-calc" ? (
-            <DamageCalcModule module={activeModule} isOverlay />
-          ) : activeModule.moduleType === "location" ? (
-            <LocationModule module={activeModule} isOverlay />
-          ) : activeModule.moduleType === "pokedex" ? (
-            <PokedexModule module={activeModule} isOverlay />
-          ) : (
-            <PokemonModule module={activeModule} isOverlay />
-          )
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <SortableContext
+          items={modules.map((m) => m.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div ref={gridRef} className="grid gap-4 grid-flow-row-dense grid-cols-1 md:[grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
+            {modules.map((module) => {
+              // Fullscreen module gets a hidden placeholder to preserve dnd-kit ordering
+              if (module.isFullscreen) {
+                return <HiddenSortablePlaceholder key={module.id} id={module.id} />;
+              }
+              if (module.moduleType === "type-chart") {
+                return <TypeChartModule key={module.id} module={module} />;
+              }
+              if (module.moduleType === "nature-chart") {
+                return <NatureChartModule key={module.id} module={module} />;
+              }
+              if (module.moduleType === "team-builder") {
+                return <TeamBuilderModule key={module.id} module={module} />;
+              }
+              if (module.moduleType === "damage-calc") {
+                return <DamageCalcModule key={module.id} module={module} />;
+              }
+              if (module.moduleType === "location") {
+                return <LocationModule key={module.id} module={module} />;
+              }
+              if (module.moduleType === "pokedex") {
+                return <PokedexModule key={module.id} module={module} />;
+              }
+              return <PokemonModule key={module.id} module={module} />;
+            })}
+          </div>
+        </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeModule ? (
+            activeModule.moduleType === "type-chart" ? (
+              <TypeChartModule module={activeModule} isOverlay />
+            ) : activeModule.moduleType === "nature-chart" ? (
+              <NatureChartModule module={activeModule} isOverlay />
+            ) : activeModule.moduleType === "team-builder" ? (
+              <TeamBuilderModule module={activeModule} isOverlay />
+            ) : activeModule.moduleType === "damage-calc" ? (
+              <DamageCalcModule module={activeModule} isOverlay />
+            ) : activeModule.moduleType === "location" ? (
+              <LocationModule module={activeModule} isOverlay />
+            ) : activeModule.moduleType === "pokedex" ? (
+              <PokedexModule module={activeModule} isOverlay />
+            ) : (
+              <PokemonModule module={activeModule} isOverlay />
+            )
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Fullscreen overlay - rendered outside DndContext */}
+      {fullscreenModule && <FullscreenOverlay module={fullscreenModule} />}
+    </>
   );
 }
