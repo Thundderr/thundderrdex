@@ -61,11 +61,15 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
     }
   }, [module.id, module.moduleType, initTeamBattle]);
 
-  // Track content width for responsive team panels
+  // Track container dimensions for responsive scaling
+  const [containerDims, setContainerDims] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const el = overlayRef.current;
     if (!el) return;
-    const update = () => setContentWidth(el.clientWidth);
+    const update = () => {
+      setContentWidth(el.clientWidth);
+      setContainerDims({ width: el.clientWidth, height: el.clientHeight });
+    };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
@@ -77,19 +81,34 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
   const showTeamPanels = hasTeams && contentWidth >= 1200;
   const isSwapped = dmgModule?.isSwapped ?? false;
 
+  // Design dimensions: left panel (840) + center (600) + right panel (840) = 2280px
+  const DESIGN_WIDTH = 2280;
+  const scale = showTeamPanels && containerDims.width > 0
+    ? Math.min(1, containerDims.width / DESIGN_WIDTH)
+    : 1;
+
   return (
     <div ref={overlayRef} className="absolute inset-0 z-10 bg-slate-900 overflow-hidden">
       {module.moduleType === "damage-calc" && dmgModule && (
         showTeamPanels ? (
           // Team battle layout: [6 Pokemon] | [Damage Calc] | [6 Pokemon]
-          <div className="h-full flex">
-            <div className="flex-1 min-w-0 border-r border-slate-700">
+          // Scaled to fit screen while maintaining proportions
+          <div
+            style={{
+              width: `${DESIGN_WIDTH}px`,
+              height: `${containerDims.height / scale}px`,
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+            }}
+            className="flex"
+          >
+            <div className="w-[840px] flex-shrink-0 border-r border-slate-700">
               <TeamBattlePanel moduleId={module.id} side="attacker" team={dmgModule.attackerTeam!} isAttackerSide={!isSwapped} />
             </div>
             <div className="w-[600px] flex-shrink-0 overflow-y-auto">
               <FullscreenDamageCalc module={dmgModule} />
             </div>
-            <div className="flex-1 min-w-0 border-l border-slate-700">
+            <div className="w-[840px] flex-shrink-0 border-l border-slate-700">
               <TeamBattlePanel moduleId={module.id} side="defender" team={dmgModule.defenderTeam!} isAttackerSide={isSwapped} />
             </div>
           </div>
