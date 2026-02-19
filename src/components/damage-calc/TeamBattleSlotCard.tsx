@@ -180,7 +180,7 @@ export function TeamBattleSlotCard({
 }: Props) {
   const { updateTeamBattleSlotConfig, setTeamBattleSlot, clearTeamBattleSlot, setDamageCalcMove } =
     useModuleStore();
-  const { globalGeneration } = useGenerationStore();
+  const { globalGeneration, setGeneration } = useGenerationStore();
   const { data: pokemonList } = usePokemonList();
   const { data: pokemon } = usePokemon(slot?.config.pokemonName ?? null);
   const { data: learnset } = useLearnset(slot?.config.pokemonName ?? null);
@@ -335,7 +335,11 @@ export function TeamBattleSlotCard({
       case "Enter":
         e.preventDefault();
         if (activeDropdown === "pokemon" && filteredPokemon[highlightedIndex]) {
-          handleConfigChange({ pokemonName: filteredPokemon[highlightedIndex].name, ability: null, item: null });
+          const p = filteredPokemon[highlightedIndex];
+          const { minGen, maxGen } = getPokemonGeneration(p.name, p.id);
+          const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
+          if (!existsInGen) break;
+          handleConfigChange({ pokemonName: p.name, ability: null, item: null });
           closeDropdown();
         } else if (activeDropdown === "item" && filteredItems[highlightedIndex]) {
           handleConfigChange({ item: filteredItems[highlightedIndex] });
@@ -586,16 +590,41 @@ export function TeamBattleSlotCard({
             {activeDropdown === "pokemon" && filteredPokemon.length > 0 && (
               <ul ref={listRef}
                 className="absolute z-50 top-full left-0 w-[220px] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-48 overflow-y-auto">
-                {filteredPokemon.map((p, i) => (
-                  <li key={p.name}
-                    onMouseDown={e => { e.preventDefault(); handleConfigChange({ pokemonName: p.name, ability: null, item: null }); closeDropdown(); }}
-                    className={`flex items-center gap-2 px-2 py-1 cursor-pointer text-xs ${
-                      i === highlightedIndex ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-700"
-                    }`}>
-                    <img src={p.spriteUrl} alt="" width={20} height={20} className="pixelated" />
-                    <span className="truncate">{p.displayName}</span>
-                  </li>
-                ))}
+                {filteredPokemon.map((p, i) => {
+                  const { minGen, maxGen } = getPokemonGeneration(p.name, p.id);
+                  const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
+                  return (
+                    <li key={p.name}
+                      onMouseDown={e => {
+                        e.preventDefault();
+                        if (!existsInGen) return;
+                        handleConfigChange({ pokemonName: p.name, ability: null, item: null }); closeDropdown();
+                      }}
+                      className={`flex items-center gap-2 px-2 py-1 text-xs ${
+                        !existsInGen ? "cursor-not-allowed" : "cursor-pointer"
+                      } ${i === highlightedIndex ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-700"}`}>
+                      <div className="relative flex-shrink-0">
+                        <img src={p.spriteUrl} alt="" width={20} height={20}
+                          className={`pixelated ${!existsInGen ? "opacity-40 grayscale" : ""}`} />
+                        {!existsInGen && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-0.5 bg-red-500 rotate-[-20deg]" />
+                          </div>
+                        )}
+                      </div>
+                      <span className={`flex-1 truncate ${!existsInGen ? "text-slate-500 line-through" : ""}`}>
+                        {p.displayName}
+                      </span>
+                      {!existsInGen && (
+                        <button
+                          onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setGeneration(minGen); }}
+                          className="px-1.5 py-0.5 text-[10px] bg-blue-600 hover:bg-blue-500 text-white rounded flex-shrink-0">
+                          Gen {minGen}{maxGen ? `-${maxGen}` : ""}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
