@@ -21,6 +21,7 @@ interface Props {
   moduleId: string;
   config: DamageCalcPokemonConfig;
   isAttacker: boolean;
+  isFullscreen?: boolean;
   onConfigChange?: (config: Partial<DamageCalcPokemonConfig>) => void;
 }
 
@@ -137,7 +138,7 @@ function ItemIcon({ item, size = 24 }: { item: string; size?: number }) {
   );
 }
 
-export function PokemonConfigPanel({ moduleId, config, isAttacker, onConfigChange }: Props) {
+export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen, onConfigChange }: Props) {
   const { setDamageCalcAttacker, setDamageCalcDefender, setDamageCalcMove } = useModuleStore();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
@@ -907,6 +908,25 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, onConfigChang
 
   return (
     <div className="bg-slate-800 rounded-lg p-2 space-y-2">
+      {/* Level - above Pokemon select (fullscreen only) */}
+      {isFullscreen && config.pokemonName && pokemon && (
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-slate-400">Lv</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={config.level}
+            onChange={(e) =>
+              updateConfig({
+                level: Math.max(1, Math.min(100, parseInputValue(e.target.value) || 1)),
+              })
+            }
+            className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-1 text-white text-center focus:outline-none focus:border-blue-500"
+          />
+        </div>
+      )}
+
       {/* Pokemon Search / Display */}
       {isSearching ? (
         <div className="relative">
@@ -1170,23 +1190,25 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, onConfigChang
       {/* Only show config options when Pokemon is selected */}
       {config.pokemonName && pokemon && (
         <>
-          {/* Level and Import/Export Row */}
+          {/* Level, Load Set and Import/Export Row */}
           <div className="flex items-center gap-2 text-xs">
-            <div className="flex items-center gap-1">
-              <span className="text-slate-400">Lv</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={config.level}
-                onChange={(e) =>
-                  updateConfig({
-                    level: Math.max(1, Math.min(100, parseInputValue(e.target.value) || 1)),
-                  })
-                }
-                className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-1 text-white text-center focus:outline-none focus:border-blue-500"
-              />
-            </div>
+            {!isFullscreen && (
+              <div className="flex items-center gap-1">
+                <span className="text-slate-400">Lv</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={config.level}
+                  onChange={(e) =>
+                    updateConfig({
+                      level: Math.max(1, Math.min(100, parseInputValue(e.target.value) || 1)),
+                    })
+                  }
+                  className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-1 text-white text-center focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            )}
             <div className="flex-1" />
             {/* Load Set Button with Dropdown */}
             <div className="relative">

@@ -82,10 +82,13 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
   const isSwapped = dmgModule?.isSwapped ?? false;
 
   // Design dimensions: left panel (840) + center (600) + right panel (840) = 2280px
+  // On wide screens (>= DESIGN_WIDTH), no scaling needed — flex-1 panels expand naturally
+  // On narrow screens, scale down with transform
   const DESIGN_WIDTH = 2280;
-  const scale = showTeamPanels && containerDims.width > 0
-    ? Math.min(1, containerDims.width / DESIGN_WIDTH)
-    : 1;
+  const needsScaling = showTeamPanels && containerDims.width > 0 && containerDims.width < DESIGN_WIDTH;
+  const scale = needsScaling ? containerDims.width / DESIGN_WIDTH : 1;
+  // Container width in layout pixels — always fills the screen when scaled
+  const layoutWidth = containerDims.width > 0 ? Math.max(DESIGN_WIDTH, containerDims.width) : DESIGN_WIDTH;
 
   return (
     <div ref={overlayRef} className="absolute inset-0 z-10 bg-slate-900 overflow-hidden">
@@ -95,20 +98,22 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
           // Scaled to fit screen while maintaining proportions
           <div
             style={{
-              width: `${DESIGN_WIDTH}px`,
+              width: `${layoutWidth}px`,
               height: `${containerDims.height / scale}px`,
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
+              ...(needsScaling ? {
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              } : {}),
             }}
             className="flex"
           >
-            <div className="w-[840px] flex-shrink-0 border-r border-slate-700">
+            <div className="flex-1 min-w-0 border-r border-slate-700">
               <TeamBattlePanel moduleId={module.id} side="attacker" team={dmgModule.attackerTeam!} isAttackerSide={!isSwapped} />
             </div>
             <div className="w-[600px] flex-shrink-0 overflow-y-auto">
               <FullscreenDamageCalc module={dmgModule} />
             </div>
-            <div className="w-[840px] flex-shrink-0 border-l border-slate-700">
+            <div className="flex-1 min-w-0 border-l border-slate-700">
               <TeamBattlePanel moduleId={module.id} side="defender" team={dmgModule.defenderTeam!} isAttackerSide={isSwapped} />
             </div>
           </div>

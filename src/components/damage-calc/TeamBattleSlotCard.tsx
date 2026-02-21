@@ -633,12 +633,6 @@ export function TeamBattleSlotCard({
               {types.map(t => <TypeBadge key={t.name} type={t.name} size="sm" />)}
             </div>
           )}
-          <div className="flex items-center gap-0.5 flex-shrink-0">
-            <span className="text-[10px] text-slate-500">Lv</span>
-            <NumericInput value={config.level} min={1} max={100}
-              onChange={v => handleConfigChange({ level: v })}
-              className="w-9 bg-slate-700/50 text-white text-[11px] text-center rounded px-0.5 py-1 outline-none" />
-          </div>
         </div>
 
         {/* Bottom area: Icon (left) | Select/Deselect (middle) | Load Set/Import/Export (right) */}
@@ -653,15 +647,23 @@ export function TeamBattleSlotCard({
             )}
           </div>
 
-          {/* Select */}
-          <button onClick={e => { e.stopPropagation(); onSelect(); }}
-            className={`w-16 h-16 flex-shrink-0 flex items-center justify-center text-[11px] font-semibold rounded transition-colors ${
-              isActive
-                ? isAttackerSide ? "bg-red-600 text-white" : "bg-blue-600 text-white"
-                : "bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white"
-            }`}>
-            Select
-          </button>
+          {/* Level + Select */}
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-0.5">
+              <span className="text-[10px] text-slate-500">Lv</span>
+              <NumericInput value={config.level} min={1} max={100}
+                onChange={v => handleConfigChange({ level: v })}
+                className="w-9 bg-slate-700/50 text-white text-[11px] text-center rounded px-0.5 py-0.5 outline-none" />
+            </div>
+            <button onClick={e => { e.stopPropagation(); onSelect(); }}
+              className={`w-16 h-16 flex-shrink-0 flex items-center justify-center text-[11px] font-semibold rounded transition-colors ${
+                isActive
+                  ? isAttackerSide ? "bg-red-600 text-white" : "bg-blue-600 text-white"
+                  : "bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white"
+              }`}>
+              Select
+            </button>
+          </div>
 
           {/* Load Set / Import / Export */}
           <div className="flex flex-col gap-1.5 flex-shrink-0">

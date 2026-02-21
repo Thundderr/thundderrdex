@@ -177,7 +177,7 @@ export function FullscreenDamageCalc({ module }: Props) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
-        <div className="space-y-3">
+        <div className="h-full flex flex-col gap-4">
           {/* Attacker vs Defender indicator — My Team always left, Enemy always right */}
           {(() => {
             // When swapped, module.attacker = enemy team, module.defender = my team
@@ -242,7 +242,7 @@ export function FullscreenDamageCalc({ module }: Props) {
 
           {/* Move Quick Select */}
           {module.attacker.moves?.some((m) => m) && (
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-2 gap-1.5">
               {module.attacker.moves.map((moveName, idx) => {
                 const moveData = attackerMoveData[idx];
                 if (!moveName || !moveData) return null;
@@ -255,7 +255,7 @@ export function FullscreenDamageCalc({ module }: Props) {
                   <button
                     key={idx}
                     onClick={() => setDamageCalcMove(module.id, moveName)}
-                    className={`px-2 py-1.5 text-[10px] rounded truncate transition-colors ${
+                    className={`px-3 py-2.5 text-xs font-medium rounded truncate transition-colors ${
                       isSelected
                         ? isGimmickActive
                           ? module.attacker.useZMove
@@ -295,7 +295,7 @@ export function FullscreenDamageCalc({ module }: Props) {
               <div className="flex items-center gap-2 mb-2">
                 <TypeBadge type={transformedMoveInfo.type as PokemonTypeName} size="sm" fixedWidth />
                 <DamageClassIcon damageClass={selectedMoveData.damageClass} />
-                <span className={`flex-1 text-sm font-semibold truncate ${
+                <span className={`flex-1 text-base font-semibold truncate ${
                   isGimmickActive
                     ? module.attacker.useZMove
                       ? "text-yellow-400"
@@ -319,7 +319,7 @@ export function FullscreenDamageCalc({ module }: Props) {
 
               <div className="flex items-baseline gap-4 mb-2">
                 <div className="flex items-baseline gap-1">
-                  <span className={`text-2xl font-bold ${
+                  <span className={`text-3xl font-bold ${
                     isGimmickActive
                       ? module.attacker.useZMove ? "text-yellow-400" : isGmaxMove ? "text-purple-400" : "text-red-400"
                       : "text-white"
@@ -364,14 +364,16 @@ export function FullscreenDamageCalc({ module }: Props) {
             </div>
           )}
 
-          {/* Field Conditions */}
-          <FieldConditions
-            moduleId={module.id}
-            field={module.field}
-            attackerLevel={module.attacker.level}
-            defenderLevel={module.defender.level}
-            allExpanded
-          />
+          {/* Field Conditions — gets remaining vertical space */}
+          <div className="flex-1 min-h-0">
+            <FieldConditions
+              moduleId={module.id}
+              field={module.field}
+              attackerLevel={module.attacker.level}
+              defenderLevel={module.defender.level}
+              allExpanded
+            />
+          </div>
         </div>
       </div>
     </div>

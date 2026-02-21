@@ -94,6 +94,10 @@ export function Sidebar() {
     return new Map(pokemonList.map((p) => [p.name, p.spriteUrl]));
   }, [pokemonList]);
 
+  // Hide sidebar completely when a damage calc module is present
+  const hasDamageCalc = modules.some((m) => m.moduleType === "damage-calc");
+  if (hasDamageCalc) return null;
+
   // Get module display info
   const getModuleInfo = (module: import("@/types/module").AnyModule) => {
     switch (module.moduleType) {

@@ -258,7 +258,7 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
       {/* Content */}
       <div className={`p-3 ${isFullscreen ? "flex-1 overflow-y-auto" : ""}`}>
         {/* Main Grid: Attacker | Controls | Defender */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${isFullscreen ? "items-stretch" : "items-start"}`}>
           {/* Attacker Panel */}
           <div className="flex flex-col">
             <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
@@ -271,11 +271,12 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
               moduleId={module.id}
               config={module.attacker}
               isAttacker={true}
+              isFullscreen={isFullscreen}
             />
           </div>
 
-          {/* Center Controls - Compact with constrained height */}
-          <div className="space-y-2 overflow-hidden">
+          {/* Center Controls */}
+          <div className={`${isFullscreen ? "flex flex-col gap-3" : "space-y-2"} overflow-hidden`}>
             {/* Swap Button - Smaller */}
             <div className="flex justify-center">
               <button
@@ -289,8 +290,14 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
               </button>
             </div>
 
-            {/* 1. Damage Results - At the top */}
-            <DamageResults result={damageResult} />
+            {/* 1. Damage Results */}
+            {isFullscreen ? (
+              <div className="flex-1 min-h-0">
+                <DamageResults result={damageResult} />
+              </div>
+            ) : (
+              <DamageResults result={damageResult} />
+            )}
 
             {/* 2. Move Quick Select - 2x2 grid */}
             {module.attacker.moves?.some((m) => m) && (
@@ -457,6 +464,7 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
               moduleId={module.id}
               config={module.defender}
               isAttacker={false}
+              isFullscreen={isFullscreen}
             />
           </div>
         </div>

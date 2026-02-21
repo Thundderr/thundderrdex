@@ -126,7 +126,7 @@ function getKoBgColor(koChance: DamageCalcResult["koChance"]): string {
 export function DamageResults({ result }: Props) {
   if (!result) {
     return (
-      <div className="bg-slate-800 rounded-lg p-3">
+      <div className="bg-slate-800 rounded-lg p-3 flex flex-col justify-center">
         <div className="text-center text-slate-500 py-2">
           <svg
             className="w-8 h-8 mx-auto mb-1 opacity-50"
@@ -153,31 +153,31 @@ export function DamageResults({ result }: Props) {
   const koBgColor = getKoBgColor(result.koChance);
 
   return (
-    <div className="bg-slate-800 rounded-lg overflow-hidden">
+    <div className="bg-slate-800 rounded-lg overflow-hidden flex flex-col">
       {/* KO Chance Banner with Info Button */}
       {result.koChance && (
-        <div className={`px-3 py-1.5 ${koBgColor} border-b border-slate-700 flex items-center justify-between`}>
-          <span className={`text-xs font-bold ${koColor}`}>
+        <div className={`px-3 py-2 ${koBgColor} border-b border-slate-700 flex items-center justify-between flex-shrink-0`}>
+          <span className={`text-sm font-bold ${koColor}`}>
             {result.koChance.text}
           </span>
           <InfoButton description={result.fullDesc} colorClass={koColor} />
         </div>
       )}
 
-      <div className="p-3 space-y-2">
+      <div className="p-3 flex-1 flex flex-col justify-center gap-3">
         {/* Damage Percentage - Main Display */}
         <div className="text-center">
-          <div className="text-2xl font-bold text-white">
+          <div className="text-4xl font-bold text-white">
             {result.minPercent.toFixed(1)}% - {result.maxPercent.toFixed(1)}%
           </div>
-          <div className="text-[10px] text-slate-400">
+          <div className="text-sm text-slate-400 mt-1">
             {result.minDamage} - {result.maxDamage} / {result.defenderMaxHp} HP
           </div>
         </div>
 
         {/* HP Bar Visualization - Left to right: Remaining HP → Variable dmg → Guaranteed dmg → Hazards */}
         <div className="relative">
-          <div className="h-3 bg-slate-700 rounded overflow-hidden">
+          <div className="h-5 bg-slate-700 rounded overflow-hidden">
             {/* 1. Remaining HP after max damage + hazards (green, leftmost) */}
             {result.maxPercent + result.hazardPercent < 100 && (
               <div
