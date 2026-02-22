@@ -99,9 +99,41 @@ const VERSION_DISPLAY: Record<string, string> = {
   scarlet: "Scarlet", violet: "Violet",
 };
 
+// Format condition values for display (e.g., "season-winter" -> "Winter")
+function formatConditionName(condition: string): string {
+  const CONDITION_DISPLAY: Record<string, string> = {
+    "season-spring": "Spring",
+    "season-summer": "Summer",
+    "season-autumn": "Autumn",
+    "season-winter": "Winter",
+    "time-morning": "Morning",
+    "time-day": "Day",
+    "time-night": "Night",
+    "swarm-yes": "Swarm",
+    "swarm-no": "No Swarm",
+    "radar-on": "Poké Radar",
+    "radar-off": "No Poké Radar",
+    "radio-off": "No Radio",
+    "radio-hoenn": "Hoenn Sound",
+    "radio-sinnoh": "Sinnoh Sound",
+    "slot2-none": "No Dual-Slot",
+    "slot2-ruby": "Ruby in Slot 2",
+    "slot2-sapphire": "Sapphire in Slot 2",
+    "slot2-emerald": "Emerald in Slot 2",
+    "slot2-firered": "FireRed in Slot 2",
+    "slot2-leafgreen": "LeafGreen in Slot 2",
+  };
+  if (CONDITION_DISPLAY[condition]) return CONDITION_DISPLAY[condition];
+  // Fallback: remove category prefix and title-case
+  const parts = condition.split("-");
+  if (parts.length > 1) parts.shift();
+  return parts.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
 function transformLocationArea(data: PokeAPILocationArea): LocationAreaData {
-  // Build version -> method -> pokemon mapping
-  const versionMap = new Map<string, Map<string, LocationPokemonEncounter[]>>();
+  // Build version -> method -> mergeKey -> pokemon mapping
+  // mergeKey includes conditions so seasonal/time-based entries stay separate
+  const versionMap = new Map<string, Map<string, Map<string, LocationPokemonEncounter>>>();
 
   for (const pokemonEncounter of data.pokemon_encounters) {
     const pokemonName = pokemonEncounter.pokemon.name;
@@ -119,19 +151,22 @@ function transformLocationArea(data: PokeAPILocationArea): LocationAreaData {
         const method = encounter.method.name;
 
         if (!methodMap.has(method)) {
-          methodMap.set(method, []);
+          methodMap.set(method, new Map());
         }
+        const encounterMap = methodMap.get(method)!;
 
-        // Check if this Pokemon is already in this method's list
-        const existingPokemon = methodMap.get(method)!.find(p => p.pokemonName === pokemonName);
+        // Build merge key from pokemon name + sorted conditions
+        const rawConditions = encounter.condition_values.map(c => c.name).sort();
+        const mergeKey = `${pokemonName}::${rawConditions.join(",")}`;
 
-        if (existingPokemon) {
-          // Update level range if needed
-          existingPokemon.minLevel = Math.min(existingPokemon.minLevel, encounter.min_level);
-          existingPokemon.maxLevel = Math.max(existingPokemon.maxLevel, encounter.max_level);
-          existingPokemon.chance = Math.max(existingPokemon.chance, encounter.chance);
+        const existing = encounterMap.get(mergeKey);
+        if (existing) {
+          // Same pokemon + same conditions: sum chances, merge level range
+          existing.minLevel = Math.min(existing.minLevel, encounter.min_level);
+          existing.maxLevel = Math.max(existing.maxLevel, encounter.max_level);
+          existing.chance += encounter.chance;
         } else {
-          methodMap.get(method)!.push({
+          encounterMap.set(mergeKey, {
             pokemonName,
             pokemonDisplayName: formatPokemonName(pokemonName),
             pokemonId,
@@ -139,7 +174,7 @@ function transformLocationArea(data: PokeAPILocationArea): LocationAreaData {
             minLevel: encounter.min_level,
             maxLevel: encounter.max_level,
             chance: encounter.chance,
-            conditions: encounter.condition_values.map(c => c.name),
+            conditions: rawConditions.map(formatConditionName),
           });
         }
       }
@@ -152,16 +187,9 @@ function transformLocationArea(data: PokeAPILocationArea): LocationAreaData {
   for (const [version, methodMap] of versionMap) {
     const methods: MethodEncounters[] = [];
 
-    for (const [method, pokemon] of methodMap) {
+    for (const [method, encounterMap] of methodMap) {
       const methodInfo = ENCOUNTER_METHOD_GROUPS[method] || { display: formatEncounterMethod(method), priority: 100 };
-
-      // Normalize chances so they add up to 100%
-      const totalChance = pokemon.reduce((sum, p) => sum + p.chance, 0);
-      if (totalChance > 0) {
-        for (const p of pokemon) {
-          p.chance = Math.round((p.chance / totalChance) * 100);
-        }
-      }
+      const pokemon = Array.from(encounterMap.values());
 
       // Sort Pokemon by encounter rate (descending), then by level
       pokemon.sort((a, b) => {
@@ -181,8 +209,9 @@ function transformLocationArea(data: PokeAPILocationArea): LocationAreaData {
     methods.sort((a, b) => a.priority - b.priority);
 
     // Create fingerprint from encounter data for grouping identical versions
+    // Include conditions in fingerprint so versions with different seasonal data aren't grouped
     const fingerprint = methods.map(m =>
-      `${m.method}:${m.pokemon.map(p => `${p.pokemonName}|${p.minLevel}|${p.maxLevel}|${p.chance}`).join(",")}`
+      `${m.method}:${m.pokemon.map(p => `${p.pokemonName}|${p.minLevel}|${p.maxLevel}|${p.chance}|${p.conditions.join("+")}`).join(",")}`
     ).join(";");
 
     versionData.set(version, {

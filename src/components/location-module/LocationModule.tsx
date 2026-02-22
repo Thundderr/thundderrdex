@@ -137,7 +137,7 @@ function MethodSection({ method, onPokemonClick }: {
         <div className="space-y-0.5">
           {method.pokemon.map((poke) => (
             <PokemonEncounterRow
-              key={poke.pokemonName}
+              key={`${poke.pokemonName}-${poke.conditions.join("-")}`}
               pokemon={poke}
               onPokemonClick={onPokemonClick}
             />
