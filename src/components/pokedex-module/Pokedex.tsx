@@ -11,20 +11,34 @@ import { GENERATIONS } from "@/data/generations";
 import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
 
-export function Pokedex() {
+interface PokedexProps {
+  moduleId: string;
+  // null/undefined = National dex (generation-grouped view). A number = a regional dex id.
+  selectedDexId?: number | null;
+}
+
+export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexProps) {
   const { data: allPokemon, isLoading } = usePokemonList();
   const { globalGeneration, setGeneration } = useGenerationStore();
-  const { addPokemonModule } = useModuleStore();
+  const { addPokemonModule, setPokedexDex } = useModuleStore();
   const caught = useCaughtStore((s) => s.caught);
   const cycleCaught = useCaughtStore((s) => s.cycleCaught);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  // null = National dex (generation-grouped view). A number = a regional dex id.
-  const [selectedDexId, setSelectedDexId] = useState<number | null>(null);
+  // Selected dex lives on the module in the store so it survives refreshes
+  const selectedDexId = selectedDexIdProp ?? null;
+  // When on, tiles marked "caught" are hidden (unmarked and not-caught stay visible)
+  const [showUncaughtOnly, setShowUncaughtOnly] = useState(false);
   const dexGroups = useMemo(() => getRegionalDexGroups(), []);
   const selectedDex = selectedDexId !== null ? getRegionalDexById(selectedDexId) : undefined;
   const { data: regionalEntries, isLoading: isRegionalLoading } = usePokedex(selectedDexId);
+
+  const visibleRegionalEntries = useMemo(() => {
+    if (!regionalEntries) return [];
+    if (!showUncaughtOnly) return regionalEntries;
+    return regionalEntries.filter((e) => caught[e.nationalId] !== "caught");
+  }, [regionalEntries, showUncaughtOnly, caught]);
 
   // Filter to base Pokemon only (id 1-1025), deduplicated by id, sorted by id
   const basePokemon = useMemo(() => {
@@ -95,15 +109,15 @@ export function Pokedex() {
 
   return (
     <div className="flex flex-col min-h-0 h-full">
-      {/* Dex Selector: National (generation-grouped) or a regional dex */}
-      <div className="mb-3 shrink-0">
+      {/* Dex Selector: National (generation-grouped) or a regional dex + uncaught filter */}
+      <div className="mb-3 shrink-0 flex gap-1.5">
         <select
           value={selectedDexId ?? "national"}
           onChange={(e) => {
             const v = e.target.value;
-            setSelectedDexId(v === "national" ? null : parseInt(v, 10));
+            setPokedexDex(moduleId, v === "national" ? null : parseInt(v, 10));
           }}
-          className="w-full px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
+          className="flex-1 min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
         >
           <option value="national">National Dex (by Generation)</option>
           {dexGroups.map((group) => (
@@ -116,6 +130,17 @@ export function Pokedex() {
             </optgroup>
           ))}
         </select>
+        <button
+          onClick={() => setShowUncaughtOnly((v) => !v)}
+          className={`shrink-0 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+            showUncaughtOnly
+              ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
+              : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+          }`}
+          title={showUncaughtOnly ? "Showing uncaught Pokemon only — click to show all" : "Show uncaught Pokemon only"}
+        >
+          Uncaught only
+        </button>
       </div>
 
       {selectedDex ? (
@@ -130,12 +155,12 @@ export function Pokedex() {
               <h3 className="text-xs font-semibold text-slate-400">
                 {selectedDex.displayName}
                 <span className="ml-2 text-slate-500 font-normal">
-                  {regionalEntries.length} Pokémon
+                  {visibleRegionalEntries.length}{showUncaughtOnly ? " uncaught" : ""} Pokémon
                 </span>
               </h3>
             </div>
             <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
-              {regionalEntries.map((entry) => {
+              {visibleRegionalEntries.map((entry) => {
                 const mark = caught[entry.nationalId];
                 return (
                 <button
@@ -198,7 +223,10 @@ export function Pokedex() {
         className="flex-1 min-h-0 overflow-y-auto rounded-lg"
       >
         {GENERATIONS.map((gen) => {
-          const pokemon = pokemonByGen.get(gen.id) || [];
+          const allInGen = pokemonByGen.get(gen.id) || [];
+          const pokemon = showUncaughtOnly
+            ? allInGen.filter((p) => caught[p.id] !== "caught")
+            : allInGen;
           if (pokemon.length === 0) return null;
 
           return (

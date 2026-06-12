@@ -184,6 +184,7 @@ interface ModuleStore {
   swapTeamBattleSides: (moduleId: string) => void;
   // Pokedex module methods
   addPokedexModule: () => void;
+  setPokedexDex: (moduleId: string, dexId: number | null) => void;
   // Location module methods
   addLocationModule: (locationAreaName?: string | null) => void;
   setLocationArea: (moduleId: string, locationAreaName: string | null) => void;
@@ -687,6 +688,19 @@ export const useModuleStore = create<ModuleStore>()(
           tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
           newlyCreatedModuleId: newModule.id,
           selectedModuleId: newModule.id,
+        }));
+      },
+
+      setPokedexDex: (moduleId, dexId) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "pokedex") {
+                return { ...m, selectedDexId: dexId } as PokedexModule;
+              }
+              return m;
+            })
+          ),
         }));
       },
 

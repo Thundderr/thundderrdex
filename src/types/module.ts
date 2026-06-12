@@ -160,6 +160,8 @@ export interface LocationModule extends BaseModule {
 // Pokedex module specific fields
 export interface PokedexModule extends BaseModule {
   moduleType: "pokedex";
+  // Selected dex: null/undefined = National dex, a number = a regional dex id
+  selectedDexId?: number | null;
 }
 
 // Union type for all modules
