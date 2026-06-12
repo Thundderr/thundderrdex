@@ -3,9 +3,10 @@
 // garbage without re-validating every nested field the app already tolerates.
 
 import type { PersistedModuleState } from "@/stores/moduleStore";
+import type { CatchMark } from "@/stores/caughtStore";
 
 export interface CaughtPayload {
-  caught: Record<number, true>;
+  caught: Record<number, CatchMark>;
 }
 
 export interface GenerationPayload {
@@ -19,7 +20,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function isCaughtPayload(raw: unknown): raw is CaughtPayload {
   if (!isRecord(raw) || !isRecord(raw.caught)) return false;
   return Object.entries(raw.caught).every(
-    ([key, value]) => /^\d+$/.test(key) && value === true
+    ([key, value]) =>
+      /^\d+$/.test(key) && (value === "caught" || value === "not-caught")
   );
 }
 

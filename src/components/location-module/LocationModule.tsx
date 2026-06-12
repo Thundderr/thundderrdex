@@ -8,6 +8,7 @@ import { useModuleStore } from "@/stores/moduleStore";
 import { LocationModule as LocationModuleType } from "@/types/module";
 import { useLocationArea, LocationAreaData, VersionEncounters, MethodEncounters } from "@/hooks/useLocationArea";
 import { useLocationAreaList, LocationAreaListItem } from "@/hooks/useLocationAreaList";
+import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
 
 interface Props {
   module: LocationModuleType;
@@ -327,9 +328,10 @@ export function LocationModule({ module, isOverlay = false }: Props) {
   return (
     <div
       ref={setRefs}
-      style={style}
+      style={{ ...style, ...moduleSizeStyle(module) }}
+      data-module-root
       onClick={() => selectModule(module.id)}
-      className={`bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+      className={`${moduleSizeClasses(module)} bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
         module.isExtended ? "col-span-1 md:col-span-2" : ""
       } ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
@@ -398,7 +400,7 @@ export function LocationModule({ module, isOverlay = false }: Props) {
       </div>
 
       {/* Content */}
-      <div className="p-4 min-h-[400px] max-h-[600px] overflow-auto">
+      <div className={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[400px] max-h-[600px]"}`}>
         {isSearching ? (
           <div className="relative">
             <input
@@ -495,6 +497,8 @@ export function LocationModule({ module, isOverlay = false }: Props) {
           </div>
         ) : null}
       </div>
+
+      {!isOverlay && <ModuleResizeHandle moduleId={module.id} />}
     </div>
   );
 }

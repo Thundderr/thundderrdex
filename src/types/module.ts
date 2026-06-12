@@ -10,6 +10,10 @@ export interface BaseModule {
   isMinimized: boolean;
   isExtended?: boolean;
   isFullscreen?: boolean;
+  // User resize overrides — absent means the module's default size.
+  // Width snaps to dashboard grid columns; height is free-form pixels.
+  customWidthCols?: number;
+  customHeight?: number;
 }
 
 // Pokemon module specific fields

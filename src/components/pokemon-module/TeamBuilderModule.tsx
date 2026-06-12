@@ -15,6 +15,7 @@ import { calculateDualTypeEffectiveness } from "@/lib/utils/typeEffectiveness";
 import { TYPES_BY_GENERATION, TYPE_COLORS } from "@/data/typeChart";
 import { isMegaPokemon, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
+import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
 
 interface Props {
   module: TeamBuilderModuleType;
@@ -473,9 +474,10 @@ export function TeamBuilderModule({ module, isOverlay = false }: Props) {
   return (
     <div
       ref={setRefs}
-      style={style}
+      style={{ ...style, ...moduleSizeStyle(module) }}
+      data-module-root
       onClick={() => selectModule(module.id)}
-      className={`col-span-1 md:col-span-2 bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+      className={`col-span-1 md:col-span-2 ${moduleSizeClasses(module)} bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
@@ -509,7 +511,7 @@ export function TeamBuilderModule({ module, isOverlay = false }: Props) {
       </div>
 
       {/* Content */}
-      <div className="p-4 flex flex-col">
+      <div className={`p-4 flex flex-col ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
           {/* Team Slots Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {module.teamSlots.map((pokemonName, index) => (
@@ -526,6 +528,8 @@ export function TeamBuilderModule({ module, isOverlay = false }: Props) {
           {/* Team Coverage */}
           <TeamCoverage teamSlots={module.teamSlots} globalGeneration={globalGeneration} />
         </div>
+
+      {!isOverlay && <ModuleResizeHandle moduleId={module.id} />}
     </div>
   );
 }

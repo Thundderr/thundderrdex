@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
 import { PokemonModule } from "@/types/module";
 import { NatureChart } from "@/components/nature-chart/NatureChart";
+import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
 
 interface Props {
   module: PokemonModule;
@@ -53,9 +54,10 @@ export function NatureChartModule({ module, isOverlay = false }: Props) {
   return (
     <div
       ref={setRefs}
-      style={style}
+      style={{ ...style, ...moduleSizeStyle(module) }}
+      data-module-root
       onClick={() => selectModule(module.id)}
-      className={`col-span-1 md:col-span-2 bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+      className={`col-span-1 md:col-span-2 ${moduleSizeClasses(module)} bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
@@ -109,9 +111,11 @@ export function NatureChartModule({ module, isOverlay = false }: Props) {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className={`p-4 ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
         <NatureChart />
       </div>
+
+      {!isOverlay && <ModuleResizeHandle moduleId={module.id} />}
     </div>
   );
 }

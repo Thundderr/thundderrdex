@@ -21,6 +21,7 @@ import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { NATURES } from "@/data/natures";
 import { StatValues } from "@/lib/utils/statCalculator";
 import { useSmogonSets, SmogonSet } from "@/hooks/useSmogonSets";
+import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
 import Image from "next/image";
 
 interface Props {
@@ -882,10 +883,11 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
   return (
     <div
       ref={setRefs}
-      style={style}
+      style={{ ...style, ...moduleSizeStyle(module) }}
       data-module-id={module.id}
+      data-module-root
       onClick={() => selectModule(module.id)}
-      className={`bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
+      className={`${moduleSizeClasses(module)} bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
         module.isExtended ? "col-span-1 md:col-span-2" : ""
       } ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
@@ -1148,7 +1150,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       </div>
 
       {/* Content */}
-      <div className="relative p-4">
+      <div className={`relative p-4 ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
           {/* Invalid generation overlay */}
           {pokemon && !pokemonExistsInGen && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -1350,6 +1352,8 @@ IVs: 0 SpA`}
           </div>
         </div>
       )}
+
+      {!isOverlay && <ModuleResizeHandle moduleId={module.id} />}
     </div>
   );
 }

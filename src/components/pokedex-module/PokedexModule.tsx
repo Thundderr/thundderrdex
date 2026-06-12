@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
 import { PokedexModule as PokedexModuleType } from "@/types/module";
 import { Pokedex } from "./Pokedex";
+import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
 
 interface Props {
   module: PokedexModuleType;
@@ -54,9 +55,10 @@ export function PokedexModule({ module, isOverlay = false, isFullscreen = false 
   return (
     <div
       ref={setRefs}
-      style={style}
+      style={isFullscreen ? style : { ...style, ...moduleSizeStyle(module) }}
+      data-module-root
       onClick={() => selectModule(module.id)}
-      className={`${isFullscreen ? "h-full" : "col-span-1 md:col-span-2 rounded-lg max-h-[calc(100vh-9.5rem)]"} flex flex-col bg-slate-900 border shadow-lg overflow-hidden ${
+      className={`${isFullscreen ? "h-full" : `col-span-1 md:col-span-2 rounded-lg ${moduleSizeClasses(module)} ${module.customHeight ? "" : "max-h-[calc(100vh-9.5rem)]"}`} flex flex-col bg-slate-900 border shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging && !isFullscreen ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
@@ -135,6 +137,8 @@ export function PokedexModule({ module, isOverlay = false, isFullscreen = false 
       <div className="p-4 flex-1 min-h-0 flex flex-col">
         <Pokedex />
       </div>
+
+      {!isOverlay && !isFullscreen && <ModuleResizeHandle moduleId={module.id} />}
     </div>
   );
 }

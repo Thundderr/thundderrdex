@@ -2,7 +2,7 @@
 // cloud. The engine itself is store-agnostic; everything store-specific
 // (payload shape, validation, migrations, conflict merge) lives here.
 
-import { useCaughtStore } from "@/stores/caughtStore";
+import { CAUGHT_STORE_VERSION, migrateCaughtState, useCaughtStore } from "@/stores/caughtStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import {
   MODULE_STORE_VERSION,
@@ -43,7 +43,7 @@ export interface SyncedStoreConfig {
 
 const caughtConfig: SyncedStoreConfig = {
   key: "caught",
-  version: 0,
+  version: CAUGHT_STORE_VERSION,
   getPayload: () => ({ caught: useCaughtStore.getState().caught }),
   applyPayload: (payload) => {
     useCaughtStore.setState({ caught: (payload as CaughtPayload).caught });
@@ -51,6 +51,8 @@ const caughtConfig: SyncedStoreConfig = {
   isDefault: (payload) =>
     Object.keys((payload as CaughtPayload).caught).length === 0,
   validate: isCaughtPayload,
+  // v0 cloud payloads stored Record<number, true>; true becomes "caught".
+  migrate: (raw) => migrateCaughtState(raw),
   // Caught-ness is a natural set union, so the adoption edge case merges
   // instead of picking a side.
   merge: (local, remote) => ({

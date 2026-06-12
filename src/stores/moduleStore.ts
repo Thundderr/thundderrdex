@@ -192,6 +192,8 @@ interface ModuleStore {
   toggleMinimize: (id: string) => void;
   toggleExtended: (id: string) => void;
   toggleFullscreen: (id: string) => void;
+  // Resize overrides; null clears a dimension back to the default, undefined leaves it unchanged
+  setModuleSize: (id: string, size: { widthCols?: number | null; height?: number | null }) => void;
   reorderModules: (activeId: string, overId: string) => void;
   bringModuleToFront: (id: string) => void;
   // Stat modifier methods
@@ -874,6 +876,26 @@ export const useModuleStore = create<ModuleStore>()(
               ...m,
               isFullscreen: m.id === id ? !m.isFullscreen : false,
             }))
+          ),
+        }));
+      },
+
+      setModuleSize: (id, size) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id !== id) return m;
+              const next = { ...m };
+              if (size.widthCols !== undefined) {
+                if (size.widthCols === null) delete next.customWidthCols;
+                else next.customWidthCols = Math.max(1, Math.round(size.widthCols));
+              }
+              if (size.height !== undefined) {
+                if (size.height === null) delete next.customHeight;
+                else next.customHeight = Math.round(size.height);
+              }
+              return next;
+            })
           ),
         }));
       },

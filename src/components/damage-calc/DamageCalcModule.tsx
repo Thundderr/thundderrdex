@@ -24,6 +24,7 @@ import {
 } from "@/lib/utils/generationConfig";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { PokemonTypeName } from "@/types/pokemon";
+import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
 
 interface Props {
   module: DamageCalcModuleType;
@@ -195,9 +196,10 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
   return (
     <div
       ref={setRefs}
-      style={style}
+      style={isFullscreen ? style : { ...style, ...moduleSizeStyle(module) }}
+      data-module-root
       onClick={() => selectModule(module.id)}
-      className={`${isFullscreen ? "h-full flex flex-col" : "col-span-1 md:col-span-2 rounded-lg"} bg-slate-900 border shadow-lg overflow-hidden ${
+      className={`${isFullscreen ? "h-full flex flex-col" : `col-span-1 md:col-span-2 rounded-lg ${moduleSizeClasses(module)}`} bg-slate-900 border shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging && !isFullscreen ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
@@ -256,7 +258,7 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
       </div>
 
       {/* Content */}
-      <div className={`p-3 ${isFullscreen ? "flex-1 overflow-y-auto" : ""}`}>
+      <div className={`p-3 ${isFullscreen || module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
         {/* Main Grid: Attacker | Controls | Defender */}
         <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${isFullscreen ? "items-stretch" : "items-start"}`}>
           {/* Attacker Panel */}
@@ -469,6 +471,8 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
           </div>
         </div>
       </div>
+
+      {!isOverlay && !isFullscreen && <ModuleResizeHandle moduleId={module.id} />}
     </div>
   );
 }

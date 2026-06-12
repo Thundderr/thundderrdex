@@ -38,6 +38,15 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* User-resized modules: width snaps to whole grid columns. Scoped to the
+   md+ breakpoint where the dashboard is multi-column — below it every
+   module stays full-width. !important beats the default col-span classes. */
+@media (min-width: 768px) {
+  .module-cols {
+    grid-column: span var(--module-cols) / span var(--module-cols) !important;
+  }
+}
+
 /* Hide number input spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {

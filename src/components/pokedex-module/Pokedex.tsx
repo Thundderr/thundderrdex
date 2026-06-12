@@ -6,7 +6,7 @@ import { usePokemonList } from "@/hooks/usePokemonList";
 import { usePokedex } from "@/hooks/usePokedex";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
-import { useCaughtStore } from "@/stores/caughtStore";
+import { useCaughtStore, CatchMark } from "@/stores/caughtStore";
 import { GENERATIONS } from "@/data/generations";
 import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
@@ -16,7 +16,7 @@ export function Pokedex() {
   const { globalGeneration, setGeneration } = useGenerationStore();
   const { addPokemonModule } = useModuleStore();
   const caught = useCaughtStore((s) => s.caught);
-  const toggleCaught = useCaughtStore((s) => s.toggleCaught);
+  const cycleCaught = useCaughtStore((s) => s.cycleCaught);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -136,23 +136,19 @@ export function Pokedex() {
             </div>
             <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
               {regionalEntries.map((entry) => {
-                const isCaught = !!caught[entry.nationalId];
+                const mark = caught[entry.nationalId];
                 return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
                   onClick={() => addPokemonModule(entry.name)}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    toggleCaught(entry.nationalId);
+                    cycleCaught(entry.nationalId);
                   }}
-                  className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${
-                    isCaught
-                      ? "bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/60 hover:bg-emerald-500/20"
-                      : "hover:bg-slate-800"
-                  }`}
-                  title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${isCaught ? " — Caught (right-click to unmark)" : " — Right-click to mark caught"}`}
+                  className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)}`}
+                  title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${markTitleHint(mark)}`}
                 >
-                  {isCaught && <CaughtBadge />}
+                  <MarkBadge mark={mark} />
                   <Image
                     src={getSpriteUrl(entry.nationalId)}
                     alt={entry.displayName}
@@ -224,7 +220,7 @@ export function Pokedex() {
               <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
                 {pokemon.map((pkmn) => {
                   const isEnabled = pkmn.id <= maxEnabledId;
-                  const isCaught = !!caught[pkmn.id];
+                  const mark = caught[pkmn.id];
                   return (
                     <button
                       key={pkmn.name}
@@ -243,16 +239,12 @@ export function Pokedex() {
                       }}
                       onContextMenu={(e) => {
                         e.preventDefault();
-                        toggleCaught(pkmn.id);
+                        cycleCaught(pkmn.id);
                       }}
-                      className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${
-                        isCaught
-                          ? "bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/60 hover:bg-emerald-500/20"
-                          : "hover:bg-slate-800"
-                      } ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"}`}
-                      title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${isCaught ? " — Caught (right-click to unmark)" : " — Right-click to mark caught"}`}
+                      className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)} ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"}`}
+                      title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${markTitleHint(mark)}`}
                     >
-                      {isCaught && <CaughtBadge />}
+                      <MarkBadge mark={mark} />
                       <Image
                         src={getSpriteUrl(pkmn.id)}
                         alt={pkmn.displayName}
@@ -281,15 +273,43 @@ export function Pokedex() {
   );
 }
 
+/** Tile styling for each catch mark; unmarked tiles keep the plain hover. */
+function markTileClasses(mark: CatchMark | undefined): string {
+  if (mark === "caught") {
+    return "bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/60 hover:bg-emerald-500/20";
+  }
+  if (mark === "not-caught") {
+    return "bg-rose-500/10 ring-1 ring-inset ring-rose-500/60 hover:bg-rose-500/20";
+  }
+  return "hover:bg-slate-800";
+}
+
+/** Tooltip suffix describing the current mark and what right-click does next. */
+function markTitleHint(mark: CatchMark | undefined): string {
+  if (mark === "caught") return " — Caught (right-click to mark not caught)";
+  if (mark === "not-caught") return " — Not caught (right-click to clear)";
+  return " — Right-click to mark caught";
+}
+
 /**
- * Small "caught" indicator shown in the corner of a Pokemon tile.
- * Clear but unobtrusive: a subtle emerald check badge.
+ * Small mark indicator shown in the corner of a Pokemon tile.
+ * Clear but unobtrusive: an emerald check for caught, a rose X for not caught.
  */
-function CaughtBadge() {
+function MarkBadge({ mark }: { mark: CatchMark | undefined }) {
+  if (!mark) return null;
+  const isCaught = mark === "caught";
   return (
-    <span className="absolute top-0.5 right-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 shadow ring-1 ring-slate-900">
+    <span
+      className={`absolute top-0.5 right-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full shadow ring-1 ring-slate-900 ${
+        isCaught ? "bg-emerald-500" : "bg-rose-500"
+      }`}
+    >
       <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        {isCaught ? (
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        ) : (
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+        )}
       </svg>
     </span>
   );
