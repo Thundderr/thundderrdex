@@ -6,6 +6,7 @@ import { usePokemonList } from "@/hooks/usePokemonList";
 import { usePokedex } from "@/hooks/usePokedex";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
+import { useCaughtStore } from "@/stores/caughtStore";
 import { GENERATIONS } from "@/data/generations";
 import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
@@ -14,6 +15,8 @@ export function Pokedex() {
   const { data: allPokemon, isLoading } = usePokemonList();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const { addPokemonModule } = useModuleStore();
+  const caught = useCaughtStore((s) => s.caught);
+  const toggleCaught = useCaughtStore((s) => s.toggleCaught);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -132,13 +135,24 @@ export function Pokedex() {
               </h3>
             </div>
             <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
-              {regionalEntries.map((entry) => (
+              {regionalEntries.map((entry) => {
+                const isCaught = !!caught[entry.nationalId];
+                return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
                   onClick={() => addPokemonModule(entry.name)}
-                  className="flex flex-col items-center p-1.5 rounded hover:bg-slate-800 transition-colors"
-                  title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})`}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    toggleCaught(entry.nationalId);
+                  }}
+                  className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${
+                    isCaught
+                      ? "bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/60 hover:bg-emerald-500/20"
+                      : "hover:bg-slate-800"
+                  }`}
+                  title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${isCaught ? " — Caught (right-click to unmark)" : " — Right-click to mark caught"}`}
                 >
+                  {isCaught && <CaughtBadge />}
                   <Image
                     src={getSpriteUrl(entry.nationalId)}
                     alt={entry.displayName}
@@ -154,7 +168,8 @@ export function Pokedex() {
                     {entry.displayName}
                   </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         )
@@ -209,6 +224,7 @@ export function Pokedex() {
               <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
                 {pokemon.map((pkmn) => {
                   const isEnabled = pkmn.id <= maxEnabledId;
+                  const isCaught = !!caught[pkmn.id];
                   return (
                     <button
                       key={pkmn.name}
@@ -225,11 +241,18 @@ export function Pokedex() {
                           }
                         }
                       }}
-                      className={`flex flex-col items-center p-1.5 rounded hover:bg-slate-800 transition-colors ${
-                        isEnabled ? "" : "opacity-30 grayscale cursor-pointer"
-                      }`}
-                      title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}`}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        toggleCaught(pkmn.id);
+                      }}
+                      className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${
+                        isCaught
+                          ? "bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/60 hover:bg-emerald-500/20"
+                          : "hover:bg-slate-800"
+                      } ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"}`}
+                      title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${isCaught ? " — Caught (right-click to unmark)" : " — Right-click to mark caught"}`}
                     >
+                      {isCaught && <CaughtBadge />}
                       <Image
                         src={getSpriteUrl(pkmn.id)}
                         alt={pkmn.displayName}
@@ -255,5 +278,19 @@ export function Pokedex() {
       </>
       )}
     </div>
+  );
+}
+
+/**
+ * Small "caught" indicator shown in the corner of a Pokemon tile.
+ * Clear but unobtrusive: a subtle emerald check badge.
+ */
+function CaughtBadge() {
+  return (
+    <span className="absolute top-0.5 right-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 shadow ring-1 ring-slate-900">
+      <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </span>
   );
 }
