@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useMemo, useCallback } from "react";
+import { useRef, useMemo, useCallback, useState } from "react";
 import Image from "next/image";
 import { usePokemonList } from "@/hooks/usePokemonList";
+import { usePokedex } from "@/hooks/usePokedex";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
 import { GENERATIONS } from "@/data/generations";
+import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
 
 export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
@@ -14,6 +16,12 @@ export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
   const { addPokemonModule } = useModuleStore();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // null = National dex (generation-grouped view). A number = a regional dex id.
+  const [selectedDexId, setSelectedDexId] = useState<number | null>(null);
+  const dexGroups = useMemo(() => getRegionalDexGroups(), []);
+  const selectedDex = selectedDexId !== null ? getRegionalDexById(selectedDexId) : undefined;
+  const { data: regionalEntries, isLoading: isRegionalLoading } = usePokedex(selectedDexId);
 
   // Filter to base Pokemon only (id 1-1025), deduplicated by id, sorted by id
   const basePokemon = useMemo(() => {
@@ -84,6 +92,77 @@ export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
 
   return (
     <div>
+      {/* Dex Selector: National (generation-grouped) or a regional dex */}
+      <div className="mb-3">
+        <select
+          value={selectedDexId ?? "national"}
+          onChange={(e) => {
+            const v = e.target.value;
+            setSelectedDexId(v === "national" ? null : parseInt(v, 10));
+          }}
+          className="w-full px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
+        >
+          <option value="national">National Dex (by Generation)</option>
+          {dexGroups.map((group) => (
+            <optgroup key={group.region} label={group.region}>
+              {group.dexes.map((dex) => (
+                <option key={dex.id} value={dex.id}>
+                  {dex.displayName}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+
+      {selectedDex ? (
+        /* ===== Regional Dex View ===== */
+        isRegionalLoading || !regionalEntries ? (
+          <div
+            className="flex items-center justify-center text-slate-400"
+            style={{ height: Math.min(maxHeight, 200) }}
+          >
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500" />
+          </div>
+        ) : (
+          <div className="overflow-y-auto rounded-lg" style={{ maxHeight }}>
+            <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 mb-2">
+              <h3 className="text-xs font-semibold text-slate-400">
+                {selectedDex.displayName}
+                <span className="ml-2 text-slate-500 font-normal">
+                  {regionalEntries.length} Pokémon
+                </span>
+              </h3>
+            </div>
+            <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
+              {regionalEntries.map((entry) => (
+                <button
+                  key={`${entry.regionalNumber}-${entry.name}`}
+                  onClick={() => addPokemonModule(entry.name)}
+                  className="flex flex-col items-center p-1.5 rounded hover:bg-slate-800 transition-colors"
+                  title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})`}
+                >
+                  <Image
+                    src={getSpriteUrl(entry.nationalId)}
+                    alt={entry.displayName}
+                    width={48}
+                    height={48}
+                    className="pixelated"
+                    unoptimized
+                  />
+                  <span className="text-[10px] text-slate-500 leading-tight">
+                    #{String(entry.regionalNumber).padStart(3, "0")}
+                  </span>
+                  <span className="text-[10px] text-slate-300 leading-tight truncate w-full text-center">
+                    {entry.displayName}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      ) : (
+      <>
       {/* Generation Quick-Select Buttons */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {GENERATIONS.map((gen) => {
@@ -177,6 +256,8 @@ export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 }

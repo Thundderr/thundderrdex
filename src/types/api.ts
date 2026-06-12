@@ -336,3 +336,20 @@ export interface PokeAPIEvolutionChain {
   id: number;
   chain: PokeAPIEvolutionChainLink;
 }
+
+// Pokedex (regional dex) types
+export interface PokeAPIPokedexEntry {
+  entry_number: number;
+  pokemon_species: {
+    name: string;
+    url: string;
+  };
+}
+
+export interface PokeAPIPokedex {
+  id: number;
+  name: string;
+  is_main_series: boolean;
+  region: { name: string; url: string } | null;
+  pokemon_entries: PokeAPIPokedexEntry[];
+}

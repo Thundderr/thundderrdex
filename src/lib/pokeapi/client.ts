@@ -9,6 +9,7 @@ import {
   PokeAPILocationAreaList,
   PokeAPIPokemonSpecies,
   PokeAPIEvolutionChain,
+  PokeAPIPokedex,
 } from "@/types/api";
 
 const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -126,5 +127,15 @@ export async function fetchEvolutionChain(
 ): Promise<PokeAPIEvolutionChain> {
   return fetchWithCache<PokeAPIEvolutionChain>(
     `${POKEAPI_BASE}/evolution-chain/${id}`
+  );
+}
+
+// Regional Pokedex endpoint - returns regional dex numbering (entry_number)
+// mapped to national species. One request returns the full dex.
+export async function fetchPokedex(
+  id: number
+): Promise<PokeAPIPokedex> {
+  return fetchWithCache<PokeAPIPokedex>(
+    `${POKEAPI_BASE}/pokedex/${id}`
   );
 }
