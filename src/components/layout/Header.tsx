@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useModuleStore } from "@/stores/moduleStore";
 import { GenerationSelector } from "./GenerationSelector";
+import { AccountButton } from "@/components/auth/AccountButton";
 
 const MODULE_BUTTONS = [
   { key: "pokemon", action: "addModule", color: "blue", label: "Pokemon", shortLabel: "Pkmn" },
@@ -72,12 +73,16 @@ export function Header() {
             </button>
           ))}
         </div>
+        <AccountButton />
       </div>
 
       {/* Mobile layout (<md): two rows */}
       <div className="flex flex-col gap-1 md:hidden pt-1">
-        <div className="overflow-x-auto p-1">
-          <GenerationSelector stretch />
+        <div className="flex items-center gap-1.5 p-1">
+          <div className="flex-1 overflow-x-auto min-w-0">
+            <GenerationSelector stretch />
+          </div>
+          <AccountButton />
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto p-1 min-w-0">
           {MODULE_BUTTONS.map((btn) => (

@@ -4,6 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useState, useEffect } from "react";
 import { createIDBPersister } from "@/lib/queryPersister";
+import { SyncManager } from "@/components/auth/SyncManager";
 
 // 7 days in milliseconds
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -44,6 +45,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         buster: "v1", // Change this to invalidate all cached data
       }}
     >
+      <SyncManager />
       {children}
     </PersistQueryClientProvider>
   );

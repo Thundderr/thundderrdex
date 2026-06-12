@@ -256,6 +256,81 @@ const updateActiveTabRecents = (
   );
 };
 
+// The persisted slice, schema version, and migration chain are exported so
+// the cloud-sync engine (src/lib/sync) can produce/consume exactly the same
+// shape and run the same migrations on payloads downloaded from other devices.
+
+export const MODULE_STORE_VERSION = 4;
+
+export interface PersistedModuleState {
+  tabs: WorkspaceTab[];
+  activeTabId: string;
+  selectedModuleId: string | null;
+  savedTeams: SavedTeam[];
+}
+
+export function partializeModuleState(
+  state: Pick<ModuleStore, "tabs" | "activeTabId" | "selectedModuleId" | "savedTeams">
+): PersistedModuleState {
+  return {
+    tabs: state.tabs.map(tab => ({
+      ...tab,
+      modules: tab.modules.map(m => {
+        // Strip isFullscreen so users don't reopen the app in fullscreen
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { isFullscreen, ...rest } = m;
+        return rest as AnyModule;
+      }),
+    })),
+    activeTabId: state.activeTabId,
+    selectedModuleId: state.selectedModuleId,
+    savedTeams: state.savedTeams,
+  };
+}
+
+// Migration from old formats to new format with tab-specific recents
+export function migrateModuleState(persistedState: unknown, version: number) {
+  if (version === 0 || version === 1) {
+    // Old format had modules array directly
+    const oldState = persistedState as { modules?: PokemonModule[]; recentSearches?: RecentSearch[] };
+    if (oldState.modules && Array.isArray(oldState.modules)) {
+      const newTab: WorkspaceTab = {
+        id: uuidv4(),
+        name: "Main",
+        modules: oldState.modules,
+        recentSearches: oldState.recentSearches || [],
+      };
+      return {
+        tabs: [newTab],
+        activeTabId: newTab.id,
+      };
+    }
+  }
+  if (version === 3) {
+    // Version 3 -> 4: Add savedTeams array
+    const oldState = persistedState as Record<string, unknown>;
+    return {
+      ...oldState,
+      savedTeams: (oldState as { savedTeams?: SavedTeam[] }).savedTeams ?? [],
+    };
+  }
+  if (version === 2) {
+    // Version 2 had global recentSearches, move them to active tab
+    const oldState = persistedState as { tabs?: WorkspaceTab[]; activeTabId?: string; recentSearches?: RecentSearch[] };
+    if (oldState.tabs && Array.isArray(oldState.tabs)) {
+      const updatedTabs = oldState.tabs.map((tab, index) => ({
+        ...tab,
+        recentSearches: index === 0 ? (oldState.recentSearches || []) : (tab.recentSearches || []),
+      }));
+      return {
+        tabs: updatedTabs,
+        activeTabId: oldState.activeTabId,
+      };
+    }
+  }
+  return persistedState;
+}
+
 const defaultTab = createDefaultTab();
 
 export const useModuleStore = create<ModuleStore>()(
@@ -1359,63 +1434,9 @@ export const useModuleStore = create<ModuleStore>()(
     }),
     {
       name: "thundderrdex-modules",
-      version: 4,
-      partialize: (state) => ({
-        tabs: state.tabs.map(tab => ({
-          ...tab,
-          modules: tab.modules.map(m => {
-            // Strip isFullscreen so users don't reopen the app in fullscreen
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { isFullscreen, ...rest } = m;
-            return rest as AnyModule;
-          }),
-        })),
-        activeTabId: state.activeTabId,
-        selectedModuleId: state.selectedModuleId,
-        savedTeams: state.savedTeams,
-      }),
-      // Migration from old formats to new format with tab-specific recents
-      migrate: (persistedState: unknown, version: number) => {
-        if (version === 0 || version === 1) {
-          // Old format had modules array directly
-          const oldState = persistedState as { modules?: PokemonModule[]; recentSearches?: RecentSearch[] };
-          if (oldState.modules && Array.isArray(oldState.modules)) {
-            const newTab: WorkspaceTab = {
-              id: uuidv4(),
-              name: "Main",
-              modules: oldState.modules,
-              recentSearches: oldState.recentSearches || [],
-            };
-            return {
-              tabs: [newTab],
-              activeTabId: newTab.id,
-            };
-          }
-        }
-        if (version === 3) {
-          // Version 3 -> 4: Add savedTeams array
-          const oldState = persistedState as Record<string, unknown>;
-          return {
-            ...oldState,
-            savedTeams: (oldState as { savedTeams?: SavedTeam[] }).savedTeams ?? [],
-          };
-        }
-        if (version === 2) {
-          // Version 2 had global recentSearches, move them to active tab
-          const oldState = persistedState as { tabs?: WorkspaceTab[]; activeTabId?: string; recentSearches?: RecentSearch[] };
-          if (oldState.tabs && Array.isArray(oldState.tabs)) {
-            const updatedTabs = oldState.tabs.map((tab, index) => ({
-              ...tab,
-              recentSearches: index === 0 ? (oldState.recentSearches || []) : (tab.recentSearches || []),
-            }));
-            return {
-              tabs: updatedTabs,
-              activeTabId: oldState.activeTabId,
-            };
-          }
-        }
-        return persistedState;
-      },
+      version: MODULE_STORE_VERSION,
+      partialize: (state) => partializeModuleState(state),
+      migrate: migrateModuleState,
     }
   )
 );
