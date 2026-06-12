@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
@@ -16,9 +16,7 @@ interface Props {
 export function PokedexModule({ module, isOverlay = false, isFullscreen = false }: Props) {
   const { removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule, toggleFullscreen } = useModuleStore();
   const moduleContainerRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
   const isSelected = selectedModuleId === module.id;
-  const [contentMaxH, setContentMaxH] = useState(600);
 
   const {
     attributes,
@@ -48,27 +46,6 @@ export function PokedexModule({ module, isOverlay = false, isFullscreen = false 
     }
   }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
 
-  // Observe the module's actual rendered height (set by grid row)
-  // and compute available height for the Pokedex content
-  useEffect(() => {
-    const container = moduleContainerRef.current;
-    if (!container) return;
-
-    const update = () => {
-      const moduleH = container.getBoundingClientRect().height;
-      const headerH = headerRef.current?.getBoundingClientRect().height ?? 40;
-      // 32px for p-4 padding (16 top + 16 bottom), 40px for gen buttons row
-      const available = moduleH - headerH - 32 - 40;
-      // Only update if grid gave us more than the default
-      setContentMaxH(Math.max(available, 600));
-    };
-
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [isFullscreen]);
-
   const setRefs = (node: HTMLDivElement | null) => {
     setNodeRef(node);
     (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
@@ -79,14 +56,14 @@ export function PokedexModule({ module, isOverlay = false, isFullscreen = false 
       ref={setRefs}
       style={style}
       onClick={() => selectModule(module.id)}
-      className={`${isFullscreen ? "h-full flex flex-col" : "col-span-1 md:col-span-2 rounded-lg"} bg-slate-900 border shadow-lg overflow-hidden ${
+      className={`${isFullscreen ? "h-full" : "col-span-1 md:col-span-2 rounded-lg max-h-[calc(100vh-8rem)]"} flex flex-col bg-slate-900 border shadow-lg overflow-hidden ${
         isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
       } ${
         isSelected && !isDragging && !isFullscreen ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
       }`}
     >
       {/* Header */}
-      <div ref={headerRef} className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
         {/* Drag Handle - hidden in fullscreen */}
         {!isFullscreen && (
           <div
@@ -153,9 +130,10 @@ export function PokedexModule({ module, isOverlay = false, isFullscreen = false 
         </div>
       </div>
 
-      {/* Content */}
-      <div className={`p-4 ${isFullscreen ? "flex-1 overflow-y-auto" : ""}`}>
-        <Pokedex maxHeight={contentMaxH} />
+      {/* Content — flex-1 + min-h-0 lets the inner grid scroll instead of
+          growing the module to fit every Pokemon */}
+      <div className="p-4 flex-1 min-h-0 flex flex-col">
+        <Pokedex />
       </div>
     </div>
   );

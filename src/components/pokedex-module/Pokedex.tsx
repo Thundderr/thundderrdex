@@ -10,7 +10,7 @@ import { GENERATIONS } from "@/data/generations";
 import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
 
-export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
+export function Pokedex() {
   const { data: allPokemon, isLoading } = usePokemonList();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const { addPokemonModule } = useModuleStore();
@@ -91,9 +91,9 @@ export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
   }
 
   return (
-    <div>
+    <div className="flex flex-col min-h-0 h-full">
       {/* Dex Selector: National (generation-grouped) or a regional dex */}
-      <div className="mb-3">
+      <div className="mb-3 shrink-0">
         <select
           value={selectedDexId ?? "national"}
           onChange={(e) => {
@@ -118,14 +118,11 @@ export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
       {selectedDex ? (
         /* ===== Regional Dex View ===== */
         isRegionalLoading || !regionalEntries ? (
-          <div
-            className="flex items-center justify-center text-slate-400"
-            style={{ height: Math.min(maxHeight, 200) }}
-          >
+          <div className="flex flex-1 min-h-0 items-center justify-center text-slate-400">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500" />
           </div>
         ) : (
-          <div className="overflow-y-auto rounded-lg" style={{ maxHeight }}>
+          <div className="flex-1 min-h-0 overflow-y-auto rounded-lg">
             <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 mb-2">
               <h3 className="text-xs font-semibold text-slate-400">
                 {selectedDex.displayName}
@@ -164,7 +161,7 @@ export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
       ) : (
       <>
       {/* Generation Quick-Select Buttons */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
+      <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
         {GENERATIONS.map((gen) => {
           const isEnabled = gen.id <= globalGeneration;
           return (
@@ -187,8 +184,7 @@ export function Pokedex({ maxHeight = 600 }: { maxHeight?: number }) {
       {/* Scrollable Pokemon Grid */}
       <div
         ref={scrollContainerRef}
-        className="overflow-y-auto rounded-lg"
-        style={{ maxHeight }}
+        className="flex-1 min-h-0 overflow-y-auto rounded-lg"
       >
         {GENERATIONS.map((gen) => {
           const pokemon = pokemonByGen.get(gen.id) || [];
