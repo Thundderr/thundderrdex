@@ -28,7 +28,13 @@ export const PALDEA_BUCKET = "Paldea";
 //   2: Record<bucketKey, Record<number, CatchMark>> — per-dex buckets
 //   3: Record<bucketKey, Record<formAwareId, CatchMark>> — keys now "<id>" or "<id>-<region>"
 //      (bare-number v2 keys are forward-compatible: they read as base forms)
-export const CAUGHT_STORE_VERSION = 3;
+//   4: same shape as 3, but drops malformed keys (notably the "undefined" junk
+//      key a cache-shape regression wrote when entries briefly had no catchKey).
+export const CAUGHT_STORE_VERSION = 4;
+
+// A valid catch key: a bare national id ("79") or a form key ("79-galar").
+// Mirrors the sync validator's regex so migrated data always passes validation.
+const VALID_CATCH_KEY = /^\d+(-[a-z]+)?$/;
 
 function coerceMark(value: unknown): CatchMark | undefined {
   if (value === true || value === "caught") return "caught";
@@ -36,15 +42,17 @@ function coerceMark(value: unknown): CatchMark | undefined {
   return undefined;
 }
 
-// Normalize an already-bucketed (v2/v3) map, coercing legacy inner values. Keys
-// are kept as strings: v2 keys are bare national ids, v3 adds "<id>-<region>"
-// variant keys — Number()-ing those would corrupt them to NaN.
+// Normalize an already-bucketed (v2/v3/v4) map, coercing legacy inner values and
+// dropping any malformed keys. Keys are kept as strings: v2 keys are bare
+// national ids, v3+ adds "<id>-<region>" variant keys — Number()-ing those would
+// corrupt them to NaN.
 function normalizeBuckets(map: Record<string, unknown>): CaughtBuckets {
   const out: CaughtBuckets = {};
   for (const [bucket, inner] of Object.entries(map)) {
     if (typeof inner !== "object" || inner === null) continue;
     const marks: Record<string, CatchMark> = {};
     for (const [id, value] of Object.entries(inner as Record<string, unknown>)) {
+      if (!VALID_CATCH_KEY.test(id)) continue; // drop junk like "undefined"
       const mark = coerceMark(value);
       if (mark) marks[id] = mark;
     }

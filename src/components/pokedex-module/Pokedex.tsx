@@ -43,7 +43,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const visibleRegionalEntries = useMemo(() => {
     if (!regionalEntries) return [];
     if (!showUncaughtOnly) return regionalEntries;
-    return regionalEntries.filter((e) => marks[e.catchKey] !== "caught");
+    return regionalEntries.filter((e) => marks[e.catchKey ?? String(e.nationalId)] !== "caught");
   }, [regionalEntries, showUncaughtOnly, marks]);
 
   // Filter to base Pokemon only (id 1-1025), deduplicated by id, sorted by id
@@ -70,7 +70,9 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
     if (selectedDex) {
       const entries = regionalEntries ?? [];
       return {
-        caughtCount: entries.filter((e) => marks[e.catchKey] === "caught").length,
+        caughtCount: entries.filter(
+          (e) => marks[e.catchKey ?? String(e.nationalId)] === "caught"
+        ).length,
         totalCount: entries.length,
       };
     }
@@ -194,14 +196,18 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
             </div>
             <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
               {visibleRegionalEntries.map((entry) => {
-                const mark = marks[entry.catchKey];
+                // Fall back to the base-species id so a missing catchKey (e.g. a
+                // stale cached entry from before the field existed) can never
+                // collapse every tile onto one shared `marks[undefined]` key.
+                const catchKey = entry.catchKey ?? String(entry.nationalId);
+                const mark = marks[catchKey];
                 return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
                   onClick={() => addPokemonModule(entry.name)}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    cycleCaught(bucketKey, entry.catchKey);
+                    cycleCaught(bucketKey, catchKey);
                   }}
                   className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)}`}
                   title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${markTitleHint(mark)}`}
