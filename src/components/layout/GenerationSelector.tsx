@@ -2,6 +2,7 @@
 
 import { useGenerationStore } from "@/stores/generationStore";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 // Game colors for each letter (lightened for dark background readability)
 const GENERATION_CONFIG = [
@@ -98,22 +99,37 @@ export function GenerationSelector({ stretch = false, collapsible = false }: { s
   const { globalGeneration, setGeneration, selectorCollapsed, setSelectorCollapsed } = useGenerationStore();
   const [isMounted, setIsMounted] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Close the dropdown when clicking outside of it.
+  const positionMenu = () => {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    setMenuPos({ top: r.bottom + 4, left: r.left });
+  };
+
+  // Close the dropdown on outside click; keep it anchored on scroll/resize.
   useEffect(() => {
     if (!dropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
+    const handlePointer = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setDropdownOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const handleReposition = () => positionMenu();
+    document.addEventListener("mousedown", handlePointer);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
   }, [dropdownOpen]);
 
   const currentGen = isMounted ? globalGeneration : 9;
@@ -122,9 +138,15 @@ export function GenerationSelector({ stretch = false, collapsible = false }: { s
   // Collapsed: show only the current generation as a button that opens a vertical dropdown.
   if (collapsible && isMounted && selectorCollapsed) {
     return (
-      <div className="relative flex items-center gap-1" ref={dropdownRef}>
+      <div className="flex items-center gap-1">
         <button
-          onClick={() => setDropdownOpen((o) => !o)}
+          ref={triggerRef}
+          onClick={() => {
+            setDropdownOpen((o) => {
+              if (!o) positionMenu();
+              return !o;
+            });
+          }}
           className="relative px-1.5 py-1 rounded transition-all text-xs font-bold bg-slate-800 ring-2 ring-blue-500"
           title={`Gen ${currentGen}: ${currentConfig.letters.map((l) => l.title).join("/")} — click to change`}
         >
@@ -145,8 +167,12 @@ export function GenerationSelector({ stretch = false, collapsible = false }: { s
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
-        {dropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 flex flex-col gap-1 bg-slate-900 border border-slate-700 rounded-lg p-1 shadow-xl z-50">
+        {dropdownOpen && menuPos && createPortal(
+          <div
+            ref={menuRef}
+            style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
+            className="flex flex-col gap-1 bg-slate-900 border border-slate-700 rounded-lg p-1 shadow-xl z-[100]"
+          >
             {GENERATION_CONFIG.map((config) => {
               const isSelected = config.gen === currentGen;
               return (
@@ -171,7 +197,8 @@ export function GenerationSelector({ stretch = false, collapsible = false }: { s
                 </button>
               );
             })}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     );

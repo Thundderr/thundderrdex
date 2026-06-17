@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useModuleStore } from "@/stores/moduleStore";
+import { useGenerationStore } from "@/stores/generationStore";
 import { GenerationSelector } from "./GenerationSelector";
 import { AccountButton } from "@/components/auth/AccountButton";
 
@@ -30,6 +31,7 @@ const COLOR_CLASSES: Record<string, string> = {
 
 export function Header() {
   const store = useModuleStore();
+  const selectorCollapsed = useGenerationStore((s) => s.selectorCollapsed);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showDivider, setShowDivider] = useState(false);
 
@@ -60,10 +62,10 @@ export function Header() {
         <Link href="/" className="text-xl font-bold text-white hover:text-slate-200 flex-shrink-0">
           ThundderrDex
         </Link>
-        <div ref={scrollContainerRef} className="flex items-center gap-2 overflow-x-auto flex-nowrap flex-1 pb-1">
+        <div ref={scrollContainerRef} className="flex items-center gap-2 overflow-x-auto flex-nowrap flex-1 pb-1 pl-1">
           <GenerationSelector collapsible />
           <div className="flex-1 min-w-[17px] flex items-center justify-center">
-            {showDivider && <div className="w-px h-6 bg-slate-700" />}
+            {(showDivider || selectorCollapsed) && <div className="w-px h-6 bg-slate-700" />}
           </div>
           {MODULE_BUTTONS.map((btn) => (
             <button
