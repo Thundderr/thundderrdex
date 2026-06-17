@@ -63,6 +63,24 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
       .sort((a, b) => a.id - b.id);
   }, [allPokemon]);
 
+  // Progress for the current dex/bucket: total species and how many are marked
+  // "caught". Computed over the whole dex (not the filtered view) so the header
+  // always reflects overall progress.
+  const { caughtCount, totalCount } = useMemo(() => {
+    if (selectedDex) {
+      const entries = regionalEntries ?? [];
+      return {
+        caughtCount: entries.filter((e) => marks[e.catchKey] === "caught").length,
+        totalCount: entries.length,
+      };
+    }
+    return {
+      caughtCount: basePokemon.filter((p) => marks[String(p.id)] === "caught").length,
+      totalCount: basePokemon.length,
+    };
+  }, [selectedDex, regionalEntries, basePokemon, marks]);
+  const uncaughtCount = totalCount - caughtCount;
+
   // Group Pokemon by generation
   const pokemonByGen = useMemo(() => {
     const groups: Map<number, typeof basePokemon> = new Map();
@@ -115,15 +133,15 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
 
   return (
     <div className="flex flex-col min-h-0 h-full">
-      {/* Dex Selector: National (generation-grouped) or a regional dex + uncaught filter */}
-      <div className="mb-3 shrink-0 flex gap-1.5">
+      {/* Top bar: dex selector (left) · caught/uncaught counts (middle) · uncaught filter (right) */}
+      <div className="mb-3 shrink-0 flex items-center gap-2">
         <select
           value={selectedDexId ?? "national"}
           onChange={(e) => {
             const v = e.target.value;
             setPokedexDex(moduleId, v === "national" ? null : parseInt(v, 10));
           }}
-          className="flex-1 min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
+          className="shrink-0 max-w-[40%] min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
         >
           <option value="national">National Dex (by Generation)</option>
           {dexGroups.map((group) => (
@@ -136,9 +154,18 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
             </optgroup>
           ))}
         </select>
+
+        {totalCount > 0 && (
+          <div className="flex-1 min-w-0 text-center text-xs text-slate-400 truncate">
+            <span className="font-semibold text-emerald-400">{caughtCount}</span> caught
+            <span className="mx-1.5 text-slate-600">·</span>
+            <span className="font-semibold text-slate-200">{uncaughtCount}</span> left
+          </div>
+        )}
+
         <button
           onClick={() => setShowUncaughtOnly((v) => !v)}
-          className={`shrink-0 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+          className={`shrink-0 ml-auto px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
             showUncaughtOnly
               ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
               : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
@@ -157,7 +184,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           </div>
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto rounded-lg">
-            <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 mb-2">
+            <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 mb-2">
               <h3 className="text-xs font-semibold text-slate-400">
                 {selectedDex.displayName}
                 <span className="ml-2 text-slate-500 font-normal">
@@ -241,7 +268,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
               ref={(node) => setSectionRef(gen.id, node)}
             >
               {/* Generation Header */}
-              <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 mb-2 mt-1 first:mt-0">
+              <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 mb-2 mt-1 first:mt-0">
                 <h3 className="text-xs font-semibold text-slate-400">
                   {gen.name} — {gen.region}
                   <span className="ml-2 text-slate-500 font-normal">
