@@ -8,10 +8,10 @@ import { AccountButton } from "@/components/auth/AccountButton";
 
 const MODULE_BUTTONS = [
   { key: "pokemon", action: "addModule", color: "blue", label: "Pokemon", shortLabel: "Pkmn" },
-  { key: "typechart", action: "addTypeChartModule", color: "cyan", label: "Type Chart", shortLabel: "Types" },
-  { key: "naturechart", action: "addNatureChartModule", color: "pink", label: "Nature Chart", shortLabel: "Natures" },
-  { key: "team", action: "addTeamBuilderModule", color: "purple", label: "Team Coverage", shortLabel: "Team" },
-  { key: "damagecalc", action: "addDamageCalcModule", color: "orange", label: "Damage Calc", shortLabel: "Calc" },
+  { key: "typechart", action: "addTypeChartModule", color: "cyan", label: "Types", shortLabel: "Types" },
+  { key: "naturechart", action: "addNatureChartModule", color: "pink", label: "Natures", shortLabel: "Natures" },
+  { key: "team", action: "addTeamBuilderModule", color: "purple", label: "Coverage", shortLabel: "Team" },
+  { key: "damagecalc", action: "addDamageCalcModule", color: "orange", label: "Calculator", shortLabel: "Calc" },
   { key: "location", action: "addLocationModule", color: "green", label: "Location", shortLabel: "Loc" },
   { key: "pokedex", action: "addPokedexModule", color: "emerald", label: "Pokedex", shortLabel: "Dex" },
   { key: "catchrate", action: "addCatchRateModule", color: "red", label: "Catch Rate", shortLabel: "Catch" },
