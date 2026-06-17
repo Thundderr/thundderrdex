@@ -6,7 +6,7 @@ import { usePokemonList } from "@/hooks/usePokemonList";
 import { usePokedex } from "@/hooks/usePokedex";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
-import { useCaughtStore, CatchMark } from "@/stores/caughtStore";
+import { useCaughtStore, CatchMark, NATIONAL_BUCKET } from "@/stores/caughtStore";
 import { GENERATIONS } from "@/data/generations";
 import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
@@ -34,11 +34,17 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const selectedDex = selectedDexId !== null ? getRegionalDexById(selectedDexId) : undefined;
   const { data: regionalEntries, isLoading: isRegionalLoading } = usePokedex(selectedDexId);
 
+  // Each dex tracks its own catch marks: the National view uses the "national"
+  // bucket; a regional dex uses its region group (so e.g. all Paldea-region
+  // dexes share one bucket, separate from Galar, Hisui, and National).
+  const bucketKey = selectedDex ? selectedDex.group : NATIONAL_BUCKET;
+  const marks = useMemo(() => caught[bucketKey] ?? {}, [caught, bucketKey]);
+
   const visibleRegionalEntries = useMemo(() => {
     if (!regionalEntries) return [];
     if (!showUncaughtOnly) return regionalEntries;
-    return regionalEntries.filter((e) => caught[e.nationalId] !== "caught");
-  }, [regionalEntries, showUncaughtOnly, caught]);
+    return regionalEntries.filter((e) => marks[e.nationalId] !== "caught");
+  }, [regionalEntries, showUncaughtOnly, marks]);
 
   // Filter to base Pokemon only (id 1-1025), deduplicated by id, sorted by id
   const basePokemon = useMemo(() => {
@@ -161,14 +167,14 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
             </div>
             <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
               {visibleRegionalEntries.map((entry) => {
-                const mark = caught[entry.nationalId];
+                const mark = marks[entry.nationalId];
                 return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
                   onClick={() => addPokemonModule(entry.name)}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    cycleCaught(entry.nationalId);
+                    cycleCaught(bucketKey, entry.nationalId);
                   }}
                   className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)}`}
                   title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${markTitleHint(mark)}`}
@@ -225,7 +231,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
         {GENERATIONS.map((gen) => {
           const allInGen = pokemonByGen.get(gen.id) || [];
           const pokemon = showUncaughtOnly
-            ? allInGen.filter((p) => caught[p.id] !== "caught")
+            ? allInGen.filter((p) => marks[p.id] !== "caught")
             : allInGen;
           if (pokemon.length === 0) return null;
 
@@ -248,7 +254,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
               <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
                 {pokemon.map((pkmn) => {
                   const isEnabled = pkmn.id <= maxEnabledId;
-                  const mark = caught[pkmn.id];
+                  const mark = marks[pkmn.id];
                   return (
                     <button
                       key={pkmn.name}
@@ -267,7 +273,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                       }}
                       onContextMenu={(e) => {
                         e.preventDefault();
-                        cycleCaught(pkmn.id);
+                        cycleCaught(bucketKey, pkmn.id);
                       }}
                       className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)} ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"}`}
                       title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${markTitleHint(mark)}`}

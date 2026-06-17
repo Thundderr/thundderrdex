@@ -49,18 +49,27 @@ const caughtConfig: SyncedStoreConfig = {
     useCaughtStore.setState({ caught: (payload as CaughtPayload).caught });
   },
   isDefault: (payload) =>
-    Object.keys((payload as CaughtPayload).caught).length === 0,
+    Object.values((payload as CaughtPayload).caught).every(
+      (bucket) => Object.keys(bucket).length === 0
+    ),
   validate: isCaughtPayload,
-  // v0 cloud payloads stored Record<number, true>; true becomes "caught".
+  // Older cloud payloads (v0 caught-only, v1 flat 3-state) are reshaped into
+  // per-dex buckets, landing in the Paldea bucket.
   migrate: (raw) => migrateCaughtState(raw),
-  // Caught-ness is a natural set union, so the adoption edge case merges
-  // instead of picking a side.
-  merge: (local, remote) => ({
-    caught: {
-      ...(remote as CaughtPayload).caught,
-      ...(local as CaughtPayload).caught,
-    },
-  }),
+  // Caught-ness is a natural set union; merge per bucket so the adoption edge
+  // case combines both sides instead of picking one.
+  merge: (local, remote) => {
+    const merged: CaughtPayload["caught"] = {};
+    const remoteBuckets = (remote as CaughtPayload).caught;
+    const localBuckets = (local as CaughtPayload).caught;
+    for (const bucket of new Set([
+      ...Object.keys(remoteBuckets),
+      ...Object.keys(localBuckets),
+    ])) {
+      merged[bucket] = { ...remoteBuckets[bucket], ...localBuckets[bucket] };
+    }
+    return { caught: merged };
+  },
   subscribe: (listener) => useCaughtStore.subscribe(listener),
   hasHydrated: () => useCaughtStore.persist.hasHydrated(),
   onFinishHydration: (listener) => useCaughtStore.persist.onFinishHydration(listener),

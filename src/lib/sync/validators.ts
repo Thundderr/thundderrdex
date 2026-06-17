@@ -3,10 +3,10 @@
 // garbage without re-validating every nested field the app already tolerates.
 
 import type { PersistedModuleState } from "@/stores/moduleStore";
-import type { CatchMark } from "@/stores/caughtStore";
+import type { CaughtBuckets } from "@/stores/caughtStore";
 
 export interface CaughtPayload {
-  caught: Record<number, CatchMark>;
+  caught: CaughtBuckets;
 }
 
 export interface GenerationPayload {
@@ -19,10 +19,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function isCaughtPayload(raw: unknown): raw is CaughtPayload {
   if (!isRecord(raw) || !isRecord(raw.caught)) return false;
-  return Object.entries(raw.caught).every(
-    ([key, value]) =>
-      /^\d+$/.test(key) && (value === "caught" || value === "not-caught")
-  );
+  // Outer keys are bucket names (any non-empty string); each value is a map of
+  // national id -> mark.
+  return Object.values(raw.caught).every((bucket) => {
+    if (!isRecord(bucket)) return false;
+    return Object.entries(bucket).every(
+      ([id, value]) =>
+        /^\d+$/.test(id) && (value === "caught" || value === "not-caught")
+    );
+  });
 }
 
 export function isGenerationPayload(raw: unknown): raw is GenerationPayload {
