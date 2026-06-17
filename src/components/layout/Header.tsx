@@ -14,6 +14,7 @@ const MODULE_BUTTONS = [
   { key: "damagecalc", action: "addDamageCalcModule", color: "orange", label: "Damage Calc", shortLabel: "Calc" },
   { key: "location", action: "addLocationModule", color: "green", label: "Location", shortLabel: "Loc" },
   { key: "pokedex", action: "addPokedexModule", color: "emerald", label: "Pokedex", shortLabel: "Dex" },
+  { key: "catchrate", action: "addCatchRateModule", color: "red", label: "Catch Rate", shortLabel: "Catch" },
 ] as const;
 
 const COLOR_CLASSES: Record<string, string> = {
@@ -24,6 +25,7 @@ const COLOR_CLASSES: Record<string, string> = {
   orange: "bg-orange-600 hover:bg-orange-500",
   green: "bg-green-600 hover:bg-green-500",
   emerald: "bg-emerald-600 hover:bg-emerald-500",
+  red: "bg-red-600 hover:bg-red-500",
 };
 
 export function Header() {

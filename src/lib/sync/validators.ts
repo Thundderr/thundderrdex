@@ -20,12 +20,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function isCaughtPayload(raw: unknown): raw is CaughtPayload {
   if (!isRecord(raw) || !isRecord(raw.caught)) return false;
   // Outer keys are bucket names (any non-empty string); each value is a map of
-  // national id -> mark.
+  // form-aware id -> mark, where the id is a bare national id ("79") or a
+  // regional-variant key ("79-galar").
   return Object.values(raw.caught).every((bucket) => {
     if (!isRecord(bucket)) return false;
     return Object.entries(bucket).every(
       ([id, value]) =>
-        /^\d+$/.test(id) && (value === "caught" || value === "not-caught")
+        /^\d+(-[a-z]+)?$/.test(id) && (value === "caught" || value === "not-caught")
     );
   });
 }

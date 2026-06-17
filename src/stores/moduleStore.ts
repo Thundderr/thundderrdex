@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, CatchRateModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
@@ -129,6 +129,32 @@ const createPokedexModule = (): PokedexModule => ({
   isMinimized: false,
 });
 
+const createCatchRateModule = (): CatchRateModule => ({
+  id: uuidv4(),
+  moduleType: "catch-rate",
+  isMinimized: false,
+  pokemonName: null,
+  ballId: "poke",
+  hpPercent: 100,
+  exactlyOneHp: false,
+  status: "none",
+  turnCount: 1,
+  inWater: false,
+  nightOrCave: false,
+  alreadyCaught: false,
+  yourLevel: 50,
+  loveBallMatch: false,
+  targetLevel: 50,
+  capturePower: 0,
+  oPowerLevel: 0,
+  caughtOffGuard: false,
+  catchingCharm: false,
+  badgeCount: 8,
+  hasEighthBadge: true,
+  dexCaughtBucket: 0,
+  darkGrass: false,
+});
+
 const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
   id: uuidv4(),
   name,
@@ -185,6 +211,9 @@ interface ModuleStore {
   // Pokedex module methods
   addPokedexModule: () => void;
   setPokedexDex: (moduleId: string, dexId: number | null) => void;
+  // Catch Rate module methods
+  addCatchRateModule: () => void;
+  setCatchRateInput: (moduleId: string, updates: Partial<CatchRateModule>) => void;
   // Location module methods
   addLocationModule: (locationAreaName?: string | null) => void;
   setLocationArea: (moduleId: string, locationAreaName: string | null) => void;
@@ -700,6 +729,28 @@ export const useModuleStore = create<ModuleStore>()(
               }
               return m;
             })
+          ),
+        }));
+      },
+
+      // Catch Rate module methods
+      addCatchRateModule: () => {
+        const newModule = createCatchRateModule();
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      setCatchRateInput: (moduleId, updates) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === moduleId && m.moduleType === "catch-rate"
+                ? ({ ...m, ...updates } as CatchRateModule)
+                : m
+            )
           ),
         }));
       },

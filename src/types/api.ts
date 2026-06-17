@@ -3,6 +3,7 @@
 export interface PokeAPIPokemon {
   id: number;
   name: string;
+  weight: number; // hectograms
   types: {
     slot: number;
     type: {
@@ -289,6 +290,8 @@ export interface PokeAPILocationAreaList {
 export interface PokeAPIPokemonSpecies {
   id: number;
   name: string;
+  capture_rate: number; // 0-255 base catch rate
+  gender_rate: number; // -1 genderless, else eighths female
   evolution_chain: {
     url: string;
   } | null;

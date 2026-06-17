@@ -8,9 +8,13 @@ export type CatchMark = "caught" | "not-caught";
 // Each dex tracks its catch marks in its own bucket, so the same species can be
 // caught in one game and uncaught in another. The bucket key is "national" for
 // the generation-grouped National view, or a region-group name (e.g. "Paldea",
-// "Galar") for the regional dexes. Within a bucket, marks are keyed by national
-// species id — unique within any single dex.
-export type CaughtBuckets = Record<string, Record<number, CatchMark>>;
+// "Galar") for the regional dexes. Within a bucket, marks are keyed by a
+// form-aware id: the bare national id for a base form ("79"), or "<id>-<region>"
+// for a regional variant ("79-galar"). This keeps the same species tracked
+// separately when different dexes show it as different forms (e.g. regular
+// Slowpoke in Paldea vs Galarian Slowpoke in Blueberry). Bare-number keys from
+// older data still read correctly as the base form.
+export type CaughtBuckets = Record<string, Record<string, CatchMark>>;
 
 export const NATIONAL_BUCKET = "national";
 
@@ -22,7 +26,9 @@ export const PALDEA_BUCKET = "Paldea";
 //   0: Record<number, true>            — caught-only, flat, national-id keyed
 //   1: Record<number, CatchMark>       — 3-state, flat, national-id keyed
 //   2: Record<bucketKey, Record<number, CatchMark>> — per-dex buckets
-export const CAUGHT_STORE_VERSION = 2;
+//   3: Record<bucketKey, Record<formAwareId, CatchMark>> — keys now "<id>" or "<id>-<region>"
+//      (bare-number v2 keys are forward-compatible: they read as base forms)
+export const CAUGHT_STORE_VERSION = 3;
 
 function coerceMark(value: unknown): CatchMark | undefined {
   if (value === true || value === "caught") return "caught";
@@ -30,15 +36,17 @@ function coerceMark(value: unknown): CatchMark | undefined {
   return undefined;
 }
 
-// Normalize an already-bucketed (v2) map, coercing legacy inner values.
+// Normalize an already-bucketed (v2/v3) map, coercing legacy inner values. Keys
+// are kept as strings: v2 keys are bare national ids, v3 adds "<id>-<region>"
+// variant keys — Number()-ing those would corrupt them to NaN.
 function normalizeBuckets(map: Record<string, unknown>): CaughtBuckets {
   const out: CaughtBuckets = {};
   for (const [bucket, inner] of Object.entries(map)) {
     if (typeof inner !== "object" || inner === null) continue;
-    const marks: Record<number, CatchMark> = {};
+    const marks: Record<string, CatchMark> = {};
     for (const [id, value] of Object.entries(inner as Record<string, unknown>)) {
       const mark = coerceMark(value);
-      if (mark) marks[Number(id)] = mark;
+      if (mark) marks[id] = mark;
     }
     out[bucket] = marks;
   }
@@ -61,11 +69,12 @@ export function migrateCaughtState(persisted: unknown): { caught: CaughtBuckets 
     return { caught: normalizeBuckets(caughtMap) };
   }
 
-  // v0/v1: a single flat map, all in relation to Paldea.
-  const paldea: Record<number, CatchMark> = {};
+  // v0/v1: a single flat map, all in relation to Paldea. Keys are bare national
+  // ids (base forms), kept as strings to match the form-aware key space.
+  const paldea: Record<string, CatchMark> = {};
   for (const [key, value] of Object.entries(caughtMap)) {
     const mark = coerceMark(value);
-    if (mark) paldea[Number(key)] = mark;
+    if (mark) paldea[key] = mark;
   }
   const caught: CaughtBuckets = {};
   if (Object.keys(paldea).length > 0) caught[PALDEA_BUCKET] = paldea;
@@ -73,10 +82,11 @@ export function migrateCaughtState(persisted: unknown): { caught: CaughtBuckets 
 }
 
 interface CaughtStore {
-  // Map of bucket key -> (national id -> mark). A plain object (not a Map) so it
-  // serializes cleanly to localStorage via the persist middleware.
+  // Map of bucket key -> (form-aware id -> mark). A plain object (not a Map) so
+  // it serializes cleanly to localStorage via the persist middleware.
   caught: CaughtBuckets;
-  cycleCaught: (bucket: string, nationalId: number) => void;
+  // `key` is the form-aware id from catchKeyFor(): "79" or "79-galar".
+  cycleCaught: (bucket: string, key: string) => void;
   // Clear one bucket's marks, or every bucket when no key is given.
   clearCaught: (bucket?: string) => void;
 }
@@ -85,16 +95,16 @@ export const useCaughtStore = create<CaughtStore>()(
   persist(
     (set) => ({
       caught: {},
-      cycleCaught: (bucket, nationalId) =>
+      cycleCaught: (bucket, key) =>
         set((state) => {
           const marks = { ...(state.caught[bucket] ?? {}) };
-          const current = marks[nationalId];
+          const current = marks[key];
           if (current === undefined) {
-            marks[nationalId] = "caught";
+            marks[key] = "caught";
           } else if (current === "caught") {
-            marks[nationalId] = "not-caught";
+            marks[key] = "not-caught";
           } else {
-            delete marks[nationalId];
+            delete marks[key];
           }
           return { caught: { ...state.caught, [bucket]: marks } };
         }),

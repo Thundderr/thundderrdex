@@ -43,7 +43,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const visibleRegionalEntries = useMemo(() => {
     if (!regionalEntries) return [];
     if (!showUncaughtOnly) return regionalEntries;
-    return regionalEntries.filter((e) => marks[e.nationalId] !== "caught");
+    return regionalEntries.filter((e) => marks[e.catchKey] !== "caught");
   }, [regionalEntries, showUncaughtOnly, marks]);
 
   // Filter to base Pokemon only (id 1-1025), deduplicated by id, sorted by id
@@ -167,21 +167,21 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
             </div>
             <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
               {visibleRegionalEntries.map((entry) => {
-                const mark = marks[entry.nationalId];
+                const mark = marks[entry.catchKey];
                 return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
                   onClick={() => addPokemonModule(entry.name)}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    cycleCaught(bucketKey, entry.nationalId);
+                    cycleCaught(bucketKey, entry.catchKey);
                   }}
                   className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)}`}
                   title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${markTitleHint(mark)}`}
                 >
                   <MarkBadge mark={mark} />
                   <Image
-                    src={getSpriteUrl(entry.nationalId)}
+                    src={entry.spriteUrl}
                     alt={entry.displayName}
                     width={48}
                     height={48}
@@ -231,7 +231,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
         {GENERATIONS.map((gen) => {
           const allInGen = pokemonByGen.get(gen.id) || [];
           const pokemon = showUncaughtOnly
-            ? allInGen.filter((p) => marks[p.id] !== "caught")
+            ? allInGen.filter((p) => marks[String(p.id)] !== "caught")
             : allInGen;
           if (pokemon.length === 0) return null;
 
@@ -254,7 +254,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
               <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
                 {pokemon.map((pkmn) => {
                   const isEnabled = pkmn.id <= maxEnabledId;
-                  const mark = marks[pkmn.id];
+                  const mark = marks[String(pkmn.id)];
                   return (
                     <button
                       key={pkmn.name}
@@ -273,7 +273,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                       }}
                       onContextMenu={(e) => {
                         e.preventDefault();
-                        cycleCaught(bucketKey, pkmn.id);
+                        cycleCaught(bucketKey, String(pkmn.id));
                       }}
                       className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)} ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"}`}
                       title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${markTitleHint(mark)}`}

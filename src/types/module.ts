@@ -1,7 +1,7 @@
 import { StatModifiers, StatValues } from "@/lib/utils/statCalculator";
 
 export type ModuleTab = "stats" | "abilities" | "types" | "moves" | "locations" | "evolution";
-export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location" | "pokedex";
+export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location" | "pokedex" | "catch-rate";
 
 // Base module interface
 export interface BaseModule {
@@ -164,8 +164,36 @@ export interface PokedexModule extends BaseModule {
   selectedDexId?: number | null;
 }
 
+// Catch Rate module specific fields
+export type CatchRateStatus = "none" | "sleep" | "freeze" | "poison" | "burn" | "paralysis";
+
+export interface CatchRateModule extends BaseModule {
+  moduleType: "catch-rate";
+  pokemonName: string | null;
+  ballId: string;
+  hpPercent: number; // 1-100
+  exactlyOneHp: boolean; // overrides hpPercent
+  status: CatchRateStatus;
+  turnCount: number; // Timer/Quick
+  inWater: boolean; // Dive/Lure
+  nightOrCave: boolean; // Dusk
+  alreadyCaught: boolean; // Repeat
+  yourLevel: number; // Level Ball
+  loveBallMatch: boolean; // Love Ball: same species, opposite gender
+  targetLevel: number; // Nest/low-level/badge penalty/Level Ball
+  // Advanced, generation-gated
+  capturePower: number; // Gen 9: 0-3
+  oPowerLevel: number; // Gen 5 Entralink / Gen 6 O-Power / Gen 7 Roto: 0-3
+  caughtOffGuard: boolean; // Gen 9
+  catchingCharm: boolean; // Gen 7+
+  badgeCount: number; // Gen 9 obedience (0-8)
+  hasEighthBadge: boolean; // Gen 8 difficulty
+  dexCaughtBucket: number; // species caught (crit capture + Gen 5 dark grass)
+  darkGrass: boolean; // Gen 5
+}
+
 // Union type for all modules
-export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule | PokedexModule;
+export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule | PokedexModule | CatchRateModule;
 
 export interface RecentSearch {
   pokemonName: string;

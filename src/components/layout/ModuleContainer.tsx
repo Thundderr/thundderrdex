@@ -26,6 +26,7 @@ import { TeamBuilderModule } from "@/components/pokemon-module/TeamBuilderModule
 import { DamageCalcModule } from "@/components/damage-calc/DamageCalcModule";
 import { LocationModule } from "@/components/location-module/LocationModule";
 import { PokedexModule } from "@/components/pokedex-module/PokedexModule";
+import { CatchRateModule } from "@/components/catch-rate-module/CatchRateModule";
 import { AnyModule } from "@/types/module";
 import { DamageCalcModule as DamageCalcModuleType, PokedexModule as PokedexModuleType } from "@/types/module";
 import { TeamBattlePanel } from "@/components/damage-calc/TeamBattlePanel";
@@ -263,6 +264,9 @@ export function ModuleContainer() {
               if (module.moduleType === "pokedex") {
                 return <PokedexModule key={module.id} module={module} />;
               }
+              if (module.moduleType === "catch-rate") {
+                return <CatchRateModule key={module.id} module={module} />;
+              }
               return <PokemonModule key={module.id} module={module} />;
             })}
           </div>
@@ -281,6 +285,8 @@ export function ModuleContainer() {
               <LocationModule module={activeModule} isOverlay />
             ) : activeModule.moduleType === "pokedex" ? (
               <PokedexModule module={activeModule} isOverlay />
+            ) : activeModule.moduleType === "catch-rate" ? (
+              <CatchRateModule module={activeModule} isOverlay />
             ) : (
               <PokemonModule module={activeModule} isOverlay />
             )
