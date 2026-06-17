@@ -48,7 +48,9 @@ export function Header() {
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, []);
+    // Re-check overflow when the selector collapses/expands, since that changes
+    // content width without resizing the container itself.
+  }, [selectorCollapsed]);
 
   const handleClick = (action: typeof MODULE_BUTTONS[number]["action"]) => {
     const fn = store[action];
@@ -65,7 +67,7 @@ export function Header() {
         <div ref={scrollContainerRef} className="flex items-center gap-2 overflow-x-auto flex-nowrap flex-1 pb-1 pl-1">
           <GenerationSelector collapsible />
           <div className="flex-1 min-w-[17px] flex items-center justify-center">
-            {(showDivider || selectorCollapsed) && <div className="w-px h-6 bg-slate-700" />}
+            {showDivider && <div className="w-px h-6 bg-slate-700" />}
           </div>
           {MODULE_BUTTONS.map((btn) => (
             <button
