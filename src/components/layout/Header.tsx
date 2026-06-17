@@ -61,7 +61,7 @@ export function Header() {
           ThundderrDex
         </Link>
         <div ref={scrollContainerRef} className="flex items-center gap-2 overflow-x-auto flex-nowrap flex-1 pb-1">
-          <GenerationSelector />
+          <GenerationSelector collapsible />
           <div className="flex-1 min-w-[17px] flex items-center justify-center">
             {showDivider && <div className="w-px h-6 bg-slate-700" />}
           </div>
