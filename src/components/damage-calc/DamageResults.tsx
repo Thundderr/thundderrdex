@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DamageCalcResult } from "@/hooks/useDamageCalc";
+import { clampLeftToViewport } from "@/lib/utils/popoverPosition";
 
 interface Props {
   result: DamageCalcResult | null;
@@ -35,7 +36,7 @@ function InfoButton({ description, colorClass }: { description: string; colorCla
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltipPos({
       top: rect.bottom + 4,
-      left: rect.left,
+      left: clampLeftToViewport(rect.left, 256),
     });
     setIsHovered(true);
   };
@@ -70,7 +71,7 @@ function InfoButton({ description, colorClass }: { description: string; colorCla
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          <div className="bg-slate-900 border border-slate-600 rounded px-2.5 py-2 shadow-lg w-80">
+          <div className="bg-slate-900 border border-slate-600 rounded px-2.5 py-2 shadow-lg w-80 max-w-[calc(100vw-1rem)]">
             <p className="text-[11px] text-slate-300 leading-relaxed">{description}</p>
             <p className="text-[9px] text-slate-500 mt-1.5 pt-1.5 border-t border-slate-700">
               {copied ? (
