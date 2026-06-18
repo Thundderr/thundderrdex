@@ -284,8 +284,8 @@ export function LocationsPanel({ pokemonName }: Props) {
               key={idx}
               className="bg-slate-800/50 rounded-lg p-2 border border-slate-700/50"
             >
-              <div className="flex items-start gap-3">
-                <div className="flex flex-wrap gap-1 min-w-[100px]">
+              <div className="flex flex-col sm:flex-row items-start gap-3">
+                <div className="flex flex-wrap gap-1 sm:min-w-[100px]">
                   {group.versions.map((version) => (
                     <VersionLabel key={version} version={version} />
                   ))}

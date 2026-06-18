@@ -220,7 +220,7 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
               <SortHeader label="Type" sortKeyValue="type" className="w-20" />
               <SortHeader label="Cat" sortKeyValue="category" className="w-10 text-center" />
               <SortHeader label="Pwr" sortKeyValue="power" className="w-10" />
-              <SortHeader label="Acc" sortKeyValue="accuracy" className="w-10" />
+              <SortHeader label="Acc" sortKeyValue="accuracy" className="hidden sm:table-cell w-10" />
             </tr>
           </thead>
           <tbody>
@@ -267,7 +267,7 @@ export function LearnsetTable({ pokemonName, pokemonTypes }: Props) {
                 <td className="py-1.5 px-2 text-right text-slate-300">
                   {entry.move.power ?? "-"}
                 </td>
-                <td className="py-1.5 px-2 text-right text-slate-300">
+                <td className="hidden sm:table-cell py-1.5 px-2 text-right text-slate-300">
                   {entry.move.accuracy ?? "-"}
                 </td>
               </tr>

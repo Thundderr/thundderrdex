@@ -125,45 +125,47 @@ function CircularEvolution({ parent, children, currentPokemonName, onSelect }: C
   const gridOrder = [0, 1, 2, 7, -1, 3, 6, 5, 4]; // -1 is center (parent)
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {gridOrder.map((childIdx, gridPos) => {
-        // Center position - place parent
-        if (childIdx === -1) {
-          return (
-            <div key="center" className="flex items-center justify-center">
-              <EvoPokemonCard
-                node={parent}
-                isCurrent={parent.name === currentPokemonName}
-                onSelect={onSelect}
-              />
-            </div>
-          );
-        }
-
-        // Check if we have a child for this position
-        if (childIdx < children.length) {
-          const child = children[childIdx];
-          return (
-            <div key={child.name} className="flex flex-col items-center justify-center">
-              <EvoPokemonCard
-                node={child}
-                isCurrent={child.name === currentPokemonName}
-                onSelect={onSelect}
-                size="small"
-              />
-              <div className="text-[8px] text-center leading-tight mt-0.5 h-6 overflow-hidden">
-                <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
-                {child.evolutionMethod?.details && (
-                  <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>
-                )}
+    <div className="overflow-x-auto">
+      <div className="grid grid-cols-3 gap-2 min-w-0">
+        {gridOrder.map((childIdx, gridPos) => {
+          // Center position - place parent
+          if (childIdx === -1) {
+            return (
+              <div key="center" className="flex items-center justify-center">
+                <EvoPokemonCard
+                  node={parent}
+                  isCurrent={parent.name === currentPokemonName}
+                  onSelect={onSelect}
+                />
               </div>
-            </div>
-          );
-        }
+            );
+          }
 
-        // Empty cell for grids with fewer than 8 evolutions
-        return <div key={gridPos} />;
-      })}
+          // Check if we have a child for this position
+          if (childIdx < children.length) {
+            const child = children[childIdx];
+            return (
+              <div key={child.name} className="flex flex-col items-center justify-center">
+                <EvoPokemonCard
+                  node={child}
+                  isCurrent={child.name === currentPokemonName}
+                  onSelect={onSelect}
+                  size="small"
+                />
+                <div className="text-[8px] text-center leading-tight mt-0.5 h-6 overflow-hidden">
+                  <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
+                  {child.evolutionMethod?.details && (
+                    <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // Empty cell for grids with fewer than 8 evolutions
+          return <div key={gridPos} />;
+        })}
+      </div>
     </div>
   );
 }
@@ -212,38 +214,40 @@ function BranchingEvolution({ children, currentPokemonName, onSelect }: Branchin
       </svg>
 
       {/* Children with methods */}
-      <div className="flex gap-1">
-        {children.map((child) => (
-          <div key={child.name} className="flex flex-col items-center" style={{ width: childWidth }}>
-            <div className="text-[9px] text-center leading-tight mb-1 max-w-[85px] h-7 flex flex-col justify-end">
-              <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
-              {child.evolutionMethod?.details && (
-                <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>
+      <div className="overflow-x-auto">
+        <div className="flex gap-1">
+          {children.map((child) => (
+            <div key={child.name} className="flex flex-col items-center" style={{ width: childWidth }}>
+              <div className="text-[9px] text-center leading-tight mb-1 max-w-[85px] h-7 flex flex-col justify-end">
+                <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
+                {child.evolutionMethod?.details && (
+                  <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>
+                )}
+              </div>
+              <EvoPokemonCard
+                node={child}
+                isCurrent={child.name === currentPokemonName}
+                onSelect={onSelect}
+                size="small"
+              />
+              {/* Recurse if this child has evolutions */}
+              {child.evolvesTo.length === 1 && (
+                <LinearEvolution
+                  nodes={child.evolvesTo}
+                  currentPokemonName={currentPokemonName}
+                  onSelect={onSelect}
+                />
+              )}
+              {child.evolvesTo.length > 1 && child.evolvesTo.length <= 4 && (
+                <BranchingEvolution
+                  children={child.evolvesTo}
+                  currentPokemonName={currentPokemonName}
+                  onSelect={onSelect}
+                />
               )}
             </div>
-            <EvoPokemonCard
-              node={child}
-              isCurrent={child.name === currentPokemonName}
-              onSelect={onSelect}
-              size="small"
-            />
-            {/* Recurse if this child has evolutions */}
-            {child.evolvesTo.length === 1 && (
-              <LinearEvolution
-                nodes={child.evolvesTo}
-                currentPokemonName={currentPokemonName}
-                onSelect={onSelect}
-              />
-            )}
-            {child.evolvesTo.length > 1 && child.evolvesTo.length <= 4 && (
-              <BranchingEvolution
-                children={child.evolvesTo}
-                currentPokemonName={currentPokemonName}
-                onSelect={onSelect}
-              />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1296,7 +1300,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       {showImportExport && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(false)}>
           <div
-            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-[400px] max-w-[90vw]"
+            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-full max-w-[min(400px,90vw)] max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
