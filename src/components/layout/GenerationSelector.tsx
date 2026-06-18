@@ -3,6 +3,10 @@
 import { useGenerationStore } from "@/stores/generationStore";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { clampLeftToViewport, POPOVER_MAXW } from "@/lib/utils/popoverPosition";
+
+// Estimated rendered width of the collapsed-mode dropdown (whitespace-nowrap items, px-2 py-1 text-xs font-bold).
+const MENU_WIDTH = 160;
 
 // Game colors for each letter (lightened for dark background readability)
 const GENERATION_CONFIG = [
@@ -170,8 +174,8 @@ export function GenerationSelector({ stretch = false, collapsible = false }: { s
         {dropdownOpen && menuPos && createPortal(
           <div
             ref={menuRef}
-            style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
-            className="flex flex-col gap-1 bg-slate-900 border border-slate-700 rounded-lg p-1 shadow-xl z-[100]"
+            style={{ position: "fixed", top: menuPos.top, left: clampLeftToViewport(menuPos.left, MENU_WIDTH) }}
+            className={`flex flex-col gap-1 bg-slate-900 border border-slate-700 rounded-lg p-1 shadow-xl z-[100] ${POPOVER_MAXW}`}
           >
             {GENERATION_CONFIG.map((config) => {
               const isSelected = config.gen === currentGen;
