@@ -115,7 +115,7 @@ export function Header() {
             <button
               key={btn.key}
               onClick={() => handleClick(btn.action)}
-              className={`flex-1 px-2 py-1 ${COLOR_CLASSES[btn.color]} text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-center`}
+              className={`flex-1 px-2 py-1.5 ${COLOR_CLASSES[btn.color]} text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-center`}
             >
               + {btn.shortLabel}
             </button>
