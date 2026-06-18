@@ -373,7 +373,7 @@ function TeamCoverage({
       </h3>
 
       {/* Main layout: Types on left, Totals on right */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         {/* Type Grid - Two columns */}
         <div className="flex-1 grid grid-cols-2 gap-1.5">
           {availableTypes.map((type) => {
@@ -414,7 +414,7 @@ function TeamCoverage({
         </div>
 
         {/* Totals on right - stacked vertically */}
-        <div className="w-36 flex flex-col gap-3">
+        <div className="w-full sm:w-36 flex flex-col gap-3">
           <div className="bg-red-900/20 border border-red-800/50 rounded-lg p-3 text-center flex-1 flex flex-col justify-center">
             <p className="text-xs text-red-300 uppercase tracking-wider mb-1">Weaknesses</p>
             <p className="text-3xl font-bold text-red-400">{totals.totalWeaknesses}</p>
