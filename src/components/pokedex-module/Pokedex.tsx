@@ -221,7 +221,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
       </div>
 
       {/* Filter bar: search by name · filter by type */}
-      <div className="mb-3 shrink-0 flex flex-col sm:flex-row gap-2">
+      <div className="mb-3 shrink-0 flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <input
             type="text"

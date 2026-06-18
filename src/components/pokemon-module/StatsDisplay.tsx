@@ -605,7 +605,7 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                       {filteredMoves.length > 0 && (
                         <ul
                           ref={moveListRef}
-                          className="absolute z-50 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto w-[320px] max-w-[calc(100vw-1rem)] left-0"
+                          className={`absolute z-50 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto w-[320px] max-w-[calc(100vw-1rem)] left-0 ${!isLeftColumn ? "sm:left-auto sm:right-0" : ""}`}
                         >
                           {/* Header row */}
                           <li className="flex items-center gap-1 px-2 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">

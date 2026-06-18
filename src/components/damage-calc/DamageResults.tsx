@@ -36,7 +36,7 @@ function InfoButton({ description, colorClass }: { description: string; colorCla
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltipPos({
       top: rect.bottom + 4,
-      left: clampLeftToViewport(rect.left, 256),
+      left: clampLeftToViewport(rect.left, 320),
     });
     setIsHovered(true);
   };
