@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { retrySync, signOutWithFlush } from "@/lib/sync/syncEngine";
 import { useAuthStore } from "@/stores/authStore";
+import { POPOVER_MAXW } from "@/lib/utils/popoverPosition";
 
 interface Props {
   onClose: () => void;
@@ -45,7 +46,7 @@ export function AccountMenu({ onClose }: Props) {
     <>
       {/* Invisible backdrop to close on outside click */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-1.5 w-60 bg-slate-800 rounded-lg shadow-xl border border-slate-700 z-50 p-3">
+      <div className={`absolute right-0 top-full mt-1.5 w-60 bg-slate-800 rounded-lg shadow-xl border border-slate-700 z-50 p-3 ${POPOVER_MAXW}`}>
         <p className="text-xs text-white font-medium truncate" title={user?.email}>
           {user?.email}
         </p>

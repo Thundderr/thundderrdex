@@ -60,7 +60,7 @@ export function ConfirmModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div
         ref={modalRef}
-        className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 max-w-sm w-full mx-4"
+        className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-lg font-semibold text-white mb-2">{title}</h2>
         <p className="text-sm text-slate-300 mb-6">{message}</p>

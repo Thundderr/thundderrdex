@@ -185,7 +185,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
             const v = e.target.value;
             setPokedexDex(moduleId, v === "national" ? null : parseInt(v, 10));
           }}
-          className="shrink-0 max-w-[40%] min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
+          className="shrink-0 max-w-full sm:max-w-[40%] min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
         >
           <option value="national">National Dex (by Generation)</option>
           {dexGroups.map((group) => (
@@ -221,7 +221,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
       </div>
 
       {/* Filter bar: search by name · filter by type */}
-      <div className="mb-3 shrink-0 flex items-center gap-2">
+      <div className="mb-3 shrink-0 flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <input
             type="text"
@@ -289,7 +289,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 No Pokémon match these filters.
               </div>
             )}
-            <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
+            <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(72px,1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
               {visibleRegionalEntries.map((entry) => {
                 // Fall back to the base-species id so a missing catchKey (e.g. a
                 // stale cached entry from before the field existed) can never
@@ -385,7 +385,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
               </div>
 
               {/* Pokemon Grid */}
-              <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
+              <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(72px,1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
                 {pokemon.map((pkmn) => {
                   const isEnabled = pkmn.id <= maxEnabledId;
                   const mark = marks[String(pkmn.id)];

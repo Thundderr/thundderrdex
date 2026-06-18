@@ -400,7 +400,7 @@ export function LocationModule({ module, isOverlay = false }: Props) {
       </div>
 
       {/* Content */}
-      <div className={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[400px] max-h-[600px]"}`}>
+      <div className={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[260px] sm:min-h-[400px] max-h-[600px]"}`}>
         {isSearching ? (
           <div className="relative">
             <input
@@ -421,7 +421,7 @@ export function LocationModule({ module, isOverlay = false }: Props) {
             {filteredLocations.length > 0 && (
               <ul
                 ref={listRef}
-                className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-[300px] overflow-auto"
+                className="absolute z-50 w-full max-w-[calc(100vw-1rem)] mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-[300px] overflow-auto"
               >
                 {filteredLocations.map((location, index) => (
                   <li

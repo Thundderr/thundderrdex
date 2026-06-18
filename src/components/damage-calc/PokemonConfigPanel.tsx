@@ -907,7 +907,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
   };
 
   return (
-    <div className="bg-slate-800 rounded-lg p-2 space-y-2">
+    <div className="bg-slate-800 rounded-lg p-2 space-y-2 min-w-0">
       {/* Level - above Pokemon select (fullscreen only) */}
       {isFullscreen && config.pokemonName && pokemon && (
         <div className="flex items-center gap-1 text-xs">
@@ -1297,7 +1297,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
           {/* Stats Table */}
           <div className="border border-slate-700 rounded overflow-hidden text-[11px]">
             {/* Header */}
-            <div className="grid grid-cols-[60px_36px_36px_44px_44px_36px] bg-slate-900/50 text-slate-400 uppercase">
+            <div className="grid grid-cols-[48px_32px_32px_40px_40px_32px] sm:grid-cols-[60px_36px_36px_44px_44px_36px] bg-slate-900/50 text-slate-400 uppercase">
               <div className="px-2 py-1"></div>
               <div className="px-1 py-1 text-center">Base</div>
               <div className="px-1 py-1 text-center">IVs</div>
@@ -1328,7 +1328,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               return (
                 <div
                   key={stat}
-                  className="grid grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700/50"
+                  className="grid grid-cols-[48px_32px_32px_40px_40px_32px] sm:grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700/50"
                 >
                   <div className={`px-2 py-1.5 font-medium ${
                     isIncreased ? "text-green-400" : isDecreased ? "text-red-400" : "text-slate-300"
@@ -1390,7 +1390,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               );
             })}
             {/* Total Row */}
-            <div className="grid grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700 bg-slate-900/30">
+            <div className="grid grid-cols-[48px_32px_32px_40px_40px_32px] sm:grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700 bg-slate-900/30">
               <div className="px-2 py-1.5 text-slate-400 font-medium">Total</div>
               <div className="px-1 py-1.5 text-center text-slate-500">
                 {pokemon.stats.total}
@@ -1487,7 +1487,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                   {filteredItemOptions.length > 0 && (
                     <ul
                       ref={itemListRef}
-                      className="absolute z-50 w-full bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-48 overflow-auto"
+                      className="absolute z-50 w-full max-w-[calc(100vw-1rem)] left-0 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-48 overflow-auto"
                     >
                       {filteredItemOptions.map((item, index) => (
                         <li
@@ -1655,7 +1655,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                         {filteredMoveOptions.length > 0 && (
                           <ul
                             ref={moveListRef}
-                            className="absolute z-50 w-full min-w-[320px] bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto"
+                            className="absolute z-50 w-[320px] max-w-[calc(100vw-1rem)] left-0 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto"
                           >
                             {/* Header row */}
                             <li className="flex items-center gap-1 px-2 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
@@ -1798,7 +1798,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
       {showImportExport && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(false)}>
           <div
-            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-[400px] max-w-[90vw]"
+            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-full max-w-[min(400px,90vw)] max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">

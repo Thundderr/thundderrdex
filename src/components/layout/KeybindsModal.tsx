@@ -65,7 +65,7 @@ export function KeybindsModal({ isOpen, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div
         ref={modalRef}
-        className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 max-w-md w-full mx-4"
+        className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white">Keyboard Shortcuts</h2>
