@@ -4,12 +4,15 @@ import { useRef, useMemo, useCallback, useState } from "react";
 import Image from "next/image";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { usePokedex } from "@/hooks/usePokedex";
+import { usePokemonOfType } from "@/hooks/usePokemonOfType";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useCaughtStore, CatchMark, NATIONAL_BUCKET } from "@/stores/caughtStore";
 import { GENERATIONS } from "@/data/generations";
 import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
+import { ALL_TYPES, TYPE_COLORS } from "@/data/typeChart";
+import type { PokemonTypeName } from "@/types/pokemon";
 
 interface PokedexProps {
   moduleId: string;
@@ -30,6 +33,10 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const selectedDexId = selectedDexIdProp ?? null;
   // When on, tiles marked "caught" are hidden (unmarked and not-caught stay visible)
   const [showUncaughtOnly, setShowUncaughtOnly] = useState(false);
+  // Top-bar filters: free-text name match and a single type.
+  const [nameFilter, setNameFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState<PokemonTypeName | null>(null);
+  const { data: typeIds, isLoading: isTypeLoading } = usePokemonOfType(typeFilter);
   const dexGroups = useMemo(() => getRegionalDexGroups(), []);
   const selectedDex = selectedDexId !== null ? getRegionalDexById(selectedDexId) : undefined;
   const { data: regionalEntries, isLoading: isRegionalLoading } = usePokedex(selectedDexId);
@@ -40,11 +47,33 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const bucketKey = selectedDex ? selectedDex.group : NATIONAL_BUCKET;
   const marks = useMemo(() => caught[bucketKey] ?? {}, [caught, bucketKey]);
 
+  // Shared name/type matcher used by both the National and regional views.
+  // `id` is the national-dex id (used for type membership); name/displayName are
+  // matched case-insensitively against the free-text query.
+  const nameQuery = nameFilter.trim().toLowerCase();
+  const matchesFilters = useCallback(
+    (id: number, name: string, displayName: string) => {
+      if (
+        nameQuery &&
+        !displayName.toLowerCase().includes(nameQuery) &&
+        !name.toLowerCase().includes(nameQuery)
+      ) {
+        return false;
+      }
+      // While the type list is still loading, don't filter anything out.
+      if (typeFilter && typeIds && !typeIds.has(id)) return false;
+      return true;
+    },
+    [nameQuery, typeFilter, typeIds]
+  );
+
   const visibleRegionalEntries = useMemo(() => {
     if (!regionalEntries) return [];
-    if (!showUncaughtOnly) return regionalEntries;
-    return regionalEntries.filter((e) => marks[e.catchKey ?? String(e.nationalId)] !== "caught");
-  }, [regionalEntries, showUncaughtOnly, marks]);
+    return regionalEntries.filter((e) => {
+      if (showUncaughtOnly && marks[e.catchKey ?? String(e.nationalId)] === "caught") return false;
+      return matchesFilters(e.nationalId, e.name, e.displayName);
+    });
+  }, [regionalEntries, showUncaughtOnly, marks, matchesFilters]);
 
   // Filter to base Pokemon only (id 1-1025), deduplicated by id, sorted by id
   const basePokemon = useMemo(() => {
@@ -94,6 +123,19 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
     }
     return groups;
   }, [basePokemon]);
+
+  // How many Pokemon match the current filters in the National view (used to
+  // show an empty-state instead of a blank scroll area).
+  const nationalMatchCount = useMemo(() => {
+    let count = 0;
+    for (const list of pokemonByGen.values()) {
+      for (const p of list) {
+        if (showUncaughtOnly && marks[String(p.id)] === "caught") continue;
+        if (matchesFilters(p.id, p.name, p.displayName)) count++;
+      }
+    }
+    return count;
+  }, [pokemonByGen, showUncaughtOnly, marks, matchesFilters]);
 
   // The max Pokemon ID enabled based on current generation
   const maxEnabledId = useMemo(() => {
@@ -178,6 +220,54 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
         </button>
       </div>
 
+      {/* Filter bar: search by name · filter by type */}
+      <div className="mb-3 shrink-0 flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <input
+            type="text"
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            placeholder="Filter by name…"
+            className="w-full px-2 py-1.5 pr-7 text-xs rounded bg-slate-800 border border-slate-700 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+          />
+          {nameFilter && (
+            <button
+              onClick={() => setNameFilter("")}
+              className="absolute inset-y-0 right-0 px-2 flex items-center text-slate-500 hover:text-slate-300"
+              title="Clear name filter"
+              aria-label="Clear name filter"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div className="shrink-0 flex items-center gap-1.5">
+          {typeFilter && (
+            <span
+              className="h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: TYPE_COLORS[typeFilter] }}
+            />
+          )}
+          <select
+            value={typeFilter ?? ""}
+            onChange={(e) => setTypeFilter(e.target.value ? (e.target.value as PokemonTypeName) : null)}
+            className="px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 capitalize hover:border-slate-600 focus:outline-none focus:border-emerald-500"
+            title="Filter by type"
+          >
+            <option value="">All types</option>
+            {ALL_TYPES.map((t) => (
+              <option key={t} value={t} className="capitalize">
+                {t}
+              </option>
+            ))}
+          </select>
+          {typeFilter && isTypeLoading && (
+            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-emerald-500 shrink-0" />
+          )}
+        </div>
+      </div>
+
       {selectedDex ? (
         /* ===== Regional Dex View ===== */
         isRegionalLoading || !regionalEntries ? (
@@ -194,6 +284,11 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 </span>
               </h3>
             </div>
+            {visibleRegionalEntries.length === 0 && (
+              <div className="py-10 text-center text-xs text-slate-500">
+                No Pokémon match these filters.
+              </div>
+            )}
             <div className="grid gap-1 mb-3 [grid-template-columns:repeat(auto-fill,minmax(90px,1fr))]">
               {visibleRegionalEntries.map((entry) => {
                 // Fall back to the base-species id so a missing catchKey (e.g. a
@@ -204,7 +299,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
-                  onClick={() => addPokemonModule(entry.name)}
+                  onClick={() => addPokemonModule(entry.name, "evolution")}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     cycleCaught(bucketKey, catchKey);
@@ -261,11 +356,17 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
         ref={scrollContainerRef}
         className="flex-1 min-h-0 overflow-y-auto rounded-lg"
       >
+        {nationalMatchCount === 0 && (
+          <div className="py-10 text-center text-xs text-slate-500">
+            No Pokémon match these filters.
+          </div>
+        )}
         {GENERATIONS.map((gen) => {
           const allInGen = pokemonByGen.get(gen.id) || [];
-          const pokemon = showUncaughtOnly
-            ? allInGen.filter((p) => marks[String(p.id)] !== "caught")
-            : allInGen;
+          const pokemon = allInGen.filter((p) => {
+            if (showUncaughtOnly && marks[String(p.id)] === "caught") return false;
+            return matchesFilters(p.id, p.name, p.displayName);
+          });
           if (pokemon.length === 0) return null;
 
           return (
@@ -293,7 +394,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                       key={pkmn.name}
                       onClick={() => {
                         if (isEnabled) {
-                          addPokemonModule(pkmn.name);
+                          addPokemonModule(pkmn.name, "evolution");
                         } else {
                           // Find which generation this Pokemon belongs to and switch
                           const pkmnGen = GENERATIONS.find(

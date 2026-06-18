@@ -10,6 +10,7 @@ import {
   PokeAPIPokemonSpecies,
   PokeAPIEvolutionChain,
   PokeAPIPokedex,
+  PokeAPIType,
 } from "@/types/api";
 
 const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -137,5 +138,13 @@ export async function fetchPokedex(
 ): Promise<PokeAPIPokedex> {
   return fetchWithCache<PokeAPIPokedex>(
     `${POKEAPI_BASE}/pokedex/${id}`
+  );
+}
+
+export async function fetchType(
+  name: string
+): Promise<PokeAPIType> {
+  return fetchWithCache<PokeAPIType>(
+    `${POKEAPI_BASE}/type/${name}`
   );
 }

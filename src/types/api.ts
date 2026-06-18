@@ -356,3 +356,12 @@ export interface PokeAPIPokedex {
   region: { name: string; url: string } | null;
   pokemon_entries: PokeAPIPokedexEntry[];
 }
+
+export interface PokeAPIType {
+  id: number;
+  name: string;
+  pokemon: {
+    slot: number;
+    pokemon: { name: string; url: string };
+  }[];
+}
