@@ -110,7 +110,7 @@ export function NatureChart() {
       </div>
 
       {/* Explanation - 3 columns */}
-      <div className="mt-4 pt-4 border-t border-slate-700 text-xs text-slate-400 grid grid-cols-3 gap-4">
+      <div className="mt-4 pt-4 border-t border-slate-700 text-xs text-slate-400 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <span className="text-slate-300 font-medium">How Natures Work</span>
           <p className="mt-1">

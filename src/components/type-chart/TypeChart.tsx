@@ -10,7 +10,7 @@ export function TypeChart() {
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[700px]">
+      <div className="min-w-[640px] sm:min-w-[700px]">
         <table
           className="w-full border-collapse text-xs"
           onMouseLeave={() => setHoveredCell(null)}
