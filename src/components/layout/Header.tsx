@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
+import { useUIStore } from "@/stores/uiStore";
 import { GenerationSelector } from "./GenerationSelector";
 import { AccountButton } from "@/components/auth/AccountButton";
 
@@ -32,6 +33,7 @@ const COLOR_CLASSES: Record<string, string> = {
 export function Header() {
   const store = useModuleStore();
   const selectorCollapsed = useGenerationStore((s) => s.selectorCollapsed);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showDivider, setShowDivider] = useState(false);
 
@@ -61,6 +63,15 @@ export function Header() {
     <header className="bg-slate-900 border-b border-slate-800 px-4 py-2 sticky top-0 z-40 flex-shrink-0">
       {/* Desktop layout (md+): single row, unchanged */}
       <div className="hidden md:flex items-center gap-3">
+        <button
+          onClick={toggleSidebar}
+          className="p-2 text-slate-300 hover:text-white rounded flex-shrink-0 lg:hidden"
+          aria-label="Open menu"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
         <Link href="/" className="text-xl font-bold text-white hover:text-slate-200 flex-shrink-0">
           ThundderrDex
         </Link>
@@ -85,6 +96,15 @@ export function Header() {
       {/* Mobile layout (<md): two rows */}
       <div className="flex flex-col gap-1 md:hidden pt-1">
         <div className="flex items-center gap-1.5 p-1">
+          <button
+            onClick={toggleSidebar}
+            className="p-2 text-slate-300 hover:text-white rounded flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <div className="flex-1 overflow-x-auto min-w-0">
             <GenerationSelector stretch />
           </div>

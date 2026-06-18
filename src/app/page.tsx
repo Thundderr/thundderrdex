@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { SidebarDrawer } from "@/components/layout/SidebarDrawer";
 import { TabBar } from "@/components/layout/TabBar";
 import { ModuleContainer } from "@/components/layout/ModuleContainer";
 import { KeyboardShortcutsProvider } from "@/components/layout/KeyboardShortcutsProvider";
@@ -19,6 +20,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <SidebarDrawer />
     </KeyboardShortcutsProvider>
   );
 }
