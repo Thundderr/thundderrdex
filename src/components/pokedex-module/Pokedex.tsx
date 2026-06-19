@@ -33,6 +33,10 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const selectedDexId = selectedDexIdProp ?? null;
   // When on, tiles marked "caught" are hidden (unmarked and not-caught stay visible)
   const [showUncaughtOnly, setShowUncaughtOnly] = useState(false);
+  // Mark mode: a touch-friendly alternative to right-clicking. When on, tapping a
+  // tile cycles its catch mark instead of opening the Pokemon (great for marking a
+  // whole dex on mobile, where right-click doesn't exist).
+  const [markMode, setMarkMode] = useState(false);
   // Top-bar filters: free-text name match and a single type.
   const [nameFilter, setNameFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState<PokemonTypeName | null>(null);
@@ -177,15 +181,17 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
 
   return (
     <div className="flex flex-col min-h-0 h-full">
-      {/* Top bar: dex selector (left) · caught/uncaught counts (middle) · uncaught filter (right) */}
-      <div className="mb-3 shrink-0 flex items-center gap-2">
+      {/* Top bar: dex selector · caught/uncaught counts · mark + uncaught toggles.
+          Stacks on mobile (select on its own row, counts + toggles below) so the
+          toggles never get clipped; single row from sm: up. */}
+      <div className="mb-3 shrink-0 flex flex-col sm:flex-row sm:items-center gap-2">
         <select
           value={selectedDexId ?? "national"}
           onChange={(e) => {
             const v = e.target.value;
             setPokedexDex(moduleId, v === "national" ? null : parseInt(v, 10));
           }}
-          className="shrink-0 max-w-full sm:max-w-[40%] min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
+          className="w-full sm:w-auto sm:max-w-[40%] min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
         >
           <option value="national">National Dex (by Generation)</option>
           {dexGroups.map((group) => (
@@ -199,6 +205,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           ))}
         </select>
 
+        <div className="flex items-center gap-2 min-w-0 sm:flex-1">
         {totalCount > 0 && (
           <div className="flex-1 min-w-0 text-center text-xs text-slate-400 truncate">
             <span className="font-semibold text-emerald-400">{caughtCount}</span> caught
@@ -207,17 +214,37 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           </div>
         )}
 
-        <button
-          onClick={() => setShowUncaughtOnly((v) => !v)}
-          className={`shrink-0 ml-auto px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-            showUncaughtOnly
-              ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
-              : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
-          }`}
-          title={showUncaughtOnly ? "Showing uncaught Pokemon only — click to show all" : "Show uncaught Pokemon only"}
-        >
-          Uncaught only
-        </button>
+        <div className="shrink-0 ml-auto flex items-center gap-1.5">
+          <button
+            onClick={() => setMarkMode((v) => !v)}
+            aria-pressed={markMode}
+            className={`shrink-0 flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+              markMode
+                ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
+                : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+            }`}
+            title={markMode
+              ? "Mark mode on — tap a Pokémon to cycle caught / not caught / clear. Tap here to turn off."
+              : "Mark mode: tap Pokémon to mark them caught (touch-friendly alternative to right-click)"}
+          >
+            <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Mark
+          </button>
+          <button
+            onClick={() => setShowUncaughtOnly((v) => !v)}
+            className={`shrink-0 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+              showUncaughtOnly
+                ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
+                : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+            }`}
+            title={showUncaughtOnly ? "Showing uncaught Pokemon only — click to show all" : "Show uncaught Pokemon only"}
+          >
+            Uncaught only
+          </button>
+        </div>
+        </div>
       </div>
 
       {/* Filter bar: search by name · filter by type */}
@@ -268,6 +295,12 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
         </div>
       </div>
 
+      {markMode && (
+        <div className="mb-2 shrink-0 rounded bg-emerald-600/10 border border-emerald-500/40 px-2.5 py-1.5 text-[11px] text-emerald-300">
+          Mark mode: tap a Pokémon to cycle caught → not caught → clear. Tapping won&apos;t open it.
+        </div>
+      )}
+
       {selectedDex ? (
         /* ===== Regional Dex View ===== */
         isRegionalLoading || !regionalEntries ? (
@@ -299,7 +332,10 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
-                  onClick={() => addPokemonModule(entry.name, "evolution")}
+                  onClick={() => {
+                    if (markMode) { cycleCaught(bucketKey, catchKey); return; }
+                    addPokemonModule(entry.name, "evolution");
+                  }}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     cycleCaught(bucketKey, catchKey);
@@ -393,6 +429,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                     <button
                       key={pkmn.name}
                       onClick={() => {
+                        if (markMode) { cycleCaught(bucketKey, String(pkmn.id)); return; }
                         if (isEnabled) {
                           addPokemonModule(pkmn.name, "evolution");
                         } else {
@@ -454,9 +491,9 @@ function markTileClasses(mark: CatchMark | undefined): string {
 
 /** Tooltip suffix describing the current mark and what right-click does next. */
 function markTitleHint(mark: CatchMark | undefined): string {
-  if (mark === "caught") return " — Caught (right-click to mark not caught)";
-  if (mark === "not-caught") return " — Not caught (right-click to clear)";
-  return " — Right-click to mark caught";
+  if (mark === "caught") return " — Caught (right-click or Mark mode to change)";
+  if (mark === "not-caught") return " — Not caught (right-click or Mark mode to change)";
+  return " — Right-click or use Mark mode to mark caught";
 }
 
 /**
