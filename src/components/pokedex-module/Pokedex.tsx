@@ -181,17 +181,19 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
 
   return (
     <div className="flex flex-col min-h-0 h-full">
-      {/* Top bar: dex selector · caught/uncaught counts · mark + uncaught toggles.
-          Stacks on mobile (select on its own row, counts + toggles below) so the
-          toggles never get clipped; single row from sm: up. */}
-      <div className="mb-3 shrink-0 flex flex-col sm:flex-row sm:items-center gap-2">
+      {/* Controls bar: dex selector · name search · type filter · caught/left
+          counts · mark + uncaught toggles. Everything sits on one line on wider
+          views; the flexible controls (dex select, name input) keep a usable
+          min-width but are capped so they don't stretch past what's needed, and
+          the whole row wraps onto multiple lines as the module narrows. */}
+      <div className="mb-3 shrink-0 flex flex-wrap items-center gap-2">
         <select
           value={selectedDexId ?? "national"}
           onChange={(e) => {
             const v = e.target.value;
             setPokedexDex(moduleId, v === "national" ? null : parseInt(v, 10));
           }}
-          className="w-full sm:w-auto sm:max-w-[40%] min-w-0 px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
+          className="flex-1 min-w-[180px] max-w-[280px] px-2 py-1.5 text-xs font-medium rounded bg-slate-800 border border-slate-700 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-emerald-500"
         >
           <option value="national">National Dex (by Generation)</option>
           {dexGroups.map((group) => (
@@ -205,51 +207,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           ))}
         </select>
 
-        <div className="flex items-center gap-2 min-w-0 sm:flex-1">
-        {totalCount > 0 && (
-          <div className="flex-1 min-w-0 text-center text-xs text-slate-400 truncate">
-            <span className="font-semibold text-emerald-400">{caughtCount}</span> caught
-            <span className="mx-1.5 text-slate-600">·</span>
-            <span className="font-semibold text-slate-200">{uncaughtCount}</span> left
-          </div>
-        )}
-
-        <div className="shrink-0 ml-auto flex items-center gap-1.5">
-          <button
-            onClick={() => setMarkMode((v) => !v)}
-            aria-pressed={markMode}
-            className={`shrink-0 flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-              markMode
-                ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
-                : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
-            }`}
-            title={markMode
-              ? "Mark mode on — tap a Pokémon to cycle caught / not caught / clear. Tap here to turn off."
-              : "Mark mode: tap Pokémon to mark them caught (touch-friendly alternative to right-click)"}
-          >
-            <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            Mark
-          </button>
-          <button
-            onClick={() => setShowUncaughtOnly((v) => !v)}
-            className={`shrink-0 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
-              showUncaughtOnly
-                ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
-                : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
-            }`}
-            title={showUncaughtOnly ? "Showing uncaught Pokemon only — click to show all" : "Show uncaught Pokemon only"}
-          >
-            Uncaught only
-          </button>
-        </div>
-        </div>
-      </div>
-
-      {/* Filter bar: search by name · filter by type */}
-      <div className="mb-3 shrink-0 flex flex-col sm:flex-row sm:items-center gap-2">
-        <div className="relative flex-1 min-w-0">
+        <div className="relative flex-1 min-w-[150px] max-w-[240px]">
           <input
             type="text"
             value={nameFilter}
@@ -292,6 +250,46 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           {typeFilter && isTypeLoading && (
             <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-emerald-500 shrink-0" />
           )}
+        </div>
+
+        {/* Counts + toggles, right-aligned and kept together as the row wraps. */}
+        <div className="shrink-0 ml-auto flex items-center gap-2">
+          {totalCount > 0 && (
+            <div className="shrink-0 text-xs text-slate-400 whitespace-nowrap">
+              <span className="font-semibold text-emerald-400">{caughtCount}</span> caught
+              <span className="mx-1.5 text-slate-600">·</span>
+              <span className="font-semibold text-slate-200">{uncaughtCount}</span> left
+            </div>
+          )}
+
+          <button
+            onClick={() => setMarkMode((v) => !v)}
+            aria-pressed={markMode}
+            className={`shrink-0 flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+              markMode
+                ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
+                : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+            }`}
+            title={markMode
+              ? "Mark mode on — tap a Pokémon to cycle caught / not caught / clear. Tap here to turn off."
+              : "Mark mode: tap Pokémon to mark them caught (touch-friendly alternative to right-click)"}
+          >
+            <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Mark
+          </button>
+          <button
+            onClick={() => setShowUncaughtOnly((v) => !v)}
+            className={`shrink-0 px-2 py-1.5 text-xs font-medium rounded border transition-colors ${
+              showUncaughtOnly
+                ? "bg-emerald-600/20 border-emerald-500 text-emerald-300"
+                : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+            }`}
+            title={showUncaughtOnly ? "Showing uncaught Pokemon only — click to show all" : "Show uncaught Pokemon only"}
+          >
+            Uncaught only
+          </button>
         </div>
       </div>
 
