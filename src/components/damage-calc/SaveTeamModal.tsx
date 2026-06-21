@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useModuleStore } from "@/stores/moduleStore";
 import { TeamBattleSlot } from "@/types/module";
+import { Modal } from "@/components/ui";
 
 interface Props {
   slots: (TeamBattleSlot | null)[];
@@ -24,45 +25,39 @@ export function SaveTeamModal({ slots, onClose }: Props) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSave();
-    if (e.key === "Escape") onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-slate-800 rounded-lg p-4 max-w-sm mx-4 shadow-xl border border-slate-700 w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-sm font-semibold text-white mb-3">Save Team</h3>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Team name..."
-          className="w-full px-3 py-2 text-sm bg-slate-900 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-          autoFocus
-          maxLength={50}
-        />
-        {isDuplicate && (
-          <p className="text-[11px] text-red-400 mt-1.5">A team with this name already exists.</p>
-        )}
-        <div className="flex gap-2 mt-3 justify-end">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!trimmed || isDuplicate}
-            className="px-3 py-1.5 text-xs text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded transition-colors"
-          >
-            Save
-          </button>
-        </div>
+    <Modal isOpen onClose={onClose} labelledBy="save-team-title" size="sm" className="p-4">
+      <h3 id="save-team-title" className="mb-3 text-sm font-semibold text-fg">Save Team</h3>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Team name..."
+        className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-fg placeholder-fg-subtle focus:border-accent focus:outline-none"
+        autoFocus
+        maxLength={50}
+      />
+      {isDuplicate && (
+        <p className="mt-1.5 text-2xs text-red-400">A team with this name already exists.</p>
+      )}
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          className="rounded bg-surface-hover px-3 py-1.5 text-xs text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={!trimmed || isDuplicate}
+          className="rounded bg-accent px-3 py-1.5 text-xs text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          Save
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }

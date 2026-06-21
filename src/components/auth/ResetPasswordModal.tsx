@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { Modal } from "@/components/ui";
 
 const INPUT_CLASSES =
-  "w-full px-3 py-2 text-sm bg-slate-900 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500";
+  "w-full px-3 py-2 text-sm bg-surface border border-line rounded text-fg placeholder-fg-subtle focus:outline-none focus:border-accent";
 const PRIMARY_BUTTON_CLASSES =
-  "w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded transition-colors";
+  "w-full px-3 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 // Shown when the user arrives via a password-reset email link (Supabase
 // fires PASSWORD_RECOVERY and signs them in with a recovery session).
@@ -44,21 +45,16 @@ export function ResetPasswordModal() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !done) void handleSubmit();
-    if (e.key === "Escape") close();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={close}>
-      <div
-        className="bg-slate-800 rounded-lg p-4 max-w-sm mx-4 shadow-xl border border-slate-700 w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
-      >
-        <h3 className="text-sm font-semibold text-white mb-3">Set a new password</h3>
+    <Modal isOpen onClose={close} labelledBy="reset-pw-title" size="sm" className="p-4" dismissOnBackdrop={false}>
+      <div onKeyDown={handleKeyDown}>
+        <h3 id="reset-pw-title" className="text-sm font-semibold text-fg mb-3">Set a new password</h3>
 
         {done ? (
           <>
-            <p className="text-xs text-slate-300">Your password has been updated.</p>
+            <p className="text-xs text-fg-muted">Your password has been updated.</p>
             <button onClick={close} className={`${PRIMARY_BUTTON_CLASSES} mt-3`}>
               Done
             </button>
@@ -82,13 +78,13 @@ export function ResetPasswordModal() {
               className={INPUT_CLASSES}
               autoComplete="new-password"
             />
-            {error && <p className="text-[11px] text-red-400">{error}</p>}
+            {error && <p className="text-2xs text-red-400">{error}</p>}
             <button onClick={() => void handleSubmit()} disabled={pending} className={`${PRIMARY_BUTTON_CLASSES} mt-1`}>
               {pending ? "Updating..." : "Update password"}
             </button>
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

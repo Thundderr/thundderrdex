@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { Modal } from "@/components/ui";
 
 type View = "signIn" | "signUp" | "forgot" | "signUpSent" | "forgotSent";
 
 const INPUT_CLASSES =
-  "w-full px-3 py-2 text-sm bg-slate-900 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500";
+  "w-full px-3 py-2 text-sm bg-surface border border-line rounded text-fg placeholder-fg-subtle focus:outline-none focus:border-accent";
 const PRIMARY_BUTTON_CLASSES =
-  "w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded transition-colors";
-const LINK_CLASSES = "text-blue-400 hover:text-blue-300 transition-colors";
+  "w-full px-3 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const LINK_CLASSES = "text-accent hover:text-accent-hover transition-colors focus-visible:outline-none focus-visible:underline";
 
 const TITLES: Record<View, string> = {
   signIn: "Sign in",
@@ -120,21 +121,16 @@ export function AuthModal({ onClose }: Props) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && submit) void submit();
-    if (e.key === "Escape") onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-slate-800 rounded-lg p-4 max-w-sm mx-4 shadow-xl border border-slate-700 w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
-      >
-        <h3 className="text-sm font-semibold text-white mb-3">{TITLES[view]}</h3>
+    <Modal isOpen onClose={onClose} labelledBy="auth-modal-title" size="sm" className="p-4">
+      <div onKeyDown={handleKeyDown}>
+        <h3 id="auth-modal-title" className="text-sm font-semibold text-fg mb-3">{TITLES[view]}</h3>
 
         {view === "signUpSent" && (
           <>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-fg-muted">
               We sent a confirmation link to <span className="text-white">{email.trim()}</span>. Click it to verify
               your account, then sign in.
             </p>
@@ -146,7 +142,7 @@ export function AuthModal({ onClose }: Props) {
 
         {view === "forgotSent" && (
           <>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-fg-muted">
               If an account exists for <span className="text-white">{email.trim()}</span>, a password reset link is on
               its way.
             </p>
@@ -188,7 +184,7 @@ export function AuthModal({ onClose }: Props) {
               />
             )}
 
-            {error && <p className="text-[11px] text-red-400">{error}</p>}
+            {error && <p className="text-2xs text-red-400">{error}</p>}
 
             <button onClick={() => submit && void submit()} disabled={pending} className={`${PRIMARY_BUTTON_CLASSES} mt-1`}>
               {pending
@@ -204,7 +200,7 @@ export function AuthModal({ onClose }: Props) {
                     : "Send reset link"}
             </button>
 
-            <div className="flex justify-between text-[11px] text-slate-400 mt-1">
+            <div className="flex justify-between text-2xs text-fg-subtle mt-1">
               {view === "signIn" && (
                 <>
                   <button onClick={() => switchView("signUp")} className={LINK_CLASSES}>
@@ -224,6 +220,6 @@ export function AuthModal({ onClose }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }
