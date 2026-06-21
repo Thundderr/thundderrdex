@@ -2,17 +2,10 @@
 
 import { useState } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { SyncStatus, useAuthStore } from "@/stores/authStore";
+import { useAuthStore } from "@/stores/authStore";
 import { AccountMenu } from "./AccountMenu";
 import { AuthModal } from "./AuthModal";
-
-const DOT_CLASSES: Record<SyncStatus, string> = {
-  synced: "bg-green-500",
-  syncing: "bg-blue-400 animate-pulse",
-  error: "bg-red-500",
-  offline: "bg-slate-500",
-  idle: "bg-slate-500",
-};
+import { syncStatusMeta } from "./syncStatusMeta";
 
 export function AccountButton() {
   const status = useAuthStore((s) => s.status);
@@ -37,16 +30,21 @@ export function AccountButton() {
     );
   }
 
+  const meta = syncStatusMeta(syncStatus);
+
   return (
     <div className="relative flex-shrink-0">
       <button
         onClick={() => setMenuOpen((open) => !open)}
-        className="relative w-8 h-8 rounded-full bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold flex items-center justify-center transition-colors"
-        title={user?.email}
+        className="relative w-8 h-8 rounded-full bg-surface-hover hover:bg-line text-fg text-sm font-semibold flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        aria-label={`Account — ${meta.label}${user?.email ? ` (${user.email})` : ""}`}
+        title={`${user?.email ?? "Account"} · ${meta.label}`}
       >
         {user?.email?.[0]?.toUpperCase() ?? "?"}
         <span
-          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900 ${DOT_CLASSES[syncStatus]}`}
+          role="status"
+          aria-label={meta.label}
+          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-app ${meta.dot}`}
         />
       </button>
       {menuOpen && <AccountMenu onClose={() => setMenuOpen(false)} />}

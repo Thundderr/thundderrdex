@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { retrySync, signOutWithFlush } from "@/lib/sync/syncEngine";
 import { useAuthStore } from "@/stores/authStore";
 import { POPOVER_MAXW } from "@/lib/utils/popoverPosition";
+import { syncStatusMeta } from "./syncStatusMeta";
 
 interface Props {
   onClose: () => void;
@@ -23,6 +24,25 @@ export function AccountMenu({ onClose }: Props) {
   const syncError = useAuthStore((s) => s.syncError);
   const lastSyncedAt = useAuthStore((s) => s.lastSyncedAt);
   const [signingOut, setSigningOut] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const meta = syncStatusMeta(syncStatus);
+
+  // Dropdown should close on Escape like the rest of the app's overlays.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Give the retry an explicit pending state so the click visibly does something
+  // (it used to silently no-op when the engine had stopped, with no feedback).
+  const handleRetry = () => {
+    setRetrying(true);
+    retrySync();
+    setTimeout(() => setRetrying(false), 1500);
+  };
 
   const statusText =
     syncStatus === "synced"
@@ -46,29 +66,31 @@ export function AccountMenu({ onClose }: Props) {
     <>
       {/* Invisible backdrop to close on outside click */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className={`absolute right-0 top-full mt-1.5 w-60 bg-slate-800 rounded-lg shadow-xl border border-slate-700 z-50 p-3 ${POPOVER_MAXW}`}>
-        <p className="text-xs text-white font-medium truncate" title={user?.email}>
+      <div role="dialog" aria-label="Account" className={`absolute right-0 top-full mt-1.5 w-60 bg-surface-raised rounded-lg shadow-xl border border-line z-50 p-3 ${POPOVER_MAXW}`}>
+        <p className="text-xs text-fg font-medium truncate" title={user?.email}>
           {user?.email}
         </p>
-        <p className={`text-[11px] mt-1 ${syncStatus === "error" ? "text-red-400" : "text-slate-400"}`}>
-          {statusText}
+        <p className={`flex items-center gap-1.5 text-2xs mt-1 ${syncStatus === "error" ? "text-red-400" : "text-fg-subtle"}`}>
+          <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
+          <span>{statusText}</span>
         </p>
         {syncStatus === "error" && (
           <button
-            onClick={() => retrySync()}
-            className="mt-2 w-full px-3 py-1.5 text-xs text-white bg-blue-600 hover:bg-blue-500 rounded transition-colors"
+            onClick={handleRetry}
+            disabled={retrying}
+            className="mt-2 w-full px-3 py-1.5 text-xs text-white bg-accent hover:bg-accent-hover disabled:opacity-60 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            Retry sync
+            {retrying ? "Retrying…" : "Retry sync"}
           </button>
         )}
         <button
           onClick={() => void handleSignOut()}
           disabled={signingOut}
-          className="mt-2 w-full px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 disabled:opacity-40 rounded transition-colors"
+          className="mt-2 w-full px-3 py-1.5 text-xs text-fg-muted hover:text-fg bg-surface-hover hover:bg-line disabled:opacity-40 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {signingOut ? "Signing out..." : "Sign out"}
         </button>
-        <p className="text-[10px] text-slate-500 mt-2">
+        <p className="text-2xs text-fg-subtle mt-2">
           Your data stays on this device after signing out.
         </p>
       </div>
