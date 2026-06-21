@@ -17,7 +17,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 5 * 60 * 1000, // 5 minutes before data is stale
             gcTime: SEVEN_DAYS, // Keep data for 7 days (must be >= maxAge for persistence)
-            retry: 1,
+            // PokéAPI rate-limits under load, so a single retry often isn't
+            // enough; two retries with capped exponential backoff recovers most
+            // transient failures before the user sees an error state.
+            retry: 2,
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
             refetchOnWindowFocus: false,
           },
         },

@@ -31,6 +31,29 @@ import { AnyModule } from "@/types/module";
 import { DamageCalcModule as DamageCalcModuleType, PokedexModule as PokedexModuleType } from "@/types/module";
 import { TeamBattlePanel } from "@/components/damage-calc/TeamBattlePanel";
 import { FullscreenDamageCalc } from "@/components/damage-calc/FullscreenDamageCalc";
+import { ErrorBoundary } from "@/components/ui";
+
+/** Single dispatch from module type to component, shared by the grid and the drag overlay. */
+function renderModule(module: AnyModule, isOverlay = false) {
+  switch (module.moduleType) {
+    case "type-chart":
+      return <TypeChartModule module={module} isOverlay={isOverlay} />;
+    case "nature-chart":
+      return <NatureChartModule module={module} isOverlay={isOverlay} />;
+    case "team-builder":
+      return <TeamBuilderModule module={module} isOverlay={isOverlay} />;
+    case "damage-calc":
+      return <DamageCalcModule module={module} isOverlay={isOverlay} />;
+    case "location":
+      return <LocationModule module={module} isOverlay={isOverlay} />;
+    case "pokedex":
+      return <PokedexModule module={module} isOverlay={isOverlay} />;
+    case "catch-rate":
+      return <CatchRateModule module={module} isOverlay={isOverlay} />;
+    default:
+      return <PokemonModule module={module} isOverlay={isOverlay} />;
+  }
+}
 
 // Hidden placeholder to keep dnd-kit sortable position tracking intact
 // while a module is rendered in the fullscreen overlay
@@ -246,51 +269,25 @@ export function ModuleContainer() {
               if (module.isFullscreen) {
                 return <HiddenSortablePlaceholder key={module.id} id={module.id} />;
               }
-              if (module.moduleType === "type-chart") {
-                return <TypeChartModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "nature-chart") {
-                return <NatureChartModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "team-builder") {
-                return <TeamBuilderModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "damage-calc") {
-                return <DamageCalcModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "location") {
-                return <LocationModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "pokedex") {
-                return <PokedexModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "catch-rate") {
-                return <CatchRateModule key={module.id} module={module} />;
-              }
-              return <PokemonModule key={module.id} module={module} />;
+              // Each module is isolated so one crash can't take down the others or
+              // the whole app. ErrorBoundary renders children inline when healthy,
+              // so the module keeps its own grid/col-span root.
+              return (
+                <ErrorBoundary key={module.id} fallback={(error, reset) => (
+                  <div role="alert" className="col-span-1 md:col-span-2 flex flex-col items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-surface p-4 text-center">
+                    <p className="text-sm font-medium text-fg-muted">This module hit an error.</p>
+                    <p className="max-w-xs text-2xs text-fg-subtle">{error.message}</p>
+                    <button onClick={reset} className="rounded bg-surface-raised px-2.5 py-1 text-xs text-fg-muted hover:bg-surface-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Try again</button>
+                  </div>
+                )}>
+                  {renderModule(module)}
+                </ErrorBoundary>
+              );
             })}
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={null}>
-          {activeModule ? (
-            activeModule.moduleType === "type-chart" ? (
-              <TypeChartModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "nature-chart" ? (
-              <NatureChartModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "team-builder" ? (
-              <TeamBuilderModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "damage-calc" ? (
-              <DamageCalcModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "location" ? (
-              <LocationModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "pokedex" ? (
-              <PokedexModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "catch-rate" ? (
-              <CatchRateModule module={activeModule} isOverlay />
-            ) : (
-              <PokemonModule module={activeModule} isOverlay />
-            )
-          ) : null}
+          {activeModule ? renderModule(activeModule, true) : null}
         </DragOverlay>
       </DndContext>
 

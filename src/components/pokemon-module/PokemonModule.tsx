@@ -12,6 +12,7 @@ import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TYPES_BY_GENERATION } from "@/data/typeChart";
 import { isMegaPokemon, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
 import { PokemonModule as PokemonModuleType, ModuleTab } from "@/types/module";
+import { QueryState } from "@/components/ui";
 import { StatsDisplay } from "./StatsDisplay";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { TypeEffectivenessDisplay } from "./TypeEffectivenessDisplay";
@@ -385,7 +386,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
   } = usePokemon(module.pokemonName);
 
   // Fetch evolution data
-  const { data: evolutionData } = useEvolution(module.pokemonName);
+  const { data: evolutionData, isLoading: isEvolutionLoading, isError: isEvolutionError, refetch: refetchEvolution } = useEvolution(module.pokemonName);
 
   // Get types for the selected generation
   const genTypes = useMemo(() => {
@@ -1278,9 +1279,20 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                           onSelect={addPokemonModule}
                         />
                       ) : (
-                        <p className="text-sm text-slate-400 text-center py-4">
-                          Loading evolution data...
-                        </p>
+                        // Distinguishes loading / error / "this Pokémon doesn't
+                        // evolve" — the old single "Loading…" line stuck forever
+                        // for non-evolving Pokémon and on fetch errors.
+                        <QueryState
+                          isLoading={isEvolutionLoading}
+                          isError={isEvolutionError}
+                          isEmpty={!isEvolutionLoading && !isEvolutionError && !evolutionData?.root}
+                          onRetry={() => refetchEvolution()}
+                          loadingLabel="Loading evolution data…"
+                          emptyLabel="This Pokémon doesn’t evolve."
+                          compact
+                        >
+                          {null}
+                        </QueryState>
                       )}
                     </div>
                   )}
