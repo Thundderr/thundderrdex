@@ -73,7 +73,7 @@ function InfoButton({ description, colorClass }: { description: string; colorCla
         >
           <div className="bg-slate-900 border border-slate-600 rounded px-2.5 py-2 shadow-lg w-80 max-w-[calc(100vw-1rem)]">
             <p className="text-[11px] text-slate-300 leading-relaxed">{description}</p>
-            <p className="text-[9px] text-slate-500 mt-1.5 pt-1.5 border-t border-slate-700">
+            <p className="text-2xs text-slate-500 mt-1.5 pt-1.5 border-t border-slate-700">
               {copied ? (
                 <span className="text-green-400">Copied!</span>
               ) : (
@@ -214,7 +214,7 @@ export function DamageResults({ result }: Props) {
             )}
           </div>
           {/* HP markers */}
-          <div className="flex justify-between text-[8px] text-slate-500 mt-0.5">
+          <div className="flex justify-between text-2xs text-slate-500 mt-0.5">
             <span>0</span>
             <span>25</span>
             <span>50</span>

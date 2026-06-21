@@ -211,7 +211,7 @@ function TeamSlot({
                           e.stopPropagation();
                           setGeneration(minGen);
                         }}
-                        className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded"
+                        className="px-1 py-0.5 text-2xs bg-blue-600 hover:bg-blue-500 text-white rounded"
                       >
                         Gen {minGen}{maxGen ? `-${maxGen}` : ""}
                       </button>
@@ -245,7 +245,7 @@ function TeamSlot({
               {genTypes.map((type) => (
                 <span
                   key={type.name}
-                  className="px-1 py-0.5 text-[9px] rounded"
+                  className="px-1 py-0.5 text-2xs rounded"
                   style={{ backgroundColor: TYPE_COLORS[type.name], color: "white" }}
                 >
                   {type.name.slice(0, 3).toUpperCase()}

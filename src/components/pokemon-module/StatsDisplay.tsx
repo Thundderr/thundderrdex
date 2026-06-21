@@ -45,7 +45,7 @@ function DamageClassIcon({ damageClass }: { damageClass: string }) {
 
   return (
     <span
-      className={`inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold text-white ${config.color}`}
+      className={`inline-flex items-center justify-center w-4 h-4 rounded text-2xs font-bold text-white ${config.color}`}
       title={damageClass}
     >
       {config.label}
@@ -608,7 +608,7 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                           className={`absolute z-50 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto w-[320px] max-w-[calc(100vw-1rem)] left-0 ${!isLeftColumn ? "sm:left-auto sm:right-0" : ""}`}
                         >
                           {/* Header row */}
-                          <li className="flex items-center gap-1 px-2 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
+                          <li className="flex items-center gap-1 px-2 py-1.5 text-2xs text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
                             <span className="w-[115px] flex-shrink-0">Move</span>
                             <span className="w-[52px] text-center flex-shrink-0">Type</span>
                             <span className="w-5 text-center flex-shrink-0">Cat</span>
@@ -646,7 +646,7 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
                               </div>
                               {/* Effect description row */}
                               {move.description && (
-                                <div className="mt-1.5 text-[9px] text-slate-400 line-clamp-2 leading-tight">
+                                <div className="mt-1.5 text-2xs text-slate-400 line-clamp-2 leading-tight">
                                   {move.description}
                                 </div>
                               )}

@@ -187,7 +187,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                   {info.pokeGen && (
                     <button
                       onClick={() => setGeneration(info.pokeGen!)}
-                      className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
+                      className="px-1 py-0.5 text-2xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
                       title={`Switch to Gen ${info.pokeGen}`}
                     >
                       {info.pokeGen}
@@ -244,7 +244,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                   {!existsInGen && (
                     <button
                       onClick={() => setGeneration(pokeGen)}
-                      className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
+                      className="px-1 py-0.5 text-2xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
                       title={`Switch to Gen ${pokeGen}`}
                     >
                       {pokeGen}

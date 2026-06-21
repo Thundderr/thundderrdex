@@ -102,7 +102,7 @@ export function LoadTeamDropdown({ moduleId, side, onClose }: Props) {
                           <span key={i} className="w-5 h-5 bg-slate-600 rounded-full flex-shrink-0" />
                         );
                       })}
-                      <span className="text-[9px] text-slate-500 ml-1">{pokemonInTeam.length}/6</span>
+                      <span className="text-2xs text-slate-500 ml-1">{pokemonInTeam.length}/6</span>
                     </div>
                   </div>
                 </button>

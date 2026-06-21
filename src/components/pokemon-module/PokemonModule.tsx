@@ -152,7 +152,7 @@ function CircularEvolution({ parent, children, currentPokemonName, onSelect }: C
                   onSelect={onSelect}
                   size="small"
                 />
-                <div className="text-[8px] text-center leading-tight mt-0.5 h-6 overflow-hidden">
+                <div className="text-2xs text-center leading-tight mt-0.5 h-6 overflow-hidden">
                   <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
                   {child.evolutionMethod?.details && (
                     <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>
@@ -218,7 +218,7 @@ function BranchingEvolution({ children, currentPokemonName, onSelect }: Branchin
         <div className="flex gap-1">
           {children.map((child) => (
             <div key={child.name} className="flex flex-col items-center" style={{ width: childWidth }}>
-              <div className="text-[9px] text-center leading-tight mb-1 max-w-[85px] h-7 flex flex-col justify-end">
+              <div className="text-2xs text-center leading-tight mb-1 max-w-[85px] h-7 flex flex-col justify-end">
                 <span className="text-blue-400 font-medium">{child.evolutionMethod?.trigger}</span>
                 {child.evolutionMethod?.details && (
                   <span className="block text-slate-500 truncate">{child.evolutionMethod.details}</span>

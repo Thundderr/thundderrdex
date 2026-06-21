@@ -54,12 +54,12 @@ function Counter({
 }) {
   return (
     <div className="flex items-center gap-0.5">
-      <span className="text-[9px] text-slate-500 mr-0.5">{label}</span>
+      <span className="text-2xs text-slate-500 mr-0.5">{label}</span>
       {Array.from({ length: max + 1 }, (_, i) => (
         <button
           key={i}
           onClick={() => onChange(i)}
-          className={`w-4 h-4 text-[9px] font-medium border transition-colors rounded ${
+          className={`w-4 h-4 text-2xs font-medium border transition-colors rounded ${
             value === i
               ? "bg-slate-600 text-white border-slate-500"
               : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700"
@@ -144,7 +144,7 @@ function CollapsibleSection({
     return (
       <div className="border-t border-slate-700">
         <button className="w-full flex items-center gap-2 py-1.5 px-2 text-[10px] text-slate-400">
-          <span className="text-[8px]">▶</span>
+          <span className="text-2xs">▶</span>
           <span className="uppercase tracking-wide">{title}</span>
         </button>
       </div>
@@ -157,7 +157,7 @@ function CollapsibleSection({
         onClick={handleToggle}
         className="w-full flex items-center gap-2 py-1.5 px-2 text-[10px] text-slate-400 hover:text-white transition-colors"
       >
-        <span className="text-[8px]">{effectiveOpen ? "▼" : "▶"}</span>
+        <span className="text-2xs">{effectiveOpen ? "▼" : "▶"}</span>
         <span className="uppercase tracking-wide">{title}</span>
       </button>
       {effectiveOpen && <div className="px-2 pb-2">{children}</div>}

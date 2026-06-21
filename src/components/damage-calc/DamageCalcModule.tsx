@@ -371,17 +371,17 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
                     {transformedMoveInfo.name}
                   </span>
                   {isGmaxMove && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-purple-600/40 text-purple-300 rounded font-medium">
+                    <span className="text-2xs px-1.5 py-0.5 bg-purple-600/40 text-purple-300 rounded font-medium">
                       G-MAX
                     </span>
                   )}
                   {isGimmickActive && !isGmaxMove && module.attacker.isDynamaxed && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-red-600/40 text-red-300 rounded font-medium">
+                    <span className="text-2xs px-1.5 py-0.5 bg-red-600/40 text-red-300 rounded font-medium">
                       MAX
                     </span>
                   )}
                   {module.attacker.useZMove && genFeatures.hasZMoves && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-yellow-600/40 text-yellow-300 rounded font-medium">
+                    <span className="text-2xs px-1.5 py-0.5 bg-yellow-600/40 text-yellow-300 rounded font-medium">
                       Z
                     </span>
                   )}

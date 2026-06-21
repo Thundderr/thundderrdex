@@ -742,7 +742,7 @@ export function TeamBattleSlotCard({
                   {boostKey ? (
                     <select value={boostValue}
                       onChange={e => updateBoost(boostKey, parseInt(e.target.value))}
-                      className={`w-full bg-slate-700 border border-slate-600 rounded px-0 text-[9px] text-center focus:outline-none focus:border-blue-500 ${
+                      className={`w-full bg-slate-700 border border-slate-600 rounded px-0 text-2xs text-center focus:outline-none focus:border-blue-500 ${
                         boostValue > 0 ? "text-green-400" : boostValue < 0 ? "text-red-400" : "text-slate-500"
                       }`}>
                       {BOOST_OPTIONS.map(b => (
@@ -889,7 +889,7 @@ export function TeamBattleSlotCard({
                       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: TYPE_COLORS[move.type as keyof typeof TYPE_COLORS] || "#475569" }} />
                       <span className="truncate">{move.displayName}</span>
-                      <span className="text-[8px] text-slate-400 ml-auto flex-shrink-0">{move.power}</span>
+                      <span className="text-2xs text-slate-400 ml-auto flex-shrink-0">{move.power}</span>
                     </li>
                   ))}
                 </ul>
@@ -914,7 +914,7 @@ export function TeamBattleSlotCard({
           <textarea value={importText} onChange={e => { setImportText(e.target.value); setImportError(null); }}
             placeholder="Paste Showdown format here..."
             className="flex-1 bg-slate-800 text-[10px] text-white p-1.5 rounded border border-slate-600 outline-none resize-none font-mono" />
-          {importError && <p className="text-[9px] text-red-400 mt-0.5">{importError}</p>}
+          {importError && <p className="text-2xs text-red-400 mt-0.5">{importError}</p>}
           <div className="flex gap-1 mt-1">
             <button onClick={handleImport}
               className="flex-1 px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-500 text-white rounded">

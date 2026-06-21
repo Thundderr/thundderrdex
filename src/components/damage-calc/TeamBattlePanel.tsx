@@ -46,7 +46,7 @@ export function TeamBattlePanel({ moduleId, side, team, isAttackerSide }: Props)
           <span className="text-[10px] text-slate-500">
             {team.slots.filter(s => s !== null).length}/6
           </span>
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+          <span className={`text-2xs font-bold px-1.5 py-0.5 rounded ${
             isAttackerSide ? "bg-red-600/30 text-red-300" : "bg-blue-600/30 text-blue-300"
           }`}>
             {isAttackerSide ? "ATK" : "DEF"}
