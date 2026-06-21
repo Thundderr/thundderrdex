@@ -68,6 +68,9 @@ input[type="number"] {
   input,
   select,
   textarea {
-    font-size: 16px;
+    /* !important so this wins over Tailwind's text-xs/text-sm utilities,
+       which have higher specificity than this element selector. Without it
+       a 12px field still trips Safari's zoom. */
+    font-size: 16px !important;
   }
 }
