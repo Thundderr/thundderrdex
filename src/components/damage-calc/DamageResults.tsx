@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { DamageCalcResult } from "@/hooks/useDamageCalc";
 import { clampLeftToViewport } from "@/lib/utils/popoverPosition";
 
@@ -8,11 +8,23 @@ interface Props {
   result: DamageCalcResult | null;
 }
 
-// Info icon with hover tooltip and click to copy
+// Info icon. The breakdown shows on hover (mouse), on focus (keyboard), and when
+// tapped/pinned (touch — which has no hover, so the breakdown used to be
+// completely unreachable). Copy lives inside the popover as its own button.
 function InfoButton({ description, colorClass }: { description: string; colorClass: string }) {
   const [copied, setCopied] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  const visible = hovered || focused || pinned;
+
+  const reposition = () => {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setTooltipPos({ top: rect.bottom + 4, left: clampLeftToViewport(rect.left, 320) });
+  };
 
   const handleCopy = async () => {
     try {
@@ -20,7 +32,6 @@ function InfoButton({ description, colorClass }: { description: string; colorCla
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textArea = document.createElement("textarea");
       textArea.value = description;
       document.body.appendChild(textArea);
@@ -32,54 +43,51 @@ function InfoButton({ description, colorClass }: { description: string; colorCla
     }
   };
 
-  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltipPos({
-      top: rect.bottom + 4,
-      left: clampLeftToViewport(rect.left, 320),
-    });
-    setIsHovered(true);
-  };
-
   return (
     <>
       <button
-        onClick={handleCopy}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={() => setIsHovered(false)}
-        className="flex items-center justify-center w-4 h-4 opacity-70 hover:opacity-100 transition-opacity"
+        ref={btnRef}
+        aria-label="Show damage breakdown"
+        aria-expanded={visible}
+        onClick={() => {
+          reposition();
+          setPinned((p) => !p);
+        }}
+        onMouseEnter={() => {
+          reposition();
+          setHovered(true);
+        }}
+        onMouseLeave={() => setHovered(false)}
+        onFocus={() => {
+          reposition();
+          setFocused(true);
+        }}
+        onBlur={() => {
+          setFocused(false);
+          setPinned(false);
+        }}
+        className="flex items-center justify-center w-5 h-5 opacity-70 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >
-        <svg
-          className={`w-3.5 h-3.5 ${colorClass}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
+        <svg className={`w-3.5 h-3.5 ${colorClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </button>
       {/* Fixed position tooltip that can extend beyond container */}
-      {isHovered && (
+      {visible && (
         <div
           className="fixed z-50"
           style={{ top: tooltipPos.top, left: tooltipPos.left }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
         >
-          <div className="bg-slate-900 border border-slate-600 rounded px-2.5 py-2 shadow-lg w-80 max-w-[calc(100vw-1rem)]">
-            <p className="text-[11px] text-slate-300 leading-relaxed">{description}</p>
-            <p className="text-2xs text-slate-500 mt-1.5 pt-1.5 border-t border-slate-700">
-              {copied ? (
-                <span className="text-green-400">Copied!</span>
-              ) : (
-                "Click to copy"
-              )}
-            </p>
+          <div className="bg-surface border border-line rounded px-2.5 py-2 shadow-lg w-80 max-w-[calc(100vw-1rem)]">
+            <p className="text-2xs text-fg-muted leading-relaxed">{description}</p>
+            <button
+              onClick={handleCopy}
+              className="mt-1.5 pt-1.5 border-t border-line w-full text-left text-2xs text-fg-subtle hover:text-fg focus-visible:outline-none focus-visible:underline"
+            >
+              {copied ? <span className="text-green-400">Copied!</span> : "Copy details"}
+            </button>
           </div>
         </div>
       )}

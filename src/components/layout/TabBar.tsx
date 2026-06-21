@@ -119,7 +119,7 @@ function SortableTab({
           className={`p-0.5 rounded hover:bg-red-600/30 transition-colors ${
             isActive
               ? "text-slate-400 hover:text-red-400"
-              : "text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100"
+              : "text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 touch-always-visible"
           }`}
           title="Close tab"
         >
@@ -228,7 +228,7 @@ export function TabBar() {
           className={`p-0.5 rounded hover:bg-red-600/30 transition-colors ${
             activeTabId === tab.id
               ? "text-slate-400 hover:text-red-400"
-              : "text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100"
+              : "text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 touch-always-visible"
           }`}
           title="Close tab"
         >

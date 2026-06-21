@@ -234,7 +234,7 @@ export function GenerationSelector({ stretch = false, collapsible = false }: { s
       {collapsible && (
         <button
           onClick={() => setSelectorCollapsed(true)}
-          className="flex-shrink-0 flex items-center justify-center w-5 h-6 rounded text-slate-400 hover:text-white hover:bg-slate-700 opacity-30 group-hover:opacity-100 transition-all"
+          className="flex-shrink-0 flex items-center justify-center w-5 h-6 rounded text-slate-400 hover:text-white hover:bg-slate-700 opacity-30 group-hover:opacity-100 touch-always-visible transition-all"
           title="Minimize generation selector"
           aria-label="Minimize generation selector"
         >

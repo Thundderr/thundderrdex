@@ -112,7 +112,7 @@ export function LoadTeamDropdown({ moduleId, side, onClose }: Props) {
                     e.stopPropagation();
                     deleteTeam(team.id);
                   }}
-                  className="p-1 hover:bg-red-600/20 rounded text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="p-1 hover:bg-red-600/20 rounded text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 touch-always-visible transition-opacity flex-shrink-0"
                   title="Delete team"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

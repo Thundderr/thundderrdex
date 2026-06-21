@@ -54,6 +54,16 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* Controls that fade in on hover (close/delete buttons, etc.) are unreachable on
+   touch devices, which have no hover. Force them visible there. Paired in markup
+   with `opacity-0 group-hover:opacity-100` and `focus-visible:opacity-100` so the
+   affordance also appears for keyboard users on pointer devices. */
+@media (pointer: coarse) {
+  .touch-always-visible {
+    opacity: 1 !important;
+  }
+}
+
 /* User-resized modules: width snaps to whole grid columns. Scoped to the
    md+ breakpoint where the dashboard is multi-column — below it every
    module stays full-width. !important beats the default col-span classes. */

@@ -304,7 +304,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                   {/* Delete trash button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setPendingDeleteTeam(team); }}
-                    className="absolute top-1/2 -translate-y-1/2 right-1 p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-600/20 opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-1/2 -translate-y-1/2 right-1 p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-600/20 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 touch-always-visible transition-all"
                     title="Delete team"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
