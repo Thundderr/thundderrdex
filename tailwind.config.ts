@@ -7,6 +7,9 @@ export default {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // Accent class strings (e.g. bg-cyan-600) live here; without this glob
+    // Tailwind purges any colour only referenced from lib (e.g. type/nature).
+    "./src/lib/**/*.{js,ts}",
   ],
   theme: {
     extend: {
