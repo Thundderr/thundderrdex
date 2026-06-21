@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { usePokemon } from "@/hooks/usePokemon";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { useEvolution, EvolutionNode } from "@/hooks/useEvolution";
@@ -12,7 +10,8 @@ import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TYPES_BY_GENERATION } from "@/data/typeChart";
 import { isMegaPokemon, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
 import { PokemonModule as PokemonModuleType, ModuleTab } from "@/types/module";
-import { QueryState } from "@/components/ui";
+import { QueryState, Modal } from "@/components/ui";
+import { ModuleShell } from "@/components/layout/ModuleShell";
 import { StatsDisplay } from "./StatsDisplay";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { TypeEffectivenessDisplay } from "./TypeEffectivenessDisplay";
@@ -22,7 +21,6 @@ import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { NATURES } from "@/data/natures";
 import { StatValues } from "@/lib/utils/statCalculator";
 import { useSmogonSets, SmogonSet } from "@/hooks/useSmogonSets";
-import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
 import Image from "next/image";
 
 interface Props {
@@ -374,10 +372,7 @@ function EvolutionTree({ root, currentPokemonName, onSelect }: EvolutionTreeProp
 }
 
 export function PokemonModule({ module, isOverlay = false }: Props) {
-  const { setPokemon, setActiveTab, removeModule, newlyCreatedModuleId, clearNewlyCreatedModule, selectedModuleId, selectModule, setStatModifiers, addPokemonModule, toggleExtended } =
-    useModuleStore();
-  const isSelected = selectedModuleId === module.id;
-  const moduleContainerRef = useRef<HTMLDivElement>(null);
+  const { setPokemon, setActiveTab, setStatModifiers, addPokemonModule, toggleExtended } = useModuleStore();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const {
     data: pokemon,
@@ -408,23 +403,6 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     const { minGen, maxGen } = getPokemonGenerationRange(module.pokemonName, pokemon.id);
     return globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
   }, [pokemon, module.pokemonName, globalGeneration]);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: module.id, disabled: isOverlay });
-
-  const style = isOverlay
-    ? { opacity: 0.95 }
-    : {
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0 : 1,
-      };
 
   // Inline search state
   const [isSearching, setIsSearching] = useState(false);
@@ -859,72 +837,23 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     }
   }, [highlightedIndex, filteredResults.length]);
 
-  // Auto-scroll and focus for newly created modules
-  useEffect(() => {
-    if (newlyCreatedModuleId === module.id && !isOverlay) {
-      // Clear the flag first to prevent re-triggering
-      clearNewlyCreatedModule();
-
-      // Scroll the module into view with a small delay to ensure render is complete
-      setTimeout(() => {
-        moduleContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-
-        // Start search after scroll animation, but only if no Pokemon is set
-        if (!module.pokemonName) {
-          setTimeout(() => {
-            startSearch();
-          }, 300);
-        }
-      }, 50);
-    }
-  }, [newlyCreatedModuleId, module.id, module.pokemonName, isOverlay, clearNewlyCreatedModule]);
-
-  // Combine refs for both dnd-kit and scroll functionality
-  const setRefs = (node: HTMLDivElement | null) => {
-    setNodeRef(node);
-    (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  // Auto-open the search field on a freshly created empty module. ModuleShell
+  // owns the scroll-into-view + newly-created flag; this only adds the search.
+  const handleNewlyCreated = () => {
+    if (!module.pokemonName) setTimeout(() => startSearch(), 300);
   };
 
   return (
-    <div
-      ref={setRefs}
-      style={{ ...style, ...moduleSizeStyle(module) }}
-      data-module-id={module.id}
-      data-module-root
-      onClick={() => selectModule(module.id)}
-      className={`${moduleSizeClasses(module)} bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
-        module.isExtended ? "col-span-1 md:col-span-2" : ""
-      } ${
-        isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
-      } ${
-        isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
-      }`}
-    >
-      {/* Unified Header with Search */}
-      <div className="relative flex items-center px-2 py-1.5 bg-slate-800 border-b border-slate-700 gap-2">
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-700 rounded flex-shrink-0"
-        >
-          <svg
-            className="w-4 h-4 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 8h16M4 16h16"
-            />
-          </svg>
-        </div>
-
-        {/* Search/Name Area */}
-        <div className="flex-1 min-w-0 relative">
+    <>
+    <ModuleShell
+      module={module}
+      isOverlay={isOverlay}
+      titleClassName=""
+      onNewlyCreated={handleNewlyCreated}
+      className={module.isExtended ? "col-span-1 md:col-span-2" : ""}
+      bodyClassName={`relative p-4 ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}
+      title={
+        <div className="relative">
           {isSearching ? (
             <div className="relative">
               <svg
@@ -1046,9 +975,9 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
             </div>
           )}
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
+      }
+      headerControls={
+        <>
           {pokemon && (
             <>
               {/* Load Set Button with Dropdown */}
@@ -1132,30 +1061,9 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               )}
             </svg>
           </button>
-          <button
-            onClick={() => removeModule(module.id)}
-            className="p-1.5 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
-            title="Remove module"
-          >
-            <svg
-              className="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className={`relative p-4 ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
+        </>
+      }
+    >
           {/* Invalid generation overlay */}
           {pokemon && !pokemonExistsInGen && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -1306,70 +1214,61 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               <p>Click the search bar above to find a Pokemon</p>
             </div>
           )}
-        </div>
+    </ModuleShell>
 
-      {/* Import/Export Modal */}
-      {showImportExport && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(false)}>
-          <div
-            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-full max-w-[min(400px,90vw)] max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+    {showImportExport && (
+      <Modal
+        isOpen
+        onClose={() => { setShowImportExport(false); setImportText(""); setImportError(null); }}
+        labelledBy="pkmn-import-title"
+        size="sm"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+          <h3 id="pkmn-import-title" className="text-sm font-medium text-fg">Showdown Format</h3>
+          <button
+            onClick={() => { setShowImportExport(false); setImportText(""); setImportError(null); }}
+            aria-label="Close"
+            className="p-1 hover:bg-surface-hover rounded text-fg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-              <h3 className="text-sm font-medium text-white">Showdown Format</h3>
-              <button
-                onClick={() => {
-                  setShowImportExport(false);
-                  setImportText("");
-                  setImportError(null);
-                }}
-                className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4">
-              <p className="text-xs text-slate-400 mb-2">Edit or paste a Pokemon set in Showdown format:</p>
-              <textarea
-                autoFocus
-                value={importText}
-                onChange={(e) => {
-                  setImportText(e.target.value);
-                  setImportError(null);
-                }}
-                placeholder={`Pikachu @ Light Ball
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-4">
+          <p className="text-xs text-fg-subtle mb-2">Edit or paste a Pokemon set in Showdown format:</p>
+          <textarea
+            autoFocus
+            value={importText}
+            onChange={(e) => { setImportText(e.target.value); setImportError(null); }}
+            placeholder={`Pikachu @ Light Ball
 Level: 50
 Adamant Nature
 EVs: 252 Atk / 4 SpD / 252 Spe
 IVs: 0 SpA`}
-                className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
-              />
-              {importError && (
-                <p className="mt-2 text-xs text-red-400">{importError}</p>
-              )}
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => navigator.clipboard.writeText(importText)}
-                  className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-white font-medium transition-colors"
-                >
-                  Copy
-                </button>
-                <button
-                  onClick={handleImport}
-                  disabled={!importText.trim()}
-                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
+            className="w-full h-48 bg-surface border border-line rounded p-3 text-xs text-fg font-mono placeholder-fg-subtle focus:outline-none focus:border-accent resize-none"
+          />
+          {importError && (
+            <p className="mt-2 text-xs text-red-400">{importError}</p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => navigator.clipboard.writeText(importText)}
+              className="flex-1 px-3 py-2 bg-surface-hover hover:bg-line rounded text-sm text-fg font-medium transition-colors"
+            >
+              Copy
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={!importText.trim()}
+              className="flex-1 px-3 py-2 bg-accent hover:bg-accent-hover disabled:bg-surface-hover disabled:text-fg-subtle rounded text-sm text-white font-medium transition-colors"
+            >
+              Apply
+            </button>
           </div>
         </div>
-      )}
-
-      {!isOverlay && <ModuleResizeHandle moduleId={module.id} />}
-    </div>
+      </Modal>
+    )}
+    </>
   );
 }

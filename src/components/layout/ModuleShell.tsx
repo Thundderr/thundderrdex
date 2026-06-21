@@ -20,6 +20,13 @@ interface Props {
   className?: string;
   /** Classes for the body wrapper. */
   bodyClassName?: string;
+  /** Classes for the title wrapper. Defaults to `truncate`; pass "" when the title
+   *  hosts an absolutely-positioned dropdown that truncate's overflow would clip. */
+  titleClassName?: string;
+  /** Called once after a newly-created module has scrolled into view (e.g. to
+   *  auto-focus a search field). Runs before the newly-created flag is consumed
+   *  elsewhere, so it can't race with the shell clearing it. */
+  onNewlyCreated?: () => void;
   children: ReactNode;
 }
 
@@ -63,6 +70,8 @@ export function ModuleShell({
   fullscreenable = false,
   className = "",
   bodyClassName = "",
+  titleClassName = "truncate",
+  onNewlyCreated,
   children,
 }: Props) {
   const { removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule, toggleMinimize, toggleFullscreen } =
@@ -80,11 +89,14 @@ export function ModuleShell({
     ? { opacity: 0.95 }
     : { transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0 : 1 };
 
+  const onNewlyCreatedRef = useRef(onNewlyCreated);
+  onNewlyCreatedRef.current = onNewlyCreated;
   useEffect(() => {
     if (newlyCreatedModuleId === module.id && !isOverlay) {
       clearNewlyCreatedModule();
       setTimeout(() => {
         containerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        onNewlyCreatedRef.current?.();
       }, 50);
     }
   }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
@@ -104,6 +116,7 @@ export function ModuleShell({
       ref={setRefs}
       style={{ ...style, ...sizeStyle }}
       data-module-root
+      data-module-id={module.id}
       onClick={() => selectModule(module.id)}
       className={`bg-surface rounded-lg border shadow-lg overflow-hidden ${sizeClasses} ${
         isDragging ? "ring-2 ring-accent border-line" : isSelected ? "ring-2 ring-accent border-accent" : "border-line"
@@ -121,7 +134,7 @@ export function ModuleShell({
           </svg>
         </div>
 
-        <div className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{title}</div>
+        <div className={`min-w-0 flex-1 text-sm font-medium text-fg ${titleClassName}`}>{title}</div>
 
         <div className="flex flex-shrink-0 items-center gap-1">
           {headerControls}
