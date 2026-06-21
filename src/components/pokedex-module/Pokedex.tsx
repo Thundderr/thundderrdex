@@ -185,8 +185,10 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           counts · mark + uncaught toggles. Everything sits on one line on wider
           views; the flexible controls (dex select, name input) keep a usable
           min-width but are capped so they don't stretch past what's needed, and
-          the whole row wraps onto multiple lines as the module narrows. */}
-      <div className="mb-3 shrink-0 flex flex-wrap items-center gap-2">
+          the whole row wraps onto multiple lines as the module narrows.
+          justify-between makes each (wrapped) row span edge-to-edge so there's
+          no empty trailing space when it wraps. */}
+      <div className="mb-3 shrink-0 flex flex-wrap items-center justify-between gap-2">
         <select
           value={selectedDexId ?? "national"}
           onChange={(e) => {
@@ -242,8 +244,8 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           >
             <option value="">All types</option>
             {ALL_TYPES.map((t) => (
-              <option key={t} value={t} className="capitalize">
-                {t}
+              <option key={t} value={t}>
+                {t.charAt(0).toUpperCase() + t.slice(1)}
               </option>
             ))}
           </select>
@@ -252,8 +254,8 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
           )}
         </div>
 
-        {/* Counts + toggles, right-aligned and kept together as the row wraps. */}
-        <div className="shrink-0 ml-auto flex items-center gap-2">
+        {/* Counts + toggles, kept together as the row wraps. */}
+        <div className="shrink-0 flex items-center gap-2">
           {totalCount > 0 && (
             <div className="shrink-0 text-xs text-slate-400 whitespace-nowrap">
               <span className="font-semibold text-emerald-400">{caughtCount}</span> caught
