@@ -102,20 +102,31 @@ describe("moduleStore - workspace tabs", () => {
       expect(get().activeTabId).toBe(firstId);
     });
 
-    // The implementation clamps at the boundaries rather than wrapping around.
-    it("goToNextTab does NOT wrap past the last tab (clamps)", () => {
+    // Navigation wraps around so the [ / ] shortcuts cycle continuously.
+    it("goToNextTab wraps from the last tab back to the first", () => {
+      const firstId = get().tabs[0].id;
       get().addWorkspaceTab(); // active = last tab
-      const lastId = get().activeTabId;
       get().goToNextTab();
-      expect(get().activeTabId).toBe(lastId);
+      expect(get().activeTabId).toBe(firstId);
     });
 
-    it("goToPreviousTab does NOT wrap before the first tab (clamps)", () => {
+    it("goToPreviousTab wraps from the first tab to the last", () => {
       get().addWorkspaceTab();
+      const lastId = get().tabs[get().tabs.length - 1].id;
       const firstId = get().tabs[0].id;
       get().setActiveWorkspaceTab(firstId);
       get().goToPreviousTab();
-      expect(get().activeTabId).toBe(firstId);
+      expect(get().activeTabId).toBe(lastId);
+    });
+
+    it("a single tab stays put when navigating", () => {
+      // beforeEach resets to a single-tab workspace.
+      const onlyId = get().tabs[0].id;
+      expect(get().tabs).toHaveLength(1);
+      get().goToNextTab();
+      expect(get().activeTabId).toBe(onlyId);
+      get().goToPreviousTab();
+      expect(get().activeTabId).toBe(onlyId);
     });
   });
 

@@ -17,10 +17,7 @@ describe("HELD_ITEMS", () => {
     expect(HELD_ITEMS).toContain("Focus Sash");
   });
 
-  // POTENTIAL BUG: HELD_ITEMS contains duplicate entries ("Assault Vest" and
-  // "Sharp Beak" each appear twice). Skipped rather than encoding the (wrong)
-  // expectation that the list is unique.
-  it.skip("has no duplicate entries", () => {
+  it("has no duplicate entries", () => {
     expect(new Set(HELD_ITEMS).size).toBe(HELD_ITEMS.length);
   });
 });

@@ -21,12 +21,10 @@ export const HELD_ITEMS: string[] = [
   "Yache Berry",
 
   // Offensive Items
-  "Assault Vest",
   "Expert Belt",
   "Life Orb",
   "Muscle Band",
   "Scope Lens",
-  "Sharp Beak",
   "Wise Glasses",
 
   // Defensive Items

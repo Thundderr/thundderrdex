@@ -184,14 +184,14 @@ export const MAX_MOVE_NAMES: Record<string, string> = {
  * Get Z-Move name for a move type
  */
 export function getZMoveName(moveType: string): string {
-  return Z_MOVE_NAMES[moveType] || "Z-Move";
+  return Z_MOVE_NAMES[moveType?.toLowerCase()] || "Z-Move";
 }
 
 /**
  * Get Max Move name for a move type
  */
 export function getMaxMoveName(moveType: string): string {
-  return MAX_MOVE_NAMES[moveType] || "Max Move";
+  return MAX_MOVE_NAMES[moveType?.toLowerCase()] || "Max Move";
 }
 
 /**
@@ -273,7 +273,7 @@ export const MAX_MOVE_EFFECTS: Record<string, string> = {
  * Get Max Move effect description
  */
 export function getMaxMoveEffect(moveType: string): string {
-  return MAX_MOVE_EFFECTS[moveType] || "Unknown effect";
+  return MAX_MOVE_EFFECTS[moveType?.toLowerCase()] || "Unknown effect";
 }
 
 /**

@@ -236,7 +236,11 @@ describe("getZMoveName", () => {
   it("falls back to 'Z-Move' for unknown/uncovered types", () => {
     expect(getZMoveName("stellar")).toBe("Z-Move");
     expect(getZMoveName("")).toBe("Z-Move");
-    expect(getZMoveName("FIRE")).toBe("Z-Move"); // keys are lowercase; no normalization
+  });
+
+  it("normalizes case before lookup", () => {
+    expect(getZMoveName("FIRE")).toBe("Inferno Overdrive");
+    expect(getZMoveName("Water")).toBe("Hydro Vortex");
   });
 });
 
@@ -249,6 +253,11 @@ describe("getMaxMoveName", () => {
   it("falls back to 'Max Move' for unknown types", () => {
     expect(getMaxMoveName("stellar")).toBe("Max Move");
     expect(getMaxMoveName("")).toBe("Max Move");
+  });
+
+  it("normalizes case before lookup", () => {
+    expect(getMaxMoveName("FIRE")).toBe("Max Flare");
+    expect(getMaxMoveEffect("FIRE")).not.toBe("Unknown effect");
   });
 });
 
