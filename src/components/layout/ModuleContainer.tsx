@@ -67,7 +67,6 @@ function HiddenSortablePlaceholder({ id }: { id: string }) {
 // Fullscreen overlay that renders a module at full viewport size
 function FullscreenOverlay({ module }: { module: AnyModule }) {
   const { toggleFullscreen, initTeamBattle } = useModuleStore();
-  const [contentWidth, setContentWidth] = useState(0);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,7 +92,6 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
     const el = overlayRef.current;
     if (!el) return;
     const update = () => {
-      setContentWidth(el.clientWidth);
       setContainerDims({ width: el.clientWidth, height: el.clientHeight });
     };
     update();
@@ -104,47 +102,34 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
 
   const dmgModule = module.moduleType === "damage-calc" ? module as DamageCalcModuleType : null;
   const hasTeams = dmgModule?.attackerTeam && dmgModule?.defenderTeam;
-  const showTeamPanels = hasTeams && contentWidth >= 1200;
   const isSwapped = dmgModule?.isSwapped ?? false;
 
-  // Design dimensions: left panel (840) + center (600) + right panel (840) = 2280px
-  // On wide screens (>= DESIGN_WIDTH), no scaling needed — flex-1 panels expand naturally
-  // On narrow screens, scale down with transform
-  const DESIGN_WIDTH = 2280;
-  const needsScaling = showTeamPanels && containerDims.width > 0 && containerDims.width < DESIGN_WIDTH;
-  const scale = needsScaling ? containerDims.width / DESIGN_WIDTH : 1;
-  // Container width in layout pixels — always fills the screen when scaled
-  const layoutWidth = containerDims.width > 0 ? Math.max(DESIGN_WIDTH, containerDims.width) : DESIGN_WIDTH;
+  // Below this width the three columns stack vertically (the page scrolls)
+  // instead of sitting side by side. Replaces the old approach of CSS-scaling a
+  // fixed 2280px design down to fit — which shrank the already-tiny stat inputs
+  // to ~6px — and the hard 1200px gate that silently dropped teams entirely.
+  const stacked = containerDims.width > 0 && containerDims.width < 1280;
 
   return (
-    <div ref={overlayRef} className="absolute inset-0 z-10 bg-slate-900 overflow-hidden">
+    <div ref={overlayRef} className="absolute inset-0 z-10 bg-surface overflow-hidden">
       {module.moduleType === "damage-calc" && dmgModule && (
-        showTeamPanels ? (
-          // Team battle layout: [6 Pokemon] | [Damage Calc] | [6 Pokemon]
-          // Scaled to fit screen while maintaining proportions
-          <div
-            style={{
-              width: `${layoutWidth}px`,
-              height: `${containerDims.height / scale}px`,
-              ...(needsScaling ? {
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-              } : {}),
-            }}
-            className="flex"
-          >
-            <div className="flex-1 min-w-0 border-r border-slate-700">
+        hasTeams ? (
+          // Team battle: [team] · [calc] · [team] — a flex row on wide screens,
+          // stacked and scrollable on narrow ones. No transform scaling, so text
+          // and inputs keep their real (readable) size at every width.
+          <div className={`h-full w-full ${stacked ? "flex flex-col overflow-y-auto" : "flex"}`}>
+            <div className={stacked ? "border-b border-line" : "flex-1 min-w-0 overflow-y-auto border-r border-line"}>
               <TeamBattlePanel moduleId={module.id} side="attacker" team={dmgModule.attackerTeam!} isAttackerSide={!isSwapped} />
             </div>
-            <div className="w-[600px] flex-shrink-0 overflow-y-auto">
+            <div className={stacked ? "border-b border-line" : "w-[600px] flex-shrink-0 overflow-y-auto"}>
               <FullscreenDamageCalc module={dmgModule} />
             </div>
-            <div className="flex-1 min-w-0 border-l border-slate-700">
+            <div className={stacked ? "" : "flex-1 min-w-0 overflow-y-auto border-l border-line"}>
               <TeamBattlePanel moduleId={module.id} side="defender" team={dmgModule.defenderTeam!} isAttackerSide={isSwapped} />
             </div>
           </div>
         ) : (
-          // Standard fullscreen layout (narrow screen or teams not initialized)
+          // Shown only briefly before team data initializes.
           <div className="h-full max-w-[990px] mx-auto">
             <DamageCalcModule module={dmgModule} isFullscreen />
           </div>
