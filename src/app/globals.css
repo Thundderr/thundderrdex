@@ -58,3 +58,16 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/*
+ * Prevent iOS Safari from auto-zooming when focusing a form field.
+ * Safari zooms whenever the focused field's font-size is below 16px.
+ * Scoped to touch devices so desktop keeps its smaller input text.
+ */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
