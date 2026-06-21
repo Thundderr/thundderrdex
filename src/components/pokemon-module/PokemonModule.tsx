@@ -12,6 +12,7 @@ import { isMegaPokemon, getMegaPokemonInfo, isRegionalVariant, getRegionalVarian
 import { PokemonModule as PokemonModuleType, ModuleTab } from "@/types/module";
 import { QueryState, Modal } from "@/components/ui";
 import { ModuleShell } from "@/components/layout/ModuleShell";
+import { PokemonModuleSkeleton } from "./PokemonModuleSkeleton";
 import { StatsDisplay } from "./StatsDisplay";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { TypeEffectivenessDisplay } from "./TypeEffectivenessDisplay";
@@ -1080,11 +1081,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
             </div>
           )}
 
-          {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-            </div>
-          )}
+          {isLoading && <PokemonModuleSkeleton isExtended={module.isExtended} />}
 
           {error && (
             <div className="text-center py-8 text-red-400">

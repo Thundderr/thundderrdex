@@ -54,6 +54,38 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* Shimmering skeleton placeholder. A muted base with a light sweep travelling
+   across it, used to fill the exact shape of content that's still loading so the
+   layout doesn't pop from blank to filled. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgb(var(--color-surface-hover));
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.07),
+    transparent
+  );
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
 /* Controls that fade in on hover (close/delete buttons, etc.) are unreachable on
    touch devices, which have no hover. Force them visible there. Paired in markup
    with `opacity-0 group-hover:opacity-100` and `focus-visible:opacity-100` so the

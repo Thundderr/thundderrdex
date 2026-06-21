@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
-import { Modal } from "@/components/ui";
+import { Modal, Skeleton } from "@/components/ui";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { usePokemonList } from "@/hooks/usePokemonList";
@@ -144,7 +144,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
   const { globalGeneration, setGeneration } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
   const { data: pokemonList } = usePokemonList();
-  const { data: pokemon } = usePokemon(config.pokemonName);
+  const { data: pokemon, isLoading: pokemonLoading } = usePokemon(config.pokemonName);
   const { data: learnset, isLoading: learnsetLoading } = useLearnset(config.pokemonName);
 
   const [isSearching, setIsSearching] = useState(false);
@@ -1165,6 +1165,19 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               Gen {pokemonMinGen}
             </button>
           )}
+        </div>
+      ) : config.pokemonName && pokemonLoading ? (
+        // Mirror the loaded pokemon-info row (sprite + name + type pills) while an
+        // uncached Pokémon loads, instead of flashing the "Select Pokemon" prompt.
+        <div className="flex items-center gap-3 p-1" aria-busy="true" aria-label="Loading Pokémon">
+          <Skeleton className="w-12 h-12 shrink-0" />
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <Skeleton className="h-4 w-24" />
+            <div className="flex gap-1">
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-10" />
+            </div>
+          </div>
         </div>
       ) : (
         <button
