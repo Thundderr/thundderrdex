@@ -165,8 +165,11 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
     attackerCanGmax && gmaxMove && selectedMoveData?.type === gmaxMove.type && selectedMoveData?.power;
 
   // Shared body, used by both the grid (ModuleShell) and the fullscreen chrome.
+  // In the grid path the scroll container is the shell's body wrapper (via
+  // bodyClassName), so the inner div only needs flex-1 in the fullscreen path
+  // where `content` is a direct flex child of the fullscreen column.
   const content = (
-    <div className={`p-3 ${isFullscreen || module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
+    <div className={`p-3 ${isFullscreen ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
         {/* Main Grid: Attacker | Controls | Defender */}
         <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${isFullscreen ? "items-stretch" : "items-start"}`}>
           {/* Attacker Panel */}
@@ -430,6 +433,7 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
       title={title}
       fullscreenable
       className="col-span-1 md:col-span-2"
+      bodyClassName={module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}
     >
       {content}
     </ModuleShell>
