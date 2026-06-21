@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
+import { Modal } from "@/components/ui";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { usePokemonList } from "@/hooks/usePokemonList";
@@ -1796,36 +1797,31 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
 
       {/* Import/Export Modal */}
       {showImportExport && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(false)}>
-          <div
-            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-full max-w-[min(400px,90vw)] max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-              <h3 className="text-sm font-medium text-white">Showdown Format</h3>
-              <button
-                onClick={() => {
-                  setShowImportExport(false);
-                  setImportText("");
-                  setImportError(null);
-                }}
-                className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4">
-              <p className="text-xs text-slate-400 mb-2">Edit or paste a Pokemon set in Showdown format:</p>
-              <textarea
-                autoFocus
-                value={importText}
-                onChange={(e) => {
-                  setImportText(e.target.value);
-                  setImportError(null);
-                }}
-                placeholder={`Pikachu @ Light Ball
+        <Modal
+          isOpen
+          onClose={() => { setShowImportExport(false); setImportText(""); setImportError(null); }}
+          labelledBy="config-import-title"
+          size="sm"
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+            <h3 id="config-import-title" className="text-sm font-medium text-fg">Showdown Format</h3>
+            <button
+              onClick={() => { setShowImportExport(false); setImportText(""); setImportError(null); }}
+              aria-label="Close"
+              className="p-1 hover:bg-surface-hover rounded text-fg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-4">
+            <p className="text-xs text-fg-subtle mb-2">Edit or paste a Pokemon set in Showdown format:</p>
+            <textarea
+              autoFocus
+              value={importText}
+              onChange={(e) => { setImportText(e.target.value); setImportError(null); }}
+              placeholder={`Pikachu @ Light Ball
 Level: 50
 Ability: Static
 Adamant Nature
@@ -1834,29 +1830,28 @@ EVs: 252 Atk / 4 SpD / 252 Spe
 - Iron Tail
 - Quick Attack
 - Thunder Wave`}
-                className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
-              />
-              {importError && (
-                <p className="mt-2 text-xs text-red-400">{importError}</p>
-              )}
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => navigator.clipboard.writeText(importText)}
-                  className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-white font-medium transition-colors"
-                >
-                  Copy
-                </button>
-                <button
-                  onClick={handleImport}
-                  disabled={!importText.trim()}
-                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
-                >
-                  Apply
-                </button>
-              </div>
+              className="w-full h-48 bg-surface border border-line rounded p-3 text-xs text-fg font-mono placeholder-fg-subtle focus:outline-none focus:border-accent resize-none"
+            />
+            {importError && (
+              <p className="mt-2 text-xs text-red-400">{importError}</p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => navigator.clipboard.writeText(importText)}
+                className="flex-1 px-3 py-2 bg-surface-hover hover:bg-line rounded text-sm text-fg font-medium transition-colors"
+              >
+                Copy
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!importText.trim()}
+                className="flex-1 px-3 py-2 bg-accent hover:bg-accent-hover disabled:bg-surface-hover disabled:text-fg-subtle rounded text-sm text-white font-medium transition-colors"
+              >
+                Apply
+              </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
