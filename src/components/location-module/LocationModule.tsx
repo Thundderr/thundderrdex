@@ -2,13 +2,11 @@
 
 import { useState, useRef, useMemo, useEffect } from "react";
 import Image from "next/image";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { useModuleStore } from "@/stores/moduleStore";
 import { LocationModule as LocationModuleType } from "@/types/module";
 import { useLocationArea, LocationAreaData, VersionEncounters, MethodEncounters } from "@/hooks/useLocationArea";
 import { useLocationAreaList, LocationAreaListItem } from "@/hooks/useLocationAreaList";
-import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
+import { ModuleShell } from "@/components/layout/ModuleShell";
 
 interface Props {
   module: LocationModuleType;
@@ -195,9 +193,7 @@ function VersionSection({ versionGroup, onPokemonClick }: {
 }
 
 export function LocationModule({ module, isOverlay = false }: Props) {
-  const { removeModule, setLocationArea, selectedModuleId, selectModule, addModule, setPokemon, newlyCreatedModuleId, clearNewlyCreatedModule, toggleExtended } = useModuleStore();
-  const isSelected = selectedModuleId === module.id;
-  const moduleContainerRef = useRef<HTMLDivElement>(null);
+  const { setLocationArea, selectModule, addModule, setPokemon, clearNewlyCreatedModule, toggleExtended } = useModuleStore();
 
   const { data: locationData, isLoading, error } = useLocationArea(module.locationAreaName);
   const { data: locationList } = useLocationAreaList();
@@ -209,23 +205,6 @@ export function LocationModule({ module, isOverlay = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: module.id, disabled: isOverlay });
-
-  const style = isOverlay
-    ? { opacity: 0.95 }
-    : {
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0 : 1,
-      };
-
   // Filter location list by query
   const filteredLocations = useMemo(() => {
     if (!locationList || !query) return locationList?.slice(0, 50) || [];
@@ -235,13 +214,11 @@ export function LocationModule({ module, isOverlay = false }: Props) {
       .slice(0, 50);
   }, [locationList, query]);
 
-  // Auto-focus search on new module creation
-  useEffect(() => {
-    if (newlyCreatedModuleId === module.id && !module.locationAreaName) {
-      setIsSearching(true);
-      clearNewlyCreatedModule();
-    }
-  }, [newlyCreatedModuleId, module.id, module.locationAreaName, clearNewlyCreatedModule]);
+  // Open the search field when a fresh, empty Location module is created.
+  // ModuleShell owns the newly-created flag and scroll-into-view.
+  const handleNewlyCreated = () => {
+    if (!module.locationAreaName) setIsSearching(true);
+  };
 
   useEffect(() => {
     if (isSearching) {
@@ -319,88 +296,52 @@ export function LocationModule({ module, isOverlay = false }: Props) {
     }
   };
 
-  // Combine refs
-  const setRefs = (node: HTMLDivElement | null) => {
-    setNodeRef(node);
-    (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-  };
+  const title = (
+    <span className="flex items-center gap-2 min-w-0">
+      <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      {module.locationAreaName ? (
+        <button
+          onClick={() => setIsSearching(true)}
+          className="text-fg font-medium truncate hover:text-accent transition-colors"
+        >
+          {locationData?.displayName || module.locationAreaName}
+        </button>
+      ) : (
+        <span className="text-fg-subtle text-sm">Location Browser</span>
+      )}
+    </span>
+  );
+
+  const extendButton = (
+    <button
+      onClick={(e) => { e.stopPropagation(); toggleExtended(module.id); }}
+      className={`p-1 rounded transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${module.isExtended ? "bg-accent/20 text-accent" : "text-fg-subtle hover:text-fg hover:bg-surface-hover"}`}
+      aria-label={module.isExtended ? "Collapse module" : "Extend module"}
+      title={module.isExtended ? "Collapse module" : "Extend module"}
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        {module.isExtended ? (
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4" />
+        ) : (
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+        )}
+      </svg>
+    </button>
+  );
 
   return (
-    <div
-      ref={setRefs}
-      style={{ ...style, ...moduleSizeStyle(module) }}
-      data-module-root
-      onClick={() => selectModule(module.id)}
-      className={`${moduleSizeClasses(module)} bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
-        module.isExtended ? "col-span-1 md:col-span-2" : ""
-      } ${
-        isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
-      } ${
-        isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
-      }`}
+    <ModuleShell
+      module={module}
+      isOverlay={isOverlay}
+      title={title}
+      headerControls={extendButton}
+      onNewlyCreated={handleNewlyCreated}
+      className={module.isExtended ? "col-span-1 md:col-span-2" : ""}
+      bodyClassName={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[260px] sm:min-h-[400px] max-h-[600px]"}`}
     >
-      {/* Header */}
-      <div className="flex items-center px-3 py-2 bg-slate-800 border-b border-slate-700 gap-2">
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-700 rounded flex-shrink-0"
-        >
-          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-          </svg>
-        </div>
-
-        {/* Title */}
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          {module.locationAreaName ? (
-            <button
-              onClick={() => setIsSearching(true)}
-              className="text-white font-medium truncate hover:text-blue-400 transition-colors"
-            >
-              {locationData?.displayName || module.locationAreaName}
-            </button>
-          ) : (
-            <span className="text-slate-400 text-sm">Location Browser</span>
-          )}
-        </div>
-
-        {/* Extend Button */}
-        <button
-          onClick={(e) => { e.stopPropagation(); toggleExtended(module.id); }}
-          className={`p-1.5 rounded transition-colors flex-shrink-0 ${module.isExtended ? "bg-blue-600/20 text-blue-400" : "text-slate-400 hover:text-white hover:bg-slate-700"}`}
-          title={module.isExtended ? "Collapse module" : "Extend module"}
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {module.isExtended ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-            )}
-          </svg>
-        </button>
-        {/* Close Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            removeModule(module.id);
-          }}
-          className="p-1.5 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400 flex-shrink-0"
-          title="Remove module"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[260px] sm:min-h-[400px] max-h-[600px]"}`}>
         {isSearching ? (
           <div className="relative">
             <input
@@ -496,9 +437,6 @@ export function LocationModule({ module, isOverlay = false }: Props) {
             )}
           </div>
         ) : null}
-      </div>
-
-      {!isOverlay && <ModuleResizeHandle moduleId={module.id} />}
-    </div>
+    </ModuleShell>
   );
 }

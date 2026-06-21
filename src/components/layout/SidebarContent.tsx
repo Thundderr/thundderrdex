@@ -10,6 +10,8 @@ import { GENERATIONS } from "@/data/generations";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import { clearAllCache } from "@/lib/queryPersister";
 import { DamageCalcModule as DamageCalcModuleType, SavedTeam } from "@/types/module";
+import { ConfirmModal } from "@/components/layout/ConfirmModal";
+import { Modal } from "@/components/ui";
 
 // Pokemon generation ranges by Pokedex number
 function getPokemonGeneration(pokedexId: number): number {
@@ -39,6 +41,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
   const [isClearing, setIsClearing] = useState(false);
   const [teamActionId, setTeamActionId] = useState<string | null>(null);
   const [pendingDeleteTeam, setPendingDeleteTeam] = useState<SavedTeam | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -46,6 +49,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
   const handleClearCache = async () => {
     setIsClearing(true);
+    setClearError(null);
     try {
       // Clear React Query in-memory cache
       queryClient.clear();
@@ -55,15 +59,13 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         // Reload the page to ensure fresh state
         window.location.reload();
       } else {
-        alert("Failed to clear cache. Please try again.");
+        setClearError("Failed to clear cache. Please try again.");
         setIsClearing(false);
-        setShowClearCacheConfirm(false);
       }
     } catch (error) {
       console.error("Error clearing cache:", error);
-      alert("Failed to clear cache. Please try again.");
+      setClearError("Failed to clear cache. Please try again.");
       setIsClearing(false);
-      setShowClearCacheConfirm(false);
     }
   };
 
@@ -187,7 +189,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                   {info.pokeGen && (
                     <button
                       onClick={() => setGeneration(info.pokeGen!)}
-                      className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
+                      className="px-1 py-0.5 text-2xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
                       title={`Switch to Gen ${info.pokeGen}`}
                     >
                       {info.pokeGen}
@@ -244,7 +246,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                   {!existsInGen && (
                     <button
                       onClick={() => setGeneration(pokeGen)}
-                      className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
+                      className="px-1 py-0.5 text-2xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex-shrink-0"
                       title={`Switch to Gen ${pokeGen}`}
                     >
                       {pokeGen}
@@ -304,7 +306,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                   {/* Delete trash button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setPendingDeleteTeam(team); }}
-                    className="absolute top-1/2 -translate-y-1/2 right-1 p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-600/20 opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-1/2 -translate-y-1/2 right-1 p-1 rounded text-slate-600 hover:text-red-400 hover:bg-red-600/20 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 touch-always-visible transition-all"
                     title="Delete team"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -345,34 +347,18 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
       )}
 
       {/* Delete Team Confirmation Modal */}
-      {pendingDeleteTeam && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 shadow-xl border border-slate-700">
-            <h3 className="text-lg font-semibold text-white mb-2">Delete Team?</h3>
-            <p className="text-sm text-slate-400 mb-4">
-              Are you sure you want to delete &quot;{pendingDeleteTeam.name}&quot;? This action cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setPendingDeleteTeam(null)}
-                className="px-4 py-2 text-sm text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  deleteTeam(pendingDeleteTeam.id);
-                  setPendingDeleteTeam(null);
-                  setTeamActionId(null);
-                }}
-                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={!!pendingDeleteTeam}
+        title="Delete Team?"
+        message={`Are you sure you want to delete "${pendingDeleteTeam?.name ?? ""}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (pendingDeleteTeam) deleteTeam(pendingDeleteTeam.id);
+          setPendingDeleteTeam(null);
+          setTeamActionId(null);
+        }}
+        onCancel={() => setPendingDeleteTeam(null)}
+      />
 
       {/* Footer - fixed at bottom */}
       <div className="pt-4 border-t border-slate-800 mt-auto flex-shrink-0 space-y-3">
@@ -398,42 +384,49 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         </p>
       </div>
 
-      {/* Clear Cache Confirmation Modal */}
+      {/* Clear Cache Confirmation Modal — kept as a Modal (not ConfirmModal) to
+          preserve the in-progress spinner and inline failure message. */}
       {showClearCacheConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 shadow-xl border border-slate-700">
-            <h3 className="text-lg font-semibold text-white mb-2">Clear All Cache?</h3>
-            <p className="text-sm text-slate-400 mb-4">
-              This will delete all cached Pokemon data and reload the page. The app will need to re-fetch data from PokeAPI, which may take a moment.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowClearCacheConfirm(false)}
-                disabled={isClearing}
-                className="px-4 py-2 text-sm text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleClearCache}
-                disabled={isClearing}
-                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {isClearing ? (
-                  <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Clearing...
-                  </>
-                ) : (
-                  "Clear Cache"
-                )}
-              </button>
-            </div>
+        <Modal
+          isOpen
+          onClose={() => { if (!isClearing) { setShowClearCacheConfirm(false); setClearError(null); } }}
+          labelledBy="clear-cache-title"
+          size="sm"
+          dismissOnBackdrop={!isClearing}
+          className="p-6"
+        >
+          <h3 id="clear-cache-title" className="text-lg font-semibold text-fg mb-2">Clear All Cache?</h3>
+          <p className="text-sm text-fg-muted mb-4">
+            This will delete all cached Pokemon data and reload the page. The app will need to re-fetch data from PokeAPI, which may take a moment.
+          </p>
+          {clearError && <p className="text-sm text-red-400 mb-4">{clearError}</p>}
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => { setShowClearCacheConfirm(false); setClearError(null); }}
+              disabled={isClearing}
+              className="px-4 py-2 text-sm text-fg-muted hover:text-fg bg-surface-hover hover:bg-line rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleClearCache}
+              disabled={isClearing}
+              className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded transition-colors disabled:opacity-50 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {isClearing ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin motion-reduce:animate-none" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Clearing...
+                </>
+              ) : (
+                "Clear Cache"
+              )}
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

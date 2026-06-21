@@ -25,10 +25,13 @@ export function AbilitiesPanel({ abilities }: Props) {
     );
   }
 
+  // This panel renders only after the parent Pokémon has loaded, so an empty list
+  // means none were found — not that data is still loading (the old copy here
+  // showed "Loading abilities…" forever for such Pokémon).
   if (abilities.length === 0) {
     return (
-      <div className="text-center py-4 text-slate-400">
-        Loading abilities...
+      <div className="text-center py-4 text-fg-subtle text-sm">
+        No abilities found for this Pokémon.
       </div>
     );
   }

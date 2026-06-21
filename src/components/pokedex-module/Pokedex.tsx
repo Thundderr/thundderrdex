@@ -11,6 +11,7 @@ import { useCaughtStore, CatchMark, NATIONAL_BUCKET } from "@/stores/caughtStore
 import { GENERATIONS } from "@/data/generations";
 import { getRegionalDexGroups, getRegionalDexById } from "@/data/pokedexes";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
+import { QueryState } from "@/components/ui";
 import { ALL_TYPES, TYPE_COLORS } from "@/data/typeChart";
 import type { PokemonTypeName } from "@/types/pokemon";
 
@@ -21,7 +22,7 @@ interface PokedexProps {
 }
 
 export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexProps) {
-  const { data: allPokemon, isLoading } = usePokemonList();
+  const { data: allPokemon, isLoading, isError, refetch } = usePokemonList();
   const { globalGeneration, setGeneration } = useGenerationStore();
   const { addPokemonModule, setPokedexDex } = useModuleStore();
   const caught = useCaughtStore((s) => s.caught);
@@ -43,7 +44,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const { data: typeIds, isLoading: isTypeLoading } = usePokemonOfType(typeFilter);
   const dexGroups = useMemo(() => getRegionalDexGroups(), []);
   const selectedDex = selectedDexId !== null ? getRegionalDexById(selectedDexId) : undefined;
-  const { data: regionalEntries, isLoading: isRegionalLoading } = usePokedex(selectedDexId);
+  const { data: regionalEntries, isLoading: isRegionalLoading, isError: isRegionalError, refetch: refetchRegional } = usePokedex(selectedDexId);
 
   // Each dex tracks its own catch marks: the National view uses the "national"
   // bucket; a regional dex uses its region group (so e.g. all Paldea-region
@@ -171,11 +172,18 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
     }
   }, []);
 
-  if (isLoading) {
+  // A failed list fetch used to resolve to an empty grid with no message or retry;
+  // now loading and error are distinct and recoverable.
+  if (isLoading || isError) {
     return (
-      <div className="flex items-center justify-center h-48 text-slate-400">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500" />
-      </div>
+      <QueryState
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        loadingLabel="Loading Pokédex…"
+      >
+        {null}
+      </QueryState>
     );
   }
 
@@ -303,10 +311,16 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
 
       {selectedDex ? (
         /* ===== Regional Dex View ===== */
-        isRegionalLoading || !regionalEntries ? (
-          <div className="flex flex-1 min-h-0 items-center justify-center text-slate-400">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500" />
-          </div>
+        isRegionalLoading || isRegionalError || !regionalEntries ? (
+          <QueryState
+            isLoading={isRegionalLoading}
+            isError={isRegionalError || !regionalEntries}
+            onRetry={() => refetchRegional()}
+            loadingLabel="Loading dex…"
+            className="flex-1 min-h-0"
+          >
+            {null}
+          </QueryState>
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto rounded-lg">
             <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm px-2 py-1.5 mb-2">

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { useModuleStore } from "@/stores/moduleStore";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
+import { Modal } from "@/components/ui";
 
 interface Props {
   moduleId: string;
@@ -15,54 +15,29 @@ interface Props {
 export function LoadTeamDropdown({ moduleId, side, onClose }: Props) {
   const { savedTeams, loadTeamIntoSide, deleteTeam } = useModuleStore();
   const { data: pokemonList } = usePokemonList();
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const pokemonSpriteMap = pokemonList
     ? new Map(pokemonList.map((p) => [p.name, p.spriteUrl]))
     : new Map<string, string>();
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose]);
-
   if (savedTeams.length === 0) {
     return (
-      <div
-        ref={dropdownRef}
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-        onClick={onClose}
-      >
-        <div
-          className="bg-slate-800 rounded-lg p-4 shadow-xl border border-slate-700 max-w-xs mx-4"
-          onClick={(e) => e.stopPropagation()}
+      <Modal isOpen onClose={onClose} label="Load team" size="sm" className="p-4">
+        <p className="text-xs text-fg-subtle">No saved teams yet. Save a team first!</p>
+        <button
+          onClick={onClose}
+          className="mt-3 px-3 py-1.5 text-xs text-fg-muted bg-surface-hover hover:bg-line rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <p className="text-xs text-slate-400">No saved teams yet. Save a team first!</p>
-          <button
-            onClick={onClose}
-            className="mt-3 px-3 py-1.5 text-xs text-slate-300 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
+          Close
+        </button>
+      </Modal>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        ref={dropdownRef}
-        className="bg-slate-800 rounded-lg shadow-xl border border-slate-700 max-w-md w-full mx-4 max-h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-4 py-3 border-b border-slate-700 flex-shrink-0">
-          <h3 className="text-sm font-semibold text-white">
+    <Modal isOpen onClose={onClose} labelledBy="load-team-title" size="md" className="flex flex-col">
+        <div className="px-4 py-3 border-b border-line flex-shrink-0">
+          <h3 id="load-team-title" className="text-sm font-semibold text-fg">
             Load Team → {side === "attacker" ? "My Team" : "Enemy Team"}
           </h3>
         </div>
@@ -102,7 +77,7 @@ export function LoadTeamDropdown({ moduleId, side, onClose }: Props) {
                           <span key={i} className="w-5 h-5 bg-slate-600 rounded-full flex-shrink-0" />
                         );
                       })}
-                      <span className="text-[9px] text-slate-500 ml-1">{pokemonInTeam.length}/6</span>
+                      <span className="text-2xs text-slate-500 ml-1">{pokemonInTeam.length}/6</span>
                     </div>
                   </div>
                 </button>
@@ -112,7 +87,7 @@ export function LoadTeamDropdown({ moduleId, side, onClose }: Props) {
                     e.stopPropagation();
                     deleteTeam(team.id);
                   }}
-                  className="p-1 hover:bg-red-600/20 rounded text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="p-1 hover:bg-red-600/20 rounded text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 touch-always-visible transition-opacity flex-shrink-0"
                   title="Delete team"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,15 +99,14 @@ export function LoadTeamDropdown({ moduleId, side, onClose }: Props) {
           })}
         </div>
 
-        <div className="px-4 py-2 border-t border-slate-700 flex-shrink-0">
+        <div className="px-4 py-2 border-t border-line flex-shrink-0">
           <button
             onClick={onClose}
-            className="w-full px-3 py-1.5 text-xs text-slate-300 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+            className="w-full px-3 py-1.5 text-xs text-fg-muted bg-surface-hover hover:bg-line rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Cancel
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

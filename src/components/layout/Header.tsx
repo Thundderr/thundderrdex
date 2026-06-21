@@ -7,28 +7,21 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { useUIStore } from "@/stores/uiStore";
 import { GenerationSelector } from "./GenerationSelector";
 import { AccountButton } from "@/components/auth/AccountButton";
+import { MODULE_ACCENTS } from "@/lib/moduleAccents";
+import { ModuleType } from "@/types/module";
 
+// Each button maps to a canonical ModuleType so its accent colour comes from the
+// single MODULE_ACCENTS source (shared with the Sidebar, badges, selection rings).
 const MODULE_BUTTONS = [
-  { key: "pokemon", action: "addModule", color: "blue", label: "Pokemon", shortLabel: "Pkmn" },
-  { key: "typechart", action: "addTypeChartModule", color: "cyan", label: "Types", shortLabel: "Types" },
-  { key: "naturechart", action: "addNatureChartModule", color: "pink", label: "Natures", shortLabel: "Natures" },
-  { key: "team", action: "addTeamBuilderModule", color: "purple", label: "Coverage", shortLabel: "Team" },
-  { key: "damagecalc", action: "addDamageCalcModule", color: "orange", label: "Calculator", shortLabel: "Calc" },
-  { key: "location", action: "addLocationModule", color: "green", label: "Location", shortLabel: "Loc" },
-  { key: "pokedex", action: "addPokedexModule", color: "emerald", label: "Pokedex", shortLabel: "Dex" },
-  { key: "catchrate", action: "addCatchRateModule", color: "red", label: "Catch Rate", shortLabel: "Catch" },
-] as const;
-
-const COLOR_CLASSES: Record<string, string> = {
-  blue: "bg-blue-600 hover:bg-blue-500",
-  cyan: "bg-cyan-600 hover:bg-cyan-500",
-  pink: "bg-pink-600 hover:bg-pink-500",
-  purple: "bg-purple-600 hover:bg-purple-500",
-  orange: "bg-orange-600 hover:bg-orange-500",
-  green: "bg-green-600 hover:bg-green-500",
-  emerald: "bg-emerald-600 hover:bg-emerald-500",
-  red: "bg-red-600 hover:bg-red-500",
-};
+  { key: "pokemon", type: "pokemon", action: "addModule", label: "Pokemon", shortLabel: "Pkmn" },
+  { key: "typechart", type: "type-chart", action: "addTypeChartModule", label: "Types", shortLabel: "Types" },
+  { key: "naturechart", type: "nature-chart", action: "addNatureChartModule", label: "Natures", shortLabel: "Natures" },
+  { key: "team", type: "team-builder", action: "addTeamBuilderModule", label: "Coverage", shortLabel: "Team" },
+  { key: "damagecalc", type: "damage-calc", action: "addDamageCalcModule", label: "Calculator", shortLabel: "Calc" },
+  { key: "location", type: "location", action: "addLocationModule", label: "Location", shortLabel: "Loc" },
+  { key: "pokedex", type: "pokedex", action: "addPokedexModule", label: "Pokedex", shortLabel: "Dex" },
+  { key: "catchrate", type: "catch-rate", action: "addCatchRateModule", label: "Catch Rate", shortLabel: "Catch" },
+] as const satisfies ReadonlyArray<{ key: string; type: ModuleType; action: string; label: string; shortLabel: string }>;
 
 export function Header() {
   const store = useModuleStore();
@@ -84,7 +77,7 @@ export function Header() {
             <button
               key={btn.key}
               onClick={() => handleClick(btn.action)}
-              className={`px-3 py-1.5 ${COLOR_CLASSES[btn.color]} text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap`}
+              className={`px-3 py-1.5 ${MODULE_ACCENTS[btn.type].solid} text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40`}
             >
               + {btn.label}
             </button>
@@ -115,7 +108,7 @@ export function Header() {
             <button
               key={btn.key}
               onClick={() => handleClick(btn.action)}
-              className={`flex-1 px-2 py-1.5 ${COLOR_CLASSES[btn.color]} text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-center`}
+              className={`flex-1 px-2 py-1.5 ${MODULE_ACCENTS[btn.type].solid} text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-center`}
             >
               + {btn.shortLabel}
             </button>

@@ -203,7 +203,7 @@ export function FullscreenDamageCalc({ module }: Props) {
                     <img src={myTeamPokemon.sprites.front_default} alt="" width={32} height={32} className="pixelated" style={{ imageRendering: "pixelated" }} />
                   )}
                   <div className="flex items-center gap-1.5">
-                    <span className={`text-[9px] font-bold ${myLabelColor}`}>{myLabel}</span>
+                    <span className={`text-2xs font-bold ${myLabelColor}`}>{myLabel}</span>
                     <span className="text-xs text-white font-medium truncate max-w-[100px]">
                       {myTeamPokemon?.displayName || "—"}
                     </span>
@@ -227,7 +227,7 @@ export function FullscreenDamageCalc({ module }: Props) {
                     <span className="text-xs text-white font-medium truncate max-w-[100px]">
                       {enemyTeamPokemon?.displayName || "—"}
                     </span>
-                    <span className={`text-[9px] font-bold ${enemyLabelColor}`}>{enemyLabel}</span>
+                    <span className={`text-2xs font-bold ${enemyLabelColor}`}>{enemyLabel}</span>
                   </div>
                   {enemyTeamPokemon?.sprites.front_default && (
                     <img src={enemyTeamPokemon.sprites.front_default} alt="" width={32} height={32} className="pixelated" style={{ imageRendering: "pixelated" }} />
@@ -307,13 +307,13 @@ export function FullscreenDamageCalc({ module }: Props) {
                   {transformedMoveInfo.name}
                 </span>
                 {isGmaxMove && (
-                  <span className="text-[9px] px-1.5 py-0.5 bg-purple-600/40 text-purple-300 rounded font-medium">G-MAX</span>
+                  <span className="text-2xs px-1.5 py-0.5 bg-purple-600/40 text-purple-300 rounded font-medium">G-MAX</span>
                 )}
                 {isGimmickActive && !isGmaxMove && module.attacker.isDynamaxed && (
-                  <span className="text-[9px] px-1.5 py-0.5 bg-red-600/40 text-red-300 rounded font-medium">MAX</span>
+                  <span className="text-2xs px-1.5 py-0.5 bg-red-600/40 text-red-300 rounded font-medium">MAX</span>
                 )}
                 {module.attacker.useZMove && genFeatures.hasZMoves && (
-                  <span className="text-[9px] px-1.5 py-0.5 bg-yellow-600/40 text-yellow-300 rounded font-medium">Z</span>
+                  <span className="text-2xs px-1.5 py-0.5 bg-yellow-600/40 text-yellow-300 rounded font-medium">Z</span>
                 )}
               </div>
 

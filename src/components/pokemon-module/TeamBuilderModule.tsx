@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import Image from "next/image";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
@@ -15,7 +13,7 @@ import { calculateDualTypeEffectiveness } from "@/lib/utils/typeEffectiveness";
 import { TYPES_BY_GENERATION, TYPE_COLORS } from "@/data/typeChart";
 import { isMegaPokemon, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
-import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
+import { ModuleShell } from "@/components/layout/ModuleShell";
 
 interface Props {
   module: TeamBuilderModuleType;
@@ -211,7 +209,7 @@ function TeamSlot({
                           e.stopPropagation();
                           setGeneration(minGen);
                         }}
-                        className="px-1 py-0.5 text-[9px] bg-blue-600 hover:bg-blue-500 text-white rounded"
+                        className="px-1 py-0.5 text-2xs bg-blue-600 hover:bg-blue-500 text-white rounded"
                       >
                         Gen {minGen}{maxGen ? `-${maxGen}` : ""}
                       </button>
@@ -245,7 +243,7 @@ function TeamSlot({
               {genTypes.map((type) => (
                 <span
                   key={type.name}
-                  className="px-1 py-0.5 text-[9px] rounded"
+                  className="px-1 py-0.5 text-2xs rounded"
                   style={{ backgroundColor: TYPE_COLORS[type.name], color: "white" }}
                 >
                   {type.name.slice(0, 3).toUpperCase()}
@@ -433,103 +431,31 @@ function TeamCoverage({
 }
 
 export function TeamBuilderModule({ module, isOverlay = false }: Props) {
-  const { removeModule, selectedModuleId, selectModule, newlyCreatedModuleId, clearNewlyCreatedModule } = useModuleStore();
   const { globalGeneration } = useGenerationStore();
-  const moduleContainerRef = useRef<HTMLDivElement>(null);
-  const isSelected = selectedModuleId === module.id;
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: module.id, disabled: isOverlay });
-
-  const style = isOverlay
-    ? { opacity: 0.95 }
-    : {
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0 : 1,
-      };
-
-  // Auto-scroll for newly created modules
-  useEffect(() => {
-    if (newlyCreatedModuleId === module.id && !isOverlay) {
-      clearNewlyCreatedModule();
-      setTimeout(() => {
-        moduleContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 50);
-    }
-  }, [newlyCreatedModuleId, module.id, isOverlay, clearNewlyCreatedModule]);
-
-  // Combine refs
-  const setRefs = (node: HTMLDivElement | null) => {
-    setNodeRef(node);
-    (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-  };
 
   return (
-    <div
-      ref={setRefs}
-      style={{ ...style, ...moduleSizeStyle(module) }}
-      data-module-root
-      onClick={() => selectModule(module.id)}
-      className={`col-span-1 md:col-span-2 ${moduleSizeClasses(module)} bg-slate-900 rounded-lg border shadow-lg overflow-hidden ${
-        isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
-      } ${
-        isSelected && !isDragging ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
-      }`}
+    <ModuleShell
+      module={module}
+      isOverlay={isOverlay}
+      title="Team Coverage"
+      className="col-span-1 md:col-span-2"
+      bodyClassName={`p-4 flex flex-col ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-700 rounded"
-        >
-          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-          </svg>
-        </div>
-
-        <div className="flex-1 mx-2 text-sm font-medium text-white">
-          Team Coverage
-        </div>
-
-        <button
-          onClick={() => removeModule(module.id)}
-          className="p-1 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
-          title="Remove module"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+      {/* Team Slots Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {module.teamSlots.map((pokemonName, index) => (
+          <TeamSlot
+            key={index}
+            slotIndex={index}
+            pokemonName={pokemonName}
+            moduleId={module.id}
+            globalGeneration={globalGeneration}
+          />
+        ))}
       </div>
 
-      {/* Content */}
-      <div className={`p-4 flex flex-col ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
-          {/* Team Slots Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {module.teamSlots.map((pokemonName, index) => (
-              <TeamSlot
-                key={index}
-                slotIndex={index}
-                pokemonName={pokemonName}
-                moduleId={module.id}
-                globalGeneration={globalGeneration}
-              />
-            ))}
-          </div>
-
-          {/* Team Coverage */}
-          <TeamCoverage teamSlots={module.teamSlots} globalGeneration={globalGeneration} />
-        </div>
-
-      {!isOverlay && <ModuleResizeHandle moduleId={module.id} />}
-    </div>
+      {/* Team Coverage */}
+      <TeamCoverage teamSlots={module.teamSlots} globalGeneration={globalGeneration} />
+    </ModuleShell>
   );
 }

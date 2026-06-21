@@ -5,6 +5,7 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useCatchRateData } from "@/hooks/useCatchRateData";
 import { SearchBar } from "@/components/pokemon-module/SearchBar";
+import { QueryState } from "@/components/ui";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import { CatchRateModule, CatchRateStatus } from "@/types/module";
 import {
@@ -39,7 +40,7 @@ export function CatchRateCalculator({ module }: { module: CatchRateModule }) {
   const { globalGeneration } = useGenerationStore();
   const gen = globalGeneration as SupportedGen;
   const { setCatchRateInput } = useModuleStore();
-  const { data, isLoading } = useCatchRateData(module.pokemonName);
+  const { data, isLoading, isError, refetch } = useCatchRateData(module.pokemonName);
 
   const set = (updates: Partial<CatchRateModule>) => setCatchRateInput(module.id, updates);
 
@@ -100,10 +101,18 @@ export function CatchRateCalculator({ module }: { module: CatchRateModule }) {
         <p className="text-slate-500 text-xs py-4 text-center">
           Search for a Pokémon to calculate its catch rate in Gen {gen}.
         </p>
-      ) : isLoading || !data ? (
-        <div className="flex items-center justify-center h-24 text-slate-400">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500" />
-        </div>
+      ) : isLoading || isError || !data ? (
+        // Previously a fetch error left this spinning forever; now it shows an
+        // error with a retry instead.
+        <QueryState
+          isLoading={isLoading}
+          isError={isError || !data}
+          onRetry={() => refetch()}
+          loadingLabel="Loading catch data…"
+          compact
+        >
+          {null}
+        </QueryState>
       ) : (
         <>
           {/* Result */}

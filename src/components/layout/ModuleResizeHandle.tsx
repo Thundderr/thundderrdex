@@ -137,10 +137,14 @@ export function ModuleResizeHandle({ moduleId }: { moduleId: string }) {
       onPointerDown={handlePointerDown}
       onDoubleClick={handleReset}
       onClick={(e) => e.stopPropagation()}
-      className="absolute bottom-0 right-0 z-20 flex h-5 w-5 cursor-se-resize touch-none items-end justify-end p-1 text-slate-600 hover:text-slate-300"
+      role="separator"
+      aria-label="Resize module (drag); double-click to reset"
+      // Always visible (was near-invisible text-slate-600 + hover-only) with a
+      // larger hit area so the resize affordance is actually discoverable.
+      className="absolute bottom-0 right-0 z-20 flex h-7 w-7 cursor-se-resize touch-none items-end justify-end p-1.5 text-fg-subtle hover:text-fg"
       title="Drag to resize • Double-click to reset"
     >
-      <svg viewBox="0 0 12 12" className="h-3 w-3" fill="currentColor" aria-hidden>
+      <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
         <circle cx="10" cy="10" r="1" />
         <circle cx="10" cy="6" r="1" />
         <circle cx="6" cy="10" r="1" />

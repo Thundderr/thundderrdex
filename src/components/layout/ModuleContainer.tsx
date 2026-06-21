@@ -31,6 +31,31 @@ import { AnyModule } from "@/types/module";
 import { DamageCalcModule as DamageCalcModuleType, PokedexModule as PokedexModuleType } from "@/types/module";
 import { TeamBattlePanel } from "@/components/damage-calc/TeamBattlePanel";
 import { FullscreenDamageCalc } from "@/components/damage-calc/FullscreenDamageCalc";
+import { ErrorBoundary } from "@/components/ui";
+import { EmptyDashboard } from "@/components/layout/EmptyDashboard";
+import { DashboardHint } from "@/components/layout/DashboardHint";
+
+/** Single dispatch from module type to component, shared by the grid and the drag overlay. */
+function renderModule(module: AnyModule, isOverlay = false) {
+  switch (module.moduleType) {
+    case "type-chart":
+      return <TypeChartModule module={module} isOverlay={isOverlay} />;
+    case "nature-chart":
+      return <NatureChartModule module={module} isOverlay={isOverlay} />;
+    case "team-builder":
+      return <TeamBuilderModule module={module} isOverlay={isOverlay} />;
+    case "damage-calc":
+      return <DamageCalcModule module={module} isOverlay={isOverlay} />;
+    case "location":
+      return <LocationModule module={module} isOverlay={isOverlay} />;
+    case "pokedex":
+      return <PokedexModule module={module} isOverlay={isOverlay} />;
+    case "catch-rate":
+      return <CatchRateModule module={module} isOverlay={isOverlay} />;
+    default:
+      return <PokemonModule module={module} isOverlay={isOverlay} />;
+  }
+}
 
 // Hidden placeholder to keep dnd-kit sortable position tracking intact
 // while a module is rendered in the fullscreen overlay
@@ -42,7 +67,6 @@ function HiddenSortablePlaceholder({ id }: { id: string }) {
 // Fullscreen overlay that renders a module at full viewport size
 function FullscreenOverlay({ module }: { module: AnyModule }) {
   const { toggleFullscreen, initTeamBattle } = useModuleStore();
-  const [contentWidth, setContentWidth] = useState(0);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,7 +92,6 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
     const el = overlayRef.current;
     if (!el) return;
     const update = () => {
-      setContentWidth(el.clientWidth);
       setContainerDims({ width: el.clientWidth, height: el.clientHeight });
     };
     update();
@@ -79,47 +102,34 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
 
   const dmgModule = module.moduleType === "damage-calc" ? module as DamageCalcModuleType : null;
   const hasTeams = dmgModule?.attackerTeam && dmgModule?.defenderTeam;
-  const showTeamPanels = hasTeams && contentWidth >= 1200;
   const isSwapped = dmgModule?.isSwapped ?? false;
 
-  // Design dimensions: left panel (840) + center (600) + right panel (840) = 2280px
-  // On wide screens (>= DESIGN_WIDTH), no scaling needed — flex-1 panels expand naturally
-  // On narrow screens, scale down with transform
-  const DESIGN_WIDTH = 2280;
-  const needsScaling = showTeamPanels && containerDims.width > 0 && containerDims.width < DESIGN_WIDTH;
-  const scale = needsScaling ? containerDims.width / DESIGN_WIDTH : 1;
-  // Container width in layout pixels — always fills the screen when scaled
-  const layoutWidth = containerDims.width > 0 ? Math.max(DESIGN_WIDTH, containerDims.width) : DESIGN_WIDTH;
+  // Below this width the three columns stack vertically (the page scrolls)
+  // instead of sitting side by side. Replaces the old approach of CSS-scaling a
+  // fixed 2280px design down to fit — which shrank the already-tiny stat inputs
+  // to ~6px — and the hard 1200px gate that silently dropped teams entirely.
+  const stacked = containerDims.width > 0 && containerDims.width < 1280;
 
   return (
-    <div ref={overlayRef} className="absolute inset-0 z-10 bg-slate-900 overflow-hidden">
+    <div ref={overlayRef} className="absolute inset-0 z-10 bg-surface overflow-hidden">
       {module.moduleType === "damage-calc" && dmgModule && (
-        showTeamPanels ? (
-          // Team battle layout: [6 Pokemon] | [Damage Calc] | [6 Pokemon]
-          // Scaled to fit screen while maintaining proportions
-          <div
-            style={{
-              width: `${layoutWidth}px`,
-              height: `${containerDims.height / scale}px`,
-              ...(needsScaling ? {
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-              } : {}),
-            }}
-            className="flex"
-          >
-            <div className="flex-1 min-w-0 border-r border-slate-700">
+        hasTeams ? (
+          // Team battle: [team] · [calc] · [team] — a flex row on wide screens,
+          // stacked and scrollable on narrow ones. No transform scaling, so text
+          // and inputs keep their real (readable) size at every width.
+          <div className={`h-full w-full ${stacked ? "flex flex-col overflow-y-auto" : "flex"}`}>
+            <div className={stacked ? "border-b border-line" : "flex-1 min-w-0 overflow-y-auto border-r border-line"}>
               <TeamBattlePanel moduleId={module.id} side="attacker" team={dmgModule.attackerTeam!} isAttackerSide={!isSwapped} />
             </div>
-            <div className="w-[600px] flex-shrink-0 overflow-y-auto">
+            <div className={stacked ? "border-b border-line" : "w-[600px] flex-shrink-0 overflow-y-auto"}>
               <FullscreenDamageCalc module={dmgModule} />
             </div>
-            <div className="flex-1 min-w-0 border-l border-slate-700">
+            <div className={stacked ? "" : "flex-1 min-w-0 overflow-y-auto border-l border-line"}>
               <TeamBattlePanel moduleId={module.id} side="defender" team={dmgModule.defenderTeam!} isAttackerSide={isSwapped} />
             </div>
           </div>
         ) : (
-          // Standard fullscreen layout (narrow screen or teams not initialized)
+          // Shown only briefly before team data initializes.
           <div className="h-full max-w-[990px] mx-auto">
             <DamageCalcModule module={dmgModule} isFullscreen />
           </div>
@@ -219,16 +229,12 @@ export function ModuleContainer() {
   }
 
   if (modules.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-slate-400">
-        <p className="text-lg mb-4">No modules yet</p>
-        <p className="text-sm">Click &quot;+ Pokemon&quot; or &quot;+ Type Chart&quot; to get started</p>
-      </div>
-    );
+    return <EmptyDashboard />;
   }
 
   return (
     <>
+      <DashboardHint />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -246,51 +252,25 @@ export function ModuleContainer() {
               if (module.isFullscreen) {
                 return <HiddenSortablePlaceholder key={module.id} id={module.id} />;
               }
-              if (module.moduleType === "type-chart") {
-                return <TypeChartModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "nature-chart") {
-                return <NatureChartModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "team-builder") {
-                return <TeamBuilderModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "damage-calc") {
-                return <DamageCalcModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "location") {
-                return <LocationModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "pokedex") {
-                return <PokedexModule key={module.id} module={module} />;
-              }
-              if (module.moduleType === "catch-rate") {
-                return <CatchRateModule key={module.id} module={module} />;
-              }
-              return <PokemonModule key={module.id} module={module} />;
+              // Each module is isolated so one crash can't take down the others or
+              // the whole app. ErrorBoundary renders children inline when healthy,
+              // so the module keeps its own grid/col-span root.
+              return (
+                <ErrorBoundary key={module.id} fallback={(error, reset) => (
+                  <div role="alert" className="col-span-1 md:col-span-2 flex flex-col items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-surface p-4 text-center">
+                    <p className="text-sm font-medium text-fg-muted">This module hit an error.</p>
+                    <p className="max-w-xs text-2xs text-fg-subtle">{error.message}</p>
+                    <button onClick={reset} className="rounded bg-surface-raised px-2.5 py-1 text-xs text-fg-muted hover:bg-surface-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Try again</button>
+                  </div>
+                )}>
+                  {renderModule(module)}
+                </ErrorBoundary>
+              );
             })}
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={null}>
-          {activeModule ? (
-            activeModule.moduleType === "type-chart" ? (
-              <TypeChartModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "nature-chart" ? (
-              <NatureChartModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "team-builder" ? (
-              <TeamBuilderModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "damage-calc" ? (
-              <DamageCalcModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "location" ? (
-              <LocationModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "pokedex" ? (
-              <PokedexModule module={activeModule} isOverlay />
-            ) : activeModule.moduleType === "catch-rate" ? (
-              <CatchRateModule module={activeModule} isOverlay />
-            ) : (
-              <PokemonModule module={activeModule} isOverlay />
-            )
-          ) : null}
+          {activeModule ? renderModule(activeModule, true) : null}
         </DragOverlay>
       </DndContext>
 

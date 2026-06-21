@@ -462,21 +462,21 @@ export const useModuleStore = create<ModuleStore>()(
       goToPreviousTab: () => {
         const state = get();
         const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId);
-        if (currentIndex > 0) {
-          const prevTab = state.tabs[currentIndex - 1];
-          const firstModuleId = prevTab?.modules[0]?.id || null;
-          set({ activeTabId: prevTab.id, selectedModuleId: firstModuleId });
-        }
+        if (currentIndex === -1 || state.tabs.length === 0) return;
+        // Wrap around so the [ shortcut cycles past the first tab to the last.
+        const prevTab = state.tabs[(currentIndex - 1 + state.tabs.length) % state.tabs.length];
+        const firstModuleId = prevTab?.modules[0]?.id || null;
+        set({ activeTabId: prevTab.id, selectedModuleId: firstModuleId });
       },
 
       goToNextTab: () => {
         const state = get();
         const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId);
-        if (currentIndex < state.tabs.length - 1) {
-          const nextTab = state.tabs[currentIndex + 1];
-          const firstModuleId = nextTab?.modules[0]?.id || null;
-          set({ activeTabId: nextTab.id, selectedModuleId: firstModuleId });
-        }
+        if (currentIndex === -1 || state.tabs.length === 0) return;
+        // Wrap around so the ] shortcut cycles past the last tab to the first.
+        const nextTab = state.tabs[(currentIndex + 1) % state.tabs.length];
+        const firstModuleId = nextTab?.modules[0]?.id || null;
+        set({ activeTabId: nextTab.id, selectedModuleId: firstModuleId });
       },
 
       reorderTabs: (activeId, overId) => {

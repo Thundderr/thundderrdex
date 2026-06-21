@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
+import { Modal, Skeleton } from "@/components/ui";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { usePokemonList } from "@/hooks/usePokemonList";
@@ -143,7 +144,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
   const { globalGeneration, setGeneration } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
   const { data: pokemonList } = usePokemonList();
-  const { data: pokemon } = usePokemon(config.pokemonName);
+  const { data: pokemon, isLoading: pokemonLoading } = usePokemon(config.pokemonName);
   const { data: learnset, isLoading: learnsetLoading } = useLearnset(config.pokemonName);
 
   const [isSearching, setIsSearching] = useState(false);
@@ -1100,7 +1101,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                       }}
                       className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-red-500 focus:ring-red-500 focus:ring-offset-slate-800"
                     />
-                    <span className={`text-[9px] ${
+                    <span className={`text-2xs ${
                       config.isDynamaxed && !config.useGigantamax
                         ? "text-red-400 font-medium"
                         : "text-slate-400"
@@ -1122,7 +1123,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                       }}
                       className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-purple-500 focus:ring-purple-500 focus:ring-offset-slate-800"
                     />
-                    <span className={`text-[9px] ${
+                    <span className={`text-2xs ${
                       config.isDynamaxed && config.useGigantamax
                         ? "text-purple-400 font-medium"
                         : "text-slate-400"
@@ -1132,11 +1133,11 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                   </label>
                   {/* Dynamax Level selector - always present to prevent layout shift */}
                   <div className={`flex items-center gap-1 ${config.isDynamaxed ? "" : "invisible"}`}>
-                    <span className="text-[8px] text-slate-500">Lv</span>
+                    <span className="text-2xs text-slate-500">Lv</span>
                     <select
                       value={config.dynamaxLevel ?? 10}
                       onChange={(e) => updateConfig({ dynamaxLevel: parseInt(e.target.value) })}
-                      className="w-9 bg-slate-700 border border-slate-600 rounded px-0.5 py-0 text-[9px] text-white focus:outline-none focus:border-red-400"
+                      className="w-9 bg-slate-700 border border-slate-600 rounded px-0.5 py-0 text-2xs text-white focus:outline-none focus:border-red-400"
                       title={`${((1.5 + (config.dynamaxLevel ?? 10) * 0.05) * 100).toFixed(0)}% HP`}
                     >
                       {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
@@ -1164,6 +1165,19 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               Gen {pokemonMinGen}
             </button>
           )}
+        </div>
+      ) : config.pokemonName && pokemonLoading ? (
+        // Mirror the loaded pokemon-info row (sprite + name + type pills) while an
+        // uncached Pokémon loads, instead of flashing the "Select Pokemon" prompt.
+        <div className="flex items-center gap-3 p-1" aria-busy="true" aria-label="Loading Pokémon">
+          <Skeleton className="w-12 h-12 shrink-0" />
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <Skeleton className="h-4 w-24" />
+            <div className="flex gap-1">
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-10" />
+            </div>
+          </div>
         </div>
       ) : (
         <button
@@ -1584,7 +1598,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                 />
                 <span className={`text-[11px] whitespace-nowrap ${isDynamaxed ? "text-red-400" : "text-slate-400"}`}>/{maxHp}</span>
                 {isDynamaxed && (
-                  <span className="text-[9px] text-slate-500 whitespace-nowrap">(base:{baseMaxHp})</span>
+                  <span className="text-2xs text-slate-500 whitespace-nowrap">(base:{baseMaxHp})</span>
                 )}
                 <span className="text-[11px] text-slate-500">(</span>
                 <input
@@ -1658,7 +1672,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                             className="absolute z-50 w-[320px] max-w-[calc(100vw-1rem)] left-0 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-[320px] overflow-auto"
                           >
                             {/* Header row */}
-                            <li className="flex items-center gap-1 px-2 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
+                            <li className="flex items-center gap-1 px-2 py-1.5 text-2xs text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
                               <span className="w-[115px] flex-shrink-0">Move</span>
                               <span className="w-[52px] text-center flex-shrink-0">Type</span>
                               <span className="w-5 text-center flex-shrink-0">Cat</span>
@@ -1704,7 +1718,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                                 </div>
                                 {/* Effect description row */}
                                 {move.description && (
-                                  <div className="mt-1.5 text-[9px] text-slate-400 line-clamp-2 leading-tight">
+                                  <div className="mt-1.5 text-2xs text-slate-400 line-clamp-2 leading-tight">
                                     {move.description}
                                   </div>
                                 )}
@@ -1752,7 +1766,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                               {transformed.name}
                             </span>
                             {transformed.isGmax && (
-                              <span className="text-[8px] px-1 py-0.5 bg-purple-600/30 text-purple-300 rounded flex-shrink-0">
+                              <span className="text-2xs px-1 py-0.5 bg-purple-600/30 text-purple-300 rounded flex-shrink-0">
                                 G-MAX
                               </span>
                             )}
@@ -1796,36 +1810,31 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
 
       {/* Import/Export Modal */}
       {showImportExport && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowImportExport(false)}>
-          <div
-            className="bg-slate-800 rounded-lg border border-slate-700 shadow-xl w-full max-w-[min(400px,90vw)] max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-              <h3 className="text-sm font-medium text-white">Showdown Format</h3>
-              <button
-                onClick={() => {
-                  setShowImportExport(false);
-                  setImportText("");
-                  setImportError(null);
-                }}
-                className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4">
-              <p className="text-xs text-slate-400 mb-2">Edit or paste a Pokemon set in Showdown format:</p>
-              <textarea
-                autoFocus
-                value={importText}
-                onChange={(e) => {
-                  setImportText(e.target.value);
-                  setImportError(null);
-                }}
-                placeholder={`Pikachu @ Light Ball
+        <Modal
+          isOpen
+          onClose={() => { setShowImportExport(false); setImportText(""); setImportError(null); }}
+          labelledBy="config-import-title"
+          size="sm"
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+            <h3 id="config-import-title" className="text-sm font-medium text-fg">Showdown Format</h3>
+            <button
+              onClick={() => { setShowImportExport(false); setImportText(""); setImportError(null); }}
+              aria-label="Close"
+              className="p-1 hover:bg-surface-hover rounded text-fg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-4">
+            <p className="text-xs text-fg-subtle mb-2">Edit or paste a Pokemon set in Showdown format:</p>
+            <textarea
+              autoFocus
+              value={importText}
+              onChange={(e) => { setImportText(e.target.value); setImportError(null); }}
+              placeholder={`Pikachu @ Light Ball
 Level: 50
 Ability: Static
 Adamant Nature
@@ -1834,29 +1843,28 @@ EVs: 252 Atk / 4 SpD / 252 Spe
 - Iron Tail
 - Quick Attack
 - Thunder Wave`}
-                className="w-full h-48 bg-slate-900 border border-slate-600 rounded p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
-              />
-              {importError && (
-                <p className="mt-2 text-xs text-red-400">{importError}</p>
-              )}
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => navigator.clipboard.writeText(importText)}
-                  className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-white font-medium transition-colors"
-                >
-                  Copy
-                </button>
-                <button
-                  onClick={handleImport}
-                  disabled={!importText.trim()}
-                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 rounded text-sm text-white font-medium transition-colors"
-                >
-                  Apply
-                </button>
-              </div>
+              className="w-full h-48 bg-surface border border-line rounded p-3 text-xs text-fg font-mono placeholder-fg-subtle focus:outline-none focus:border-accent resize-none"
+            />
+            {importError && (
+              <p className="mt-2 text-xs text-red-400">{importError}</p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => navigator.clipboard.writeText(importText)}
+                className="flex-1 px-3 py-2 bg-surface-hover hover:bg-line rounded text-sm text-fg font-medium transition-colors"
+              >
+                Copy
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!importText.trim()}
+                className="flex-1 px-3 py-2 bg-accent hover:bg-accent-hover disabled:bg-surface-hover disabled:text-fg-subtle rounded text-sm text-white font-medium transition-colors"
+              >
+                Apply
+              </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -1,8 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useMemo } from "react";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
 import { DamageCalcModule as DamageCalcModuleType } from "@/types/module";
@@ -24,7 +22,7 @@ import {
 } from "@/lib/utils/generationConfig";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { PokemonTypeName } from "@/types/pokemon";
-import { ModuleResizeHandle, moduleSizeStyle, moduleSizeClasses } from "@/components/layout/ModuleResizeHandle";
+import { ModuleShell } from "@/components/layout/ModuleShell";
 
 interface Props {
   module: DamageCalcModuleType;
@@ -51,33 +49,12 @@ function DamageClassIcon({ damageClass }: { damageClass: string }) {
 }
 
 export function DamageCalcModule({ module, isOverlay = false, isFullscreen = false }: Props) {
-  const { removeModule, selectedModuleId, selectModule, swapDamageCalcPokemon, setDamageCalcMove, toggleFullscreen } = useModuleStore();
+  const { removeModule, swapDamageCalcPokemon, setDamageCalcMove, toggleFullscreen } = useModuleStore();
   const { globalGeneration } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
-  const isSelected = selectedModuleId === module.id;
-  const moduleContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch attacker's learnset for move display names
   const { data: attackerLearnset } = useLearnset(module.attacker.pokemonName);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: module.id, disabled: isOverlay || isFullscreen });
-
-  const style = isOverlay
-    ? { opacity: 0.95 }
-    : isFullscreen
-      ? {}
-      : {
-          transform: CSS.Translate.toString(transform),
-          transition,
-          opacity: isDragging ? 0 : 1,
-        };
 
   // Calculate damage
   const damageResult = useDamageCalc(
@@ -187,78 +164,12 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
   const isGmaxMove = isGimmickActive && module.attacker.isDynamaxed && module.attacker.useGigantamax &&
     attackerCanGmax && gmaxMove && selectedMoveData?.type === gmaxMove.type && selectedMoveData?.power;
 
-  // Combine refs
-  const setRefs = (node: HTMLDivElement | null) => {
-    setNodeRef(node);
-    (moduleContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-  };
-
-  return (
-    <div
-      ref={setRefs}
-      style={isFullscreen ? style : { ...style, ...moduleSizeStyle(module) }}
-      data-module-root
-      onClick={() => selectModule(module.id)}
-      className={`${isFullscreen ? "h-full flex flex-col" : `col-span-1 md:col-span-2 rounded-lg ${moduleSizeClasses(module)}`} bg-slate-900 border shadow-lg overflow-hidden ${
-        isDragging ? "ring-2 ring-blue-500 border-slate-700" : ""
-      } ${
-        isSelected && !isDragging && !isFullscreen ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-700"
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-center px-3 py-2 bg-slate-800 border-b border-slate-700 gap-2">
-        {/* Drag Handle - hidden in fullscreen */}
-        {!isFullscreen && (
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-700 rounded flex-shrink-0"
-          >
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-            </svg>
-          </div>
-        )}
-
-        {/* Title */}
-        <div className="flex-1 flex items-center gap-2">
-          <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          <span className="text-white font-medium">Damage Calculator</span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {/* Fullscreen Toggle */}
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleFullscreen(module.id); }}
-            className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isFullscreen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-              )}
-            </svg>
-          </button>
-
-          {/* Close Button */}
-          <button
-            onClick={() => removeModule(module.id)}
-            className="p-1.5 hover:bg-red-600/20 rounded text-slate-400 hover:text-red-400"
-            title="Remove module"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className={`p-3 ${isFullscreen || module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
+  // Shared body, used by both the grid (ModuleShell) and the fullscreen chrome.
+  // In the grid path the scroll container is the shell's body wrapper (via
+  // bodyClassName), so the inner div only needs flex-1 in the fullscreen path
+  // where `content` is a direct flex child of the fullscreen column.
+  const content = (
+    <div className={`p-3 ${isFullscreen ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
         {/* Main Grid: Attacker | Controls | Defender */}
         <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${isFullscreen ? "items-stretch" : "items-start"}`}>
           {/* Attacker Panel */}
@@ -371,17 +282,17 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
                     {transformedMoveInfo.name}
                   </span>
                   {isGmaxMove && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-purple-600/40 text-purple-300 rounded font-medium">
+                    <span className="text-2xs px-1.5 py-0.5 bg-purple-600/40 text-purple-300 rounded font-medium">
                       G-MAX
                     </span>
                   )}
                   {isGimmickActive && !isGmaxMove && module.attacker.isDynamaxed && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-red-600/40 text-red-300 rounded font-medium">
+                    <span className="text-2xs px-1.5 py-0.5 bg-red-600/40 text-red-300 rounded font-medium">
                       MAX
                     </span>
                   )}
                   {module.attacker.useZMove && genFeatures.hasZMoves && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-yellow-600/40 text-yellow-300 rounded font-medium">
+                    <span className="text-2xs px-1.5 py-0.5 bg-yellow-600/40 text-yellow-300 rounded font-medium">
                       Z
                     </span>
                   )}
@@ -470,9 +381,61 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
             />
           </div>
         </div>
-      </div>
-
-      {!isOverlay && !isFullscreen && <ModuleResizeHandle moduleId={module.id} />}
     </div>
+  );
+
+  const title = (
+    <span className="flex items-center gap-2">
+      <svg className="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      Damage Calculator
+    </span>
+  );
+
+  // Fullscreen has its own chrome (no grip/sortable/resize) and is rendered by
+  // FullscreenOverlay, so it doesn't go through ModuleShell.
+  if (isFullscreen) {
+    return (
+      <div data-module-root className="flex h-full flex-col overflow-hidden bg-surface">
+        <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface-raised px-3 py-2">
+          <div className="flex-1 text-sm font-medium text-fg">{title}</div>
+          <button
+            onClick={(e) => { e.stopPropagation(); toggleFullscreen(module.id); }}
+            aria-label="Exit fullscreen"
+            title="Exit fullscreen"
+            className="rounded p-1.5 text-fg-subtle hover:bg-surface-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4" />
+            </svg>
+          </button>
+          <button
+            onClick={() => removeModule(module.id)}
+            aria-label="Close module"
+            title="Close module"
+            className="rounded p-1.5 text-fg-subtle hover:bg-red-600/20 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <ModuleShell
+      module={module}
+      isOverlay={isOverlay}
+      title={title}
+      fullscreenable
+      className="col-span-1 md:col-span-2"
+      bodyClassName={module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}
+    >
+      {content}
+    </ModuleShell>
   );
 }

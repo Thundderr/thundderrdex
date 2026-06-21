@@ -184,7 +184,7 @@ export function MoveSelector({ moduleId, attackerName, selectedMove }: Props) {
               className="absolute z-50 w-[320px] max-w-[calc(100vw-1rem)] left-0 bottom-full mb-1 max-h-[320px] overflow-auto border border-slate-700 rounded bg-slate-800 shadow-xl"
             >
               {/* Header row */}
-              <li className="flex items-center gap-1 px-2 py-1.5 text-[9px] text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
+              <li className="flex items-center gap-1 px-2 py-1.5 text-2xs text-slate-500 border-b border-slate-700 bg-slate-800/95 sticky top-0">
                 <span className="w-[115px] flex-shrink-0">Move</span>
                 <span className="w-[52px] text-center flex-shrink-0">Type</span>
                 <span className="w-5 text-center flex-shrink-0">Cat</span>
@@ -226,7 +226,7 @@ export function MoveSelector({ moduleId, attackerName, selectedMove }: Props) {
                   </div>
                   {/* Effect description row */}
                   {move.description && (
-                    <div className="mt-0.5 text-[9px] text-slate-400 line-clamp-2 leading-tight">
+                    <div className="mt-0.5 text-2xs text-slate-400 line-clamp-2 leading-tight">
                       {move.description}
                     </div>
                   )}
