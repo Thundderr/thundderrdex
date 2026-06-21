@@ -32,6 +32,8 @@ import { DamageCalcModule as DamageCalcModuleType, PokedexModule as PokedexModul
 import { TeamBattlePanel } from "@/components/damage-calc/TeamBattlePanel";
 import { FullscreenDamageCalc } from "@/components/damage-calc/FullscreenDamageCalc";
 import { ErrorBoundary } from "@/components/ui";
+import { EmptyDashboard } from "@/components/layout/EmptyDashboard";
+import { DashboardHint } from "@/components/layout/DashboardHint";
 
 /** Single dispatch from module type to component, shared by the grid and the drag overlay. */
 function renderModule(module: AnyModule, isOverlay = false) {
@@ -242,16 +244,12 @@ export function ModuleContainer() {
   }
 
   if (modules.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-slate-400">
-        <p className="text-lg mb-4">No modules yet</p>
-        <p className="text-sm">Click &quot;+ Pokemon&quot; or &quot;+ Type Chart&quot; to get started</p>
-      </div>
-    );
+    return <EmptyDashboard />;
   }
 
   return (
     <>
+      <DashboardHint />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

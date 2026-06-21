@@ -26,7 +26,8 @@ export function KeyboardShortcutsProvider({ children }: Props) {
       {/* Info button - fixed position */}
       <button
         onClick={() => setIsKeybindsOpen(true)}
-        className="fixed bottom-4 right-4 z-40 p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full shadow-lg border border-slate-700 transition-colors"
+        aria-label="Keyboard shortcuts"
+        className="fixed bottom-4 right-4 z-40 p-2.5 bg-surface-raised hover:bg-surface-hover text-fg-subtle hover:text-fg rounded-full shadow-lg border border-line transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         title="Keyboard shortcuts"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

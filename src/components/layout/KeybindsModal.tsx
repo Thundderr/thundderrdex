@@ -8,6 +8,7 @@ interface Props {
 }
 
 const GLOBAL_SHORTCUTS = [
+  { key: "Shift + 1–9", description: "Switch generation" },
   { key: "Shift + T", description: "New tab" },
   { key: "Shift + X", description: "Close current tab" },
   { key: "Shift + P", description: "New Pokemon module" },
