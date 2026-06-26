@@ -4,7 +4,10 @@
 
 create table public.user_state (
   user_id    uuid        not null references auth.users (id) on delete cascade,
-  store_key  text        not null check (store_key in ('caught', 'modules', 'generation')),
+  -- 'training' is reserved for the Training Dojo's SRS progress. The store is
+  -- local-only today; to turn on cloud sync, add a SYNCED_STORES entry for it
+  -- (see src/lib/sync/storeRegistry.ts) and apply this constraint update.
+  store_key  text        not null check (store_key in ('caught', 'modules', 'generation', 'training')),
   payload    jsonb       not null,
   version    integer     not null default 0,          -- zustand persist schema version
   updated_at timestamptz not null,                    -- client-supplied last-modified time

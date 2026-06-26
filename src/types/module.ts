@@ -1,7 +1,7 @@
 import { StatModifiers, StatValues } from "@/lib/utils/statCalculator";
 
 export type ModuleTab = "stats" | "abilities" | "types" | "moves" | "locations" | "evolution";
-export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location" | "pokedex" | "catch-rate";
+export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location" | "pokedex" | "catch-rate" | "training";
 
 // Base module interface
 export interface BaseModule {
@@ -192,8 +192,15 @@ export interface CatchRateModule extends BaseModule {
   darkGrass: boolean; // Gen 5
 }
 
+// Training Dojo module specific fields
+export interface TrainingModule extends BaseModule {
+  moduleType: "training";
+  // Last quiz mode the user picked, so reopening the card lands on it.
+  selectedModeId: string | null;
+}
+
 // Union type for all modules
-export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule | PokedexModule | CatchRateModule;
+export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule | PokedexModule | CatchRateModule | TrainingModule;
 
 export interface RecentSearch {
   pokemonName: string;

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, CatchRateModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, CatchRateModule, TrainingModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
@@ -155,6 +155,13 @@ const createCatchRateModule = (): CatchRateModule => ({
   darkGrass: false,
 });
 
+const createTrainingModule = (): TrainingModule => ({
+  id: uuidv4(),
+  moduleType: "training",
+  isMinimized: false,
+  selectedModeId: null,
+});
+
 const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
   id: uuidv4(),
   name,
@@ -214,6 +221,9 @@ interface ModuleStore {
   // Catch Rate module methods
   addCatchRateModule: () => void;
   setCatchRateInput: (moduleId: string, updates: Partial<CatchRateModule>) => void;
+  // Training Dojo module methods
+  addTrainingModule: () => void;
+  setTrainingMode: (moduleId: string, modeId: string | null) => void;
   // Location module methods
   addLocationModule: (locationAreaName?: string | null) => void;
   setLocationArea: (moduleId: string, locationAreaName: string | null) => void;
@@ -750,6 +760,28 @@ export const useModuleStore = create<ModuleStore>()(
             modules.map((m) =>
               m.id === moduleId && m.moduleType === "catch-rate"
                 ? ({ ...m, ...updates } as CatchRateModule)
+                : m
+            )
+          ),
+        }));
+      },
+
+      // Training Dojo module methods
+      addTrainingModule: () => {
+        const newModule = createTrainingModule();
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      setTrainingMode: (moduleId, modeId) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) =>
+              m.id === moduleId && m.moduleType === "training"
+                ? ({ ...m, selectedModeId: modeId } as TrainingModule)
                 : m
             )
           ),

@@ -10,6 +10,7 @@ const QUICK_START: { type: ModuleType; label: string; action: keyof ReturnType<t
   { type: "pokedex", label: "Pokédex", action: "addPokedexModule" },
   { type: "damage-calc", label: "Damage Calc", action: "addDamageCalcModule" },
   { type: "type-chart", label: "Type Chart", action: "addTypeChartModule" },
+  { type: "training", label: "Training", action: "addTrainingModule" },
 ];
 
 /**
