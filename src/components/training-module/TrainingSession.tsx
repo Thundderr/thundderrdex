@@ -6,6 +6,7 @@ import { useCompetitiveFormatStore } from "@/stores/competitiveFormatStore";
 import { loadSetPool, type SetPool } from "@/lib/training/setPool";
 import { loadUsage } from "@/lib/competitive/smogonStats";
 import { getCompetitiveFormat } from "@/lib/competitive/formats";
+import { CompetitiveFormatSelector } from "@/components/competitive/CompetitiveFormatSelector";
 import type { UsageDataset } from "@/lib/competitive/types";
 import { TYPE_COLORS } from "@/data/typeChart";
 import type { QuizMode, QuizQuestion, ExplainLink, ReviewChip, RichSegment } from "@/lib/training";
@@ -113,6 +114,8 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
 
   const answered = picked !== null;
   const isCorrect = answered && question !== null && picked === question.correctChoiceId;
+  // Modes whose questions are weighted by real usage; their meta is format-bound.
+  const usesMeta = mode.needsUsage || mode.prefersUsage || false;
 
   const handlePick = useCallback(
     (choiceId: string) => {
@@ -176,9 +179,17 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
         </div>
       </div>
 
-      {mode.settings && mode.settings.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          {mode.settings.map((setting) => {
+      {(usesMeta || (mode.settings && mode.settings.length > 0)) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* Which meta this drill is weighted toward — switchable mid-session so
+              you can drill VGC vs Champions without leaving the quiz. */}
+          {usesMeta && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xs uppercase tracking-wide text-fg-subtle">Meta</span>
+              <CompetitiveFormatSelector />
+            </div>
+          )}
+          {mode.settings?.map((setting) => {
             const current = settings?.[setting.key] ?? setting.default;
             return (
               <div key={setting.key} className="flex items-center gap-1.5">
