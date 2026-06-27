@@ -15,7 +15,8 @@ export function CatchRateModule({ module, isOverlay = false }: Props) {
       module={module}
       isOverlay={isOverlay}
       title="Catch Rate"
-      className={`col-span-1 md:col-span-2 flex flex-col ${module.customHeight ? "" : "max-h-[calc(100vh-9.5rem)]"}`}
+      defaultTall
+      className="col-span-1 md:col-span-2"
       bodyClassName="p-4 flex-1 min-h-0 overflow-y-auto"
     >
       <CatchRateCalculator module={module} />

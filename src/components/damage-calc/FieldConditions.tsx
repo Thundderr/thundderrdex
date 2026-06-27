@@ -385,7 +385,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel,
       )}
 
       {/* Two Column Layout for Attacker/Defender Sides */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-700">
+      <div className="grid grid-cols-1 @md:grid-cols-2 gap-2 pt-2 border-t border-slate-700">
         {/* Column Headers */}
         <h4 className="text-[10px] text-slate-500 uppercase text-center">Attacker</h4>
         <h4 className="text-[10px] text-slate-500 uppercase text-center">Defender</h4>
@@ -393,7 +393,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel,
 
       {/* Hazards Section */}
       <CollapsibleSection title="Hazards" sectionId="hazards" forceOpen={allExpanded}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
           {/* Attacker Hazards */}
           <div className="space-y-1.5">
             {genFeatures.hasStealthRock && (
@@ -443,7 +443,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel,
 
       {/* Screens Section */}
       <CollapsibleSection title="Screens" sectionId="screens" forceOpen={allExpanded}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
           {/* Attacker Screens */}
           <div className="flex flex-wrap gap-1 justify-center">
             <Toggle active={field.attackerSide.isReflect} onClick={() => updateAttackerSide({ isReflect: !field.attackerSide.isReflect })}>
@@ -477,7 +477,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel,
 
       {/* Status & Protection Section */}
       <CollapsibleSection title="Status & Protection" sectionId="status" forceOpen={allExpanded}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
           {/* Attacker Status */}
           <div className="flex flex-wrap gap-1 justify-center">
             <Toggle active={field.attackerSide.isProtected} onClick={() => updateAttackerSide({ isProtected: !field.attackerSide.isProtected })}>
@@ -515,7 +515,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel,
 
       {/* Support Section */}
       <CollapsibleSection title="Support" sectionId="support" forceOpen={allExpanded}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
           {/* Attacker Support */}
           <div className="space-y-1.5">
             {genFeatures.hasTailwind && (
@@ -579,7 +579,7 @@ export function FieldConditions({ moduleId, field, attackerLevel, defenderLevel,
 
       {/* Switching Section */}
       <CollapsibleSection title="Switching" sectionId="switching" forceOpen={allExpanded}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
           {/* Attacker Switching */}
           <div className="flex flex-wrap gap-1 justify-center">
             <Toggle

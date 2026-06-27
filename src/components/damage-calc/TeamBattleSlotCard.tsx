@@ -570,7 +570,7 @@ export function TeamBattleSlotCard({
       </div>
 
       {/* ── Col 1: Pokemon info ── */}
-      <div className="w-[340px] flex-shrink-0 flex flex-col border-r border-slate-700/30 p-2 gap-1.5">
+      <div className="flex-1 min-w-[10rem] flex flex-col border-r border-slate-700/30 p-2 gap-1.5">
         {/* Top row: Name | Type(s) | Level */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
@@ -589,7 +589,7 @@ export function TeamBattleSlotCard({
             )}
             {activeDropdown === "pokemon" && filteredPokemon.length > 0 && (
               <ul ref={listRef}
-                className="absolute z-50 top-full left-0 w-[220px] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-48 overflow-y-auto">
+                className="absolute z-50 top-full left-0 w-[220px] max-w-[calc(100vw-1rem)] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-48 overflow-y-auto">
                 {filteredPokemon.map((p, i) => {
                   const { minGen, maxGen } = getPokemonGeneration(p.name, p.id);
                   const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
@@ -674,7 +674,7 @@ export function TeamBattleSlotCard({
                 Load Set
               </button>
               {activeDropdown === "loadSet" && smogonSets && smogonSets.length > 0 && (
-                <ul className="absolute z-50 bottom-full left-0 mb-0.5 w-[220px] bg-slate-800 border border-slate-600 rounded shadow-xl max-h-48 overflow-y-auto">
+                <ul className="absolute z-50 bottom-full left-0 mb-0.5 w-[220px] max-w-[calc(100vw-1rem)] bg-slate-800 border border-slate-600 rounded shadow-xl max-h-48 overflow-y-auto">
                   {smogonSets.map((set, i) => (
                     <li key={i}
                       onMouseDown={e => { e.preventDefault(); applySmogonSet(set); }}
@@ -824,7 +824,7 @@ export function TeamBattleSlotCard({
           )}
           {activeDropdown === "item" && filteredItems.length > 0 && (
             <ul ref={listRef}
-              className="absolute z-50 top-full left-0 w-[180px] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-40 overflow-y-auto">
+              className="absolute z-50 top-full left-0 w-[180px] max-w-[calc(100vw-1rem)] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-40 overflow-y-auto">
               {filteredItems.map((item, i) => (
                 <li key={item}
                   onMouseDown={e => { e.preventDefault(); handleConfigChange({ item }); closeDropdown(); }}
@@ -872,7 +872,7 @@ export function TeamBattleSlotCard({
               )}
               {isEditing && filteredMoves.length > 0 && (
                 <ul ref={listRef}
-                  className="absolute z-50 top-full right-0 w-[200px] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-40 overflow-y-auto">
+                  className="absolute z-50 top-full right-0 w-[200px] max-w-[calc(100vw-1rem)] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-40 overflow-y-auto">
                   {filteredMoves.map((move, i) => (
                     <li key={move.name}
                       onMouseDown={e => {

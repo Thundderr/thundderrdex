@@ -131,7 +131,7 @@ export function CatchRateCalculator({ module }: { module: CatchRateModule }) {
           </div>
 
           {/* Core inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
             <Field label="Poké Ball">
               <Select value={ballId} onChange={(v) => set({ ballId: v })}>
                 {balls.map((b) => (
@@ -172,7 +172,7 @@ export function CatchRateCalculator({ module }: { module: CatchRateModule }) {
             </div>
           </Field>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
             <NumberField
               label="Target level"
               value={module.targetLevel}
@@ -284,7 +284,7 @@ function AdvancedSection({
   return (
     <div className="border-t border-slate-700 pt-2 space-y-2">
       <div className="text-[11px] uppercase tracking-wider text-slate-500">Advanced</div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
         {showCapturePower && (
           <Field label="Capture Power">
             <Select value={String(module.capturePower)} onChange={(v) => set({ capturePower: Number(v) })}>

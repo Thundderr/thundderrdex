@@ -340,7 +340,7 @@ export function LocationModule({ module, isOverlay = false }: Props) {
       headerControls={extendButton}
       onNewlyCreated={handleNewlyCreated}
       className={module.isExtended ? "col-span-1 md:col-span-2" : ""}
-      bodyClassName={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[260px] sm:min-h-[400px] max-h-[600px]"}`}
+      bodyClassName={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[clamp(16rem,40dvh,28rem)]"}`}
     >
         {isSearching ? (
           <div className="relative">

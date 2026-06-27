@@ -16,6 +16,10 @@ interface Props {
   headerControls?: ReactNode;
   /** Show the fullscreen toggle. Only enable where a fullscreen rendering exists. */
   fullscreenable?: boolean;
+  /** Data-heavy modules: give the root a fluid default height that fills the
+   *  viewport proportionally (instead of auto-sizing short on big screens).
+   *  A user drag-resize still overrides it. */
+  defaultTall?: boolean;
   /** Extra classes for the root element (col-span, max-height, flex, etc.). */
   className?: string;
   /** Classes for the body wrapper. */
@@ -68,6 +72,7 @@ export function ModuleShell({
   title,
   headerControls,
   fullscreenable = false,
+  defaultTall = false,
   className = "",
   bodyClassName = "",
   titleClassName = "truncate",
@@ -108,8 +113,8 @@ export function ModuleShell({
 
   // When minimized, collapse to just the header: drop the custom height so the
   // root auto-sizes, and skip the body + resize handle.
-  const sizeStyle = isMinimized ? {} : moduleSizeStyle(module);
-  const sizeClasses = isMinimized ? "relative" : moduleSizeClasses(module);
+  const sizeStyle = isMinimized ? {} : moduleSizeStyle(module, defaultTall);
+  const sizeClasses = isMinimized ? "relative" : moduleSizeClasses(module, defaultTall);
 
   return (
     <div
@@ -118,7 +123,7 @@ export function ModuleShell({
       data-module-root
       data-module-id={module.id}
       onClick={() => selectModule(module.id)}
-      className={`bg-surface rounded-lg border shadow-lg overflow-hidden ${sizeClasses} ${
+      className={`@container bg-surface rounded-lg border shadow-lg overflow-hidden ${sizeClasses} ${
         isDragging ? "ring-2 ring-accent border-line" : isSelected ? "ring-2 ring-accent border-accent" : "border-line"
       } ${className}`}
     >

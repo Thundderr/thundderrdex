@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { DamageCalcResult } from "@/hooks/useDamageCalc";
 import { clampLeftToViewport } from "@/lib/utils/popoverPosition";
 
@@ -72,25 +73,29 @@ function InfoButton({ description, colorClass }: { description: string; colorCla
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </button>
-      {/* Fixed position tooltip that can extend beyond container */}
-      {visible && (
-        <div
-          className="fixed z-50"
-          style={{ top: tooltipPos.top, left: tooltipPos.left }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          <div className="bg-surface border border-line rounded px-2.5 py-2 shadow-lg w-80 max-w-[calc(100vw-1rem)]">
-            <p className="text-2xs text-fg-muted leading-relaxed">{description}</p>
-            <button
-              onClick={handleCopy}
-              className="mt-1.5 pt-1.5 border-t border-line w-full text-left text-2xs text-fg-subtle hover:text-fg focus-visible:outline-none focus-visible:underline"
-            >
-              {copied ? <span className="text-green-400">Copied!</span> : "Copy details"}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Fixed-position tooltip with viewport coords. Portaled to <body> so an
+          ancestor module's container-type (layout containment) can't capture it
+          as the containing block and break the fixed positioning. */}
+      {visible && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed z-50"
+            style={{ top: tooltipPos.top, left: tooltipPos.left }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+          >
+            <div className="bg-surface border border-line rounded px-2.5 py-2 shadow-lg w-80 max-w-[calc(100vw-1rem)]">
+              <p className="text-2xs text-fg-muted leading-relaxed">{description}</p>
+              <button
+                onClick={handleCopy}
+                className="mt-1.5 pt-1.5 border-t border-line w-full text-left text-2xs text-fg-subtle hover:text-fg focus-visible:outline-none focus-visible:underline"
+              >
+                {copied ? <span className="text-green-400">Copied!</span> : "Copy details"}
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 }

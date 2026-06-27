@@ -577,7 +577,7 @@ export function StatsDisplay({ stats, moduleId, abilities, pokemonName }: Props)
       {pokemonName && (
         <div className="pt-2 border-t border-slate-700">
           <label className="text-[10px] text-slate-400 mb-1.5 block">Moves</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 relative">
+          <div className="grid grid-cols-1 @md:grid-cols-2 gap-1.5 relative">
             {[0, 1, 2, 3].map((slotIndex) => {
               const moveName = statModifiers.moves?.[slotIndex] ?? null;
               const isSearching = searchingMoveSlot === slotIndex;

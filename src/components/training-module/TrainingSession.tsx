@@ -162,7 +162,7 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
       ref={rootRef}
       tabIndex={-1}
       onKeyDown={onKeyDown}
-      className="flex min-h-[24rem] flex-col gap-3 outline-none"
+      className="flex h-full min-h-[20rem] flex-col gap-3 outline-none"
     >
       {/* Header: back, settings, live stats */}
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -246,7 +246,7 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
         {phase === "ready" && question && (
           <div className="flex flex-col gap-3">
             <div className="rounded-xl border border-line bg-surface-raised p-4 text-center">
-              <p className="text-lg font-semibold text-fg sm:text-xl">
+              <p className="text-fluid-lg font-semibold text-fg">
                 {question.promptRich ? (
                   <RichText segments={question.promptRich} chipClass="px-2 py-0.5 text-base" />
                 ) : (
@@ -277,7 +277,7 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 @md:grid-cols-2">
                 {question.choices.map((choice, i) => (
                   <button
                     key={choice.id}
@@ -390,7 +390,7 @@ function Feedback({
 
       {/* Hints at the bottom: attacking-side on the left, defending-side on the right. */}
       {question.review && question.review.length > 0 && (
-        <div className="mt-3 flex flex-col gap-4 sm:flex-row">
+        <div className="mt-3 flex flex-col gap-4 @md:flex-row">
           <ReviewColumn sections={question.review.filter((s) => s.group !== "defense")} />
           <ReviewColumn sections={question.review.filter((s) => s.group === "defense")} />
         </div>

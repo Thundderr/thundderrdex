@@ -9,28 +9,36 @@ const MIN_HEIGHT = 160;
 // Ignore pointer jitter below this so a sloppy click doesn't lock in a size
 const MOVE_THRESHOLD = 4;
 
+// Fluid default height for data-heavy modules: scales with the viewport so the
+// dashboard fills nicely on big screens instead of leaving empty space, while
+// the rem floor/ceiling keep it readable at zoom extremes. dvh (not vh) tracks
+// mobile browser chrome. A user drag (customHeight) always overrides this.
+export const DEFAULT_TALL_HEIGHT = "clamp(24rem, 60dvh, 48rem)";
+
 /**
- * Inline style for a module's root element carrying its user-set size.
+ * Inline style for a module's root element carrying its size.
  * Width is expressed as a CSS variable consumed by the .module-cols rule
  * (media-queried, so it can't break the single-column mobile layout);
- * height is a plain pixel height.
+ * height is the user's pixel height, else the fluid default when `defaultTall`.
  */
-export function moduleSizeStyle(module: BaseModule): CSSProperties {
+export function moduleSizeStyle(module: BaseModule, defaultTall = false): CSSProperties {
   const style: CSSProperties & Record<string, string | number> = {};
   if (module.customWidthCols) style["--module-cols"] = module.customWidthCols;
   if (module.customHeight) style.height = `${module.customHeight}px`;
+  else if (defaultTall) style.height = DEFAULT_TALL_HEIGHT;
   return style;
 }
 
 /**
  * Classes for a module's root element. `relative` anchors the resize handle;
- * a fixed height turns the root into a column flexbox so the content area
- * (given flex-1/min-h-0 by the module) scrolls instead of overflowing.
+ * a constrained height (user-set or fluid default) turns the root into a column
+ * flexbox so the content area (given flex-1/min-h-0 by the module) scrolls
+ * instead of overflowing.
  */
-export function moduleSizeClasses(module: BaseModule): string {
+export function moduleSizeClasses(module: BaseModule, defaultTall = false): string {
   let classes = "relative";
   if (module.customWidthCols) classes += " module-cols";
-  if (module.customHeight) classes += " flex flex-col";
+  if (module.customHeight || defaultTall) classes += " flex flex-col";
   return classes;
 }
 

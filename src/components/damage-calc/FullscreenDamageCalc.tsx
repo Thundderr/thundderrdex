@@ -143,7 +143,7 @@ export function FullscreenDamageCalc({ module }: Props) {
     attackerCanGmax && gmaxMove && selectedMoveData?.type === gmaxMove.type && selectedMoveData?.power;
 
   return (
-    <div className="h-full flex flex-col bg-slate-900">
+    <div className="@container h-full flex flex-col bg-slate-900">
       {/* Header */}
       <div className="flex items-center px-3 py-2 bg-slate-800 border-b border-slate-700 gap-2 flex-shrink-0">
         <div className="flex-1 flex items-center gap-2">

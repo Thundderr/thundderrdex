@@ -70,7 +70,6 @@ function HiddenSortablePlaceholder({ id }: { id: string }) {
 // Fullscreen overlay that renders a module at full viewport size
 function FullscreenOverlay({ module }: { module: AnyModule }) {
   const { toggleFullscreen, initTeamBattle } = useModuleStore();
-  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -89,51 +88,35 @@ function FullscreenOverlay({ module }: { module: AnyModule }) {
     }
   }, [module.id, module.moduleType, initTeamBattle]);
 
-  // Track container dimensions for responsive scaling
-  const [containerDims, setContainerDims] = useState({ width: 0, height: 0 });
-  useEffect(() => {
-    const el = overlayRef.current;
-    if (!el) return;
-    const update = () => {
-      setContainerDims({ width: el.clientWidth, height: el.clientHeight });
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   const dmgModule = module.moduleType === "damage-calc" ? module as DamageCalcModuleType : null;
   const hasTeams = dmgModule?.attackerTeam && dmgModule?.defenderTeam;
   const isSwapped = dmgModule?.isSwapped ?? false;
 
-  // Below this width the three columns stack vertically (the page scrolls)
-  // instead of sitting side by side. Replaces the old approach of CSS-scaling a
-  // fixed 2280px design down to fit — which shrank the already-tiny stat inputs
-  // to ~6px — and the hard 1200px gate that silently dropped teams entirely.
-  const stacked = containerDims.width > 0 && containerDims.width < 1280;
-
   return (
-    <div ref={overlayRef} className="absolute inset-0 z-10 bg-surface overflow-hidden">
+    <div className="@container absolute inset-0 z-10 bg-surface overflow-hidden">
       {module.moduleType === "damage-calc" && dmgModule && (
         hasTeams ? (
-          // Team battle: [team] · [calc] · [team] — a flex row on wide screens,
-          // stacked and scrollable on narrow ones. No transform scaling, so text
-          // and inputs keep their real (readable) size at every width.
-          <div className={`h-full w-full ${stacked ? "flex flex-col overflow-y-auto" : "flex"}`}>
-            <div className={stacked ? "border-b border-line" : "flex-1 min-w-0 overflow-y-auto border-r border-line"}>
+          // Team battle: [team] · [calc] · [team]. Pure-CSS reflow keyed to the
+          // overlay's own width (container query): one scrolling column when
+          // narrow; three columns when wide, with a *fluid* center track
+          // (clamp) so the side panels never get crushed in a "cramped middle"
+          // zone the way a hard breakpoint + fixed-px center used to. No JS
+          // measurement, no transform scaling — inputs keep their real size at
+          // every width and zoom level.
+          <div className="grid h-full w-full grid-cols-1 overflow-y-auto @5xl:grid-cols-[minmax(0,1fr)_clamp(20rem,32vw,38rem)_minmax(0,1fr)] @5xl:overflow-hidden">
+            <div className="min-w-0 border-b border-line @5xl:border-b-0 @5xl:border-r @5xl:overflow-y-auto">
               <TeamBattlePanel moduleId={module.id} side="attacker" team={dmgModule.attackerTeam!} isAttackerSide={!isSwapped} />
             </div>
-            <div className={stacked ? "border-b border-line" : "w-[600px] flex-shrink-0 overflow-y-auto"}>
+            <div className="min-w-0 border-b border-line @5xl:border-b-0 @5xl:overflow-y-auto">
               <FullscreenDamageCalc module={dmgModule} />
             </div>
-            <div className={stacked ? "" : "flex-1 min-w-0 overflow-y-auto border-l border-line"}>
+            <div className="min-w-0 @5xl:border-l @5xl:border-line @5xl:overflow-y-auto">
               <TeamBattlePanel moduleId={module.id} side="defender" team={dmgModule.defenderTeam!} isAttackerSide={isSwapped} />
             </div>
           </div>
         ) : (
           // Shown only briefly before team data initializes.
-          <div className="h-full max-w-[990px] mx-auto">
+          <div className="mx-auto h-full w-full max-w-[62rem]">
             <DamageCalcModule module={dmgModule} isFullscreen />
           </div>
         )

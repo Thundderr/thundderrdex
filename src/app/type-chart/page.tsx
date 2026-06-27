@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function TypeChartPage() {
   return (
-    <div className="min-h-screen bg-slate-950 p-4 md:p-6">
+    <div className="min-h-[100dvh] bg-slate-950 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
           <Link
@@ -29,7 +29,7 @@ export default function TypeChartPage() {
               />
             </svg>
           </Link>
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
+          <h1 className="text-fluid-2xl font-bold text-white">
             Type Effectiveness Chart
           </h1>
         </div>

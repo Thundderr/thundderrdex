@@ -88,7 +88,8 @@ export function TrainingModule({ module, isOverlay = false }: Props) {
       module={module}
       isOverlay={isOverlay}
       title={activeMode ? `Dojo · ${activeMode.title}` : "Training Dojo"}
-      className="col-span-1 md:col-span-2 flex flex-col"
+      defaultTall
+      className="col-span-1 md:col-span-2"
       bodyClassName="p-4 flex-1 min-h-0 overflow-y-auto"
     >
       {activeMode && !isOverlay ? (

@@ -58,7 +58,8 @@ export function PokedexModule({ module, isOverlay = false, isFullscreen = false 
       isOverlay={isOverlay}
       title="Pokedex"
       fullscreenable
-      className={`col-span-1 md:col-span-2 flex flex-col ${module.customHeight ? "" : "max-h-[calc(100vh-9.5rem)]"}`}
+      defaultTall
+      className="col-span-1 md:col-span-2"
       bodyClassName="flex min-h-0 flex-1 flex-col p-4"
     >
       {body}

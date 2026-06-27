@@ -170,8 +170,10 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
   // where `content` is a direct flex child of the fullscreen column.
   const content = (
     <div className={`p-3 ${isFullscreen ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
-        {/* Main Grid: Attacker | Controls | Defender */}
-        <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${isFullscreen ? "items-stretch" : "items-start"}`}>
+        {/* Main Grid: Attacker | Controls | Defender. Reflows on the module's own
+            width (container query), not the viewport — so a narrow-dragged module
+            stacks even on a big screen. */}
+        <div className={`grid grid-cols-1 @2xl:grid-cols-3 gap-4 ${isFullscreen ? "items-stretch" : "items-start"}`}>
           {/* Attacker Panel */}
           <div className="flex flex-col">
             <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
@@ -397,7 +399,7 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
   // FullscreenOverlay, so it doesn't go through ModuleShell.
   if (isFullscreen) {
     return (
-      <div data-module-root className="flex h-full flex-col overflow-hidden bg-surface">
+      <div data-module-root className="@container flex h-full flex-col overflow-hidden bg-surface">
         <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface-raised px-3 py-2">
           <div className="flex-1 text-sm font-medium text-fg">{title}</div>
           <button
@@ -432,8 +434,9 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
       isOverlay={isOverlay}
       title={title}
       fullscreenable
+      defaultTall
       className="col-span-1 md:col-span-2"
-      bodyClassName={module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}
+      bodyClassName="flex-1 min-h-0 overflow-y-auto"
     >
       {content}
     </ModuleShell>

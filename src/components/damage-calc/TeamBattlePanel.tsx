@@ -27,7 +27,7 @@ export function TeamBattlePanel({ moduleId, side, team, isAttackerSide }: Props)
   const loadedTeam = team.loadedFromTeamId ? savedTeams.find(t => t.id === team.loadedFromTeamId) : null;
 
   return (
-    <div className="h-full flex flex-col bg-slate-900">
+    <div className="@container h-full flex flex-col bg-slate-900">
       {/* Header */}
       <div className="flex items-center justify-between px-2 py-1.5 bg-slate-800 border-b border-slate-700 flex-shrink-0">
         <div className="flex items-center gap-2">

@@ -1311,7 +1311,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
           {/* Stats Table */}
           <div className="border border-slate-700 rounded overflow-hidden text-[11px]">
             {/* Header */}
-            <div className="grid grid-cols-[48px_32px_32px_40px_40px_32px] sm:grid-cols-[60px_36px_36px_44px_44px_36px] bg-slate-900/50 text-slate-400 uppercase">
+            <div className="grid grid-cols-[48px_32px_32px_40px_40px_32px] @md:grid-cols-[60px_36px_36px_44px_44px_36px] bg-slate-900/50 text-slate-400 uppercase">
               <div className="px-2 py-1"></div>
               <div className="px-1 py-1 text-center">Base</div>
               <div className="px-1 py-1 text-center">IVs</div>
@@ -1342,7 +1342,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               return (
                 <div
                   key={stat}
-                  className="grid grid-cols-[48px_32px_32px_40px_40px_32px] sm:grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700/50"
+                  className="grid grid-cols-[48px_32px_32px_40px_40px_32px] @md:grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700/50"
                 >
                   <div className={`px-2 py-1.5 font-medium ${
                     isIncreased ? "text-green-400" : isDecreased ? "text-red-400" : "text-slate-300"
@@ -1404,7 +1404,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               );
             })}
             {/* Total Row */}
-            <div className="grid grid-cols-[48px_32px_32px_40px_40px_32px] sm:grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700 bg-slate-900/30">
+            <div className="grid grid-cols-[48px_32px_32px_40px_40px_32px] @md:grid-cols-[60px_36px_36px_44px_44px_36px] border-t border-slate-700 bg-slate-900/30">
               <div className="px-2 py-1.5 text-slate-400 font-medium">Total</div>
               <div className="px-1 py-1.5 text-center text-slate-500">
                 {pokemon.stats.total}
