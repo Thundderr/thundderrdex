@@ -1,7 +1,8 @@
-import { pick, pickN } from "./random";
+import { pick, pickN, pickWeightedPair } from "./random";
 import { buildPokemon, getGen, speedBreakdown, toCalcSetup, type SpeedBreakdown } from "./calcEngine";
 import type { SmogonSet } from "@/hooks/useSmogonSets";
 import type { PoolEntry, SetPool } from "./setPool";
+import { usagePoolFromDataset } from "./usageBuilds";
 import {
   settingValue,
   type ModeSetting,
@@ -27,6 +28,15 @@ const MODS: SpeedMod[] = [
 
 const SETTINGS: ModeSetting[] = [
   {
+    key: "scenario",
+    label: "Matchups",
+    options: [
+      { id: "meta", label: "Meta-weighted" },
+      { id: "random", label: "Random" },
+    ],
+    default: "meta",
+  },
+  {
     key: "modifiers",
     label: "Modifiers",
     options: [
@@ -48,12 +58,21 @@ function line(name: string, b: SpeedBreakdown, mod: SpeedMod): string {
 export const speedMode: QuizMode = {
   id: "speed",
   title: "Speed Tiers",
-  blurb: "Call who moves first from real builds — the turn's most important read.",
-  needsSetPool: true,
+  blurb: "Call who moves first from real format builds — the turn's most important read.",
+  needsSetPool: false,
+  needsUsage: true,
   settings: SETTINGS,
-  generate(ctx: QuizContext, pool?: SetPool): QuizQuestion | null {
+  generate(ctx: QuizContext, poolArg?: SetPool): QuizQuestion | null {
+    // Prefer the selected format's real meta builds (level 50); fall back to a
+    // passed-in singles set pool (used by tests).
+    const pool = ctx.usage ? usagePoolFromDataset(ctx.usage) : poolArg;
     if (!pool || pool.length < 2) return null;
-    const [a, b] = pickN(ctx.rng, pool, 2) as [PoolEntry, PoolEntry];
+    // Meta-weighted by default: common mons face off proportionally to how often
+    // you'd actually see them. "Random" gives uniform pure-chance matchups.
+    const metaWeighted = settingValue(speedMode, ctx, "scenario") !== "random" && !!ctx.usage;
+    const [a, b] = metaWeighted
+      ? pickWeightedPair(ctx.rng, pool, pool.map((e) => e.usagePct ?? 1))
+      : (pickN(ctx.rng, pool, 2) as [PoolEntry, PoolEntry]);
     if (!a || !b) return null;
 
     const setA = pick(ctx.rng, a.sets) as SmogonSet;

@@ -2,10 +2,17 @@ import { typeEffMode } from "./typeEffMode";
 import { natureMode } from "./natureMode";
 import { speedMode } from "./speedMode";
 import { willItKoMode } from "./willItKoMode";
+import { metaBuildMode } from "./metaBuildMode";
 import type { QuizMode, TrainingModeId } from "./types";
 
 /** Display order in the Dojo lobby: recall first, then battle decision-making. */
-export const TRAINING_MODES: QuizMode[] = [typeEffMode, natureMode, speedMode, willItKoMode];
+export const TRAINING_MODES: QuizMode[] = [
+  typeEffMode,
+  natureMode,
+  speedMode,
+  willItKoMode,
+  metaBuildMode,
+];
 
 const MODE_BY_ID = new Map<string, QuizMode>(TRAINING_MODES.map((m) => [m.id, m]));
 

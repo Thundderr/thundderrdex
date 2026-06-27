@@ -4,6 +4,8 @@ import type { SmogonSet } from "@/hooks/useSmogonSets";
 export interface PoolEntry {
   species: string;
   sets: SmogonSet[];
+  /** Format usage % when the pool is built from usage data; absent for singles sets. */
+  usagePct?: number;
 }
 
 export type SetPool = PoolEntry[];

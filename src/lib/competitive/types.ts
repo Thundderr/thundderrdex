@@ -121,3 +121,32 @@ export interface UsageEntry {
   teammates: UsageOption[];
   spreads: SpreadOption[];
 }
+
+/**
+ * A `UsageEntry` with its option lists capped to the top-N (the shape the proxy
+ * route ships to the client). Adds the app kebab `species` id for convenience.
+ */
+export interface SlimUsageEntry extends UsageEntry {
+  /** App kebab-case species id, e.g. "urshifu-rapid-strike". */
+  species: string;
+}
+
+/** Per-list caps applied when slimming a chaos file for the client. */
+export interface UsageCaps {
+  abilities: number;
+  items: number;
+  moves: number;
+  tera: number;
+  teammates: number;
+  spreads: number;
+}
+
+/** The full normalized, slimmed dataset for one format/month — what the app consumes. */
+export interface UsageDataset {
+  smogonFormat: string;
+  month: string;
+  cutoff: number;
+  battles: number;
+  /** Entries sorted by usage descending. */
+  entries: SlimUsageEntry[];
+}

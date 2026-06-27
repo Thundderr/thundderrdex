@@ -39,6 +39,7 @@ const MODE_KEY_PREFIX: Record<string, string> = {
   nature: "nature:",
   speed: "speed:",
   "will-it-ko": "ko:",
+  "meta-build": "meta:",
 };
 
 function pruneRecords(records: Record<string, SrsRecord>): Record<string, SrsRecord> {

@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTrainingStore } from "@/stores/trainingStore";
+import { useCompetitiveFormatStore } from "@/stores/competitiveFormatStore";
 import { loadSetPool, type SetPool } from "@/lib/training/setPool";
+import { loadUsage } from "@/lib/competitive/smogonStats";
+import { getCompetitiveFormat } from "@/lib/competitive/formats";
+import type { UsageDataset } from "@/lib/competitive/types";
 import { TYPE_COLORS } from "@/data/typeChart";
 import type { QuizMode, QuizQuestion, ExplainLink, ReviewChip, RichSegment } from "@/lib/training";
 
@@ -25,14 +29,18 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
   const setModeSetting = useTrainingStore((s) => s.setModeSetting);
   const streak = useTrainingStore((s) => s.currentStreak[mode.id] ?? 0);
   const settings = useTrainingStore((s) => s.modeSettings[mode.id]);
+  const competitiveFormat = useCompetitiveFormatStore((s) => s.format);
 
-  const [phase, setPhase] = useState<Phase>(mode.needsSetPool ? "loading" : "ready");
+  const [phase, setPhase] = useState<Phase>(
+    mode.needsSetPool || mode.needsUsage ? "loading" : "ready"
+  );
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [seen, setSeen] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
 
   const poolRef = useRef<SetPool | null>(null);
+  const usageRef = useRef<UsageDataset | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Build the next question from the freshest SRS records + current settings.
@@ -42,6 +50,8 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
       records: useTrainingStore.getState().records,
       settings: useTrainingStore.getState().modeSettings[mode.id],
       rng: Math.random,
+      usage: usageRef.current ?? undefined,
+      hasTera: getCompetitiveFormat(competitiveFormat).hasTera,
     };
     for (let i = 0; i < MAX_GENERATE_TRIES; i++) {
       const q = mode.generate(ctx, poolRef.current ?? undefined);
@@ -52,9 +62,9 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
       }
     }
     return false;
-  }, [mode, generation]);
+  }, [mode, generation, competitiveFormat]);
 
-  // Session bootstrap: reset streak, load pool if needed, first question.
+  // Session bootstrap: reset streak, load any async data, first question.
   useEffect(() => {
     let cancelled = false;
     resetStreak(mode.id);
@@ -68,6 +78,23 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
           return;
         }
       }
+      if (mode.needsUsage) {
+        const usage = await loadUsage(competitiveFormat).catch(() => null);
+        if (cancelled) return;
+        usageRef.current = usage;
+        if (!usage || usage.entries.length === 0) {
+          setPhase("error");
+          return;
+        }
+      } else if (mode.prefersUsage) {
+        // Optional meta-weighting: load in the background so the mode starts
+        // instantly and upgrades to meta scenarios once the data lands.
+        loadUsage(competitiveFormat)
+          .then((u) => {
+            if (!cancelled) usageRef.current = u;
+          })
+          .catch(() => {});
+      }
       if (cancelled) return;
       setPhase(nextQuestion() ? "ready" : "error");
     }
@@ -76,7 +103,7 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode.id, generation]);
+  }, [mode.id, generation, competitiveFormat]);
 
   // Keep focus on the container so number/Enter shortcuts work without hijacking
   // global keys (and without clashing across multiple Dojo cards).
@@ -181,7 +208,11 @@ export function TrainingSession({ mode, generation, onExit, onExplain }: Props) 
         {phase === "loading" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-fg-muted">
             <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-accent" />
-            <p className="text-sm">Loading competitive sets…</p>
+            <p className="text-sm">
+              {mode.needsUsage
+                ? `Loading ${getCompetitiveFormat(competitiveFormat).label} usage…`
+                : "Loading competitive sets…"}
+            </p>
           </div>
         )}
 

@@ -10,8 +10,12 @@ import {
   parseSpreadKey,
   normalizeChaosEntry,
   toAppSpecies,
+  buildUsageDataset,
+  legalSpeciesFromUsage,
+  parseLatestStatsMonth,
+  previousMonth,
 } from "./sources";
-import type { SmogonChaosEntry } from "./types";
+import type { SmogonChaos, SmogonChaosEntry } from "./types";
 
 // Trimmed from the real gen9vgc2026regi-1760 Incineroar entry.
 const INCINEROAR: SmogonChaosEntry = {
@@ -105,5 +109,89 @@ describe("toAppSpecies", () => {
   it("kebab-cases Smogon display names", () => {
     expect(toAppSpecies("Urshifu-Rapid-Strike")).toBe("urshifu-rapid-strike");
     expect(toAppSpecies("Flutter Mane")).toBe("flutter-mane");
+  });
+});
+
+const LOW_USAGE: SmogonChaosEntry = {
+  "Raw count": 1000,
+  "Viability Ceiling": [100, 80, 70, 60],
+  usage: 0.05,
+  Abilities: { levitate: 100 },
+  Items: { leftovers: 100 },
+  Spreads: { "Bold:252/0/252/0/4/0": 100 },
+  Moves: { protect: 100, recover: 100, toxic: 100 },
+  "Tera Types": { steel: 100 },
+  Teammates: { Incineroar: 50 },
+  "Checks and Counters": [],
+};
+
+const CHAOS: SmogonChaos = {
+  info: {
+    metagame: "gen9vgc2026regi",
+    cutoff: 1760,
+    "cutoff deviation": 0,
+    "team type": null,
+    "number of battles": 236315,
+  },
+  data: { Incineroar: INCINEROAR, Bronzong: LOW_USAGE },
+};
+
+describe("buildUsageDataset", () => {
+  it("normalises, sorts by usage desc, and carries metadata", () => {
+    const ds = buildUsageDataset(CHAOS, { month: "2026-05" });
+    expect(ds.smogonFormat).toBe("gen9vgc2026regi");
+    expect(ds.month).toBe("2026-05");
+    expect(ds.cutoff).toBe(1760);
+    expect(ds.battles).toBe(236315);
+    // Incineroar (39.9%) sorts before Bronzong (5%).
+    expect(ds.entries.map((e) => e.name)).toEqual(["Incineroar", "Bronzong"]);
+    expect(ds.entries[0].species).toBe("incineroar");
+    expect(ds.entries[0].usagePct).toBeCloseTo(39.87, 1);
+  });
+
+  it("caps each option list to the requested length", () => {
+    const ds = buildUsageDataset(CHAOS, {
+      month: "2026-05",
+      caps: { abilities: 1, items: 1, moves: 2, tera: 1, teammates: 1, spreads: 1 },
+    });
+    const inc = ds.entries[0];
+    expect(inc.moves).toHaveLength(2);
+    expect(inc.items).toHaveLength(1);
+    // Still the highest-usage options after capping.
+    expect(inc.moves[0].name).toBe("fakeout");
+  });
+});
+
+describe("parseLatestStatsMonth", () => {
+  it("returns the newest YYYY-MM folder from index HTML", () => {
+    const html = `
+      <a href="2025-12/">2025-12/</a>
+      <a href="2026-05/">2026-05/</a>
+      <a href="2026-04/">2026-04/</a>
+    `;
+    expect(parseLatestStatsMonth(html)).toBe("2026-05");
+  });
+
+  it("returns null when no month folders are present", () => {
+    expect(parseLatestStatsMonth("<a href='formats/'>formats</a>")).toBeNull();
+  });
+});
+
+describe("previousMonth", () => {
+  it("steps back a month, rolling over the year", () => {
+    expect(previousMonth("2026-05")).toBe("2026-04");
+    expect(previousMonth("2026-01")).toBe("2025-12");
+    expect(previousMonth("2026-10")).toBe("2026-09");
+  });
+});
+
+describe("legalSpeciesFromUsage", () => {
+  it("returns the set of in-format species (kebab ids)", () => {
+    const ds = buildUsageDataset(CHAOS, { month: "2026-05" });
+    const legal = legalSpeciesFromUsage(ds);
+    expect(legal.has("incineroar")).toBe(true);
+    expect(legal.has("bronzong")).toBe(true);
+    expect(legal.has("pikachu")).toBe(false);
+    expect(legal.size).toBe(2);
   });
 });

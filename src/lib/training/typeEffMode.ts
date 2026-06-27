@@ -6,6 +6,8 @@ import {
   type TypeEffectiveness,
 } from "@/data/typeChart";
 import { pickWeightedKey } from "./srs";
+import { pickWeighted } from "./random";
+import { metaTypeDistributions } from "./metaScenario";
 import { settingValue, type ModeSetting, type QuizContext, type QuizMode, type QuizQuestion, type ReviewSection, type RichSegment } from "./types";
 
 type GenChart = Record<PokemonTypeName, TypeEffectiveness>;
@@ -95,6 +97,15 @@ function multLabel(value: number): string {
 
 const SETTINGS: ModeSetting[] = [
   {
+    key: "scenario",
+    label: "Scenarios",
+    options: [
+      { id: "meta", label: "Meta-weighted" },
+      { id: "random", label: "Random" },
+    ],
+    default: "meta",
+  },
+  {
     key: "defender",
     label: "Defender",
     options: [
@@ -149,64 +160,101 @@ function buildReview(
   return sections;
 }
 
+/** Build the question for a chosen attacker type vs a defending typing. */
+function buildQuestion(chart: GenChart, atk: PokemonTypeName, defTypes: PokemonTypeName[]): QuizQuestion {
+  const mult = typeMultiplier(chart, atk, defTypes);
+  const correct = SCALE.find((s) => s.value === mult) ?? SCALE[3];
+  const defLabel = defTypes.map(cap).join(" / ");
+
+  // A single type can only ever be 0/½/1/2×; ¼× and 4× need a second type, so
+  // drop those impossible options when the defender is mono-type.
+  const scale = defTypes.length === 1 ? SCALE.filter((s) => s.value !== 0.25 && s.value !== 4) : SCALE;
+
+  // One plain line per defending type, so a dual matchup reads as two distinct
+  // facts ("Ghost is 2× against Ghost." / "Ghost is 1× against Grass.").
+  const explanation = defTypes
+    .map((d) => `${cap(atk)} is ${multLabel(singleMultiplier(chart, atk, d))} against ${cap(d)}.`)
+    .join("\n");
+  const explanationLines: RichSegment[][] = defTypes.map((d) => [
+    { type: atk },
+    ` is ${multLabel(singleMultiplier(chart, atk, d))} against `,
+    { type: d },
+    ".",
+  ]);
+
+  // Coloured prompt: [Atk] → [Def1] / [Def2]
+  const promptRich: RichSegment[] = [{ type: atk }, " → "];
+  defTypes.forEach((d, i) => {
+    if (i > 0) promptRich.push(" / ");
+    promptRich.push({ type: d });
+  });
+
+  return {
+    modeId: "type-eff",
+    srsKey: typeEffKey(atk, defTypes),
+    prompt: `${cap(atk)} → ${defLabel}`,
+    promptRich,
+    choices: scale.map((s) => ({ id: String(s.value), label: s.short })),
+    choiceLayout: "row",
+    correctChoiceId: String(correct.value),
+    explanation,
+    explanationLines,
+    review: buildReview(chart, atk, defTypes),
+    explainLink: { kind: "type-chart", label: "Open Type Chart", attackingType: atk },
+  };
+}
+
+/**
+ * Meta-weighted selection: a defending typing sampled by how often you face it,
+ * and an attacking type sampled by damaging-move usage — both restricted to types
+ * that exist in the chosen generation's chart. Returns null when usage is absent
+ * or the filters leave nothing (caller falls back to random).
+ */
+function metaSelect(
+  ctx: QuizContext,
+  chart: GenChart,
+  kind: DefenderKind
+): { atk: PokemonTypeName; defTypes: PokemonTypeName[] } | null {
+  if (!ctx.usage) return null;
+  const dists = metaTypeDistributions(ctx.usage);
+  const inChart = (t: PokemonTypeName) => !!chart[t];
+
+  let defenders = dists.defenders.filter((d) => d.types.every(inChart));
+  if (kind === "mono") defenders = defenders.filter((d) => d.types.length === 1);
+  else if (kind === "dual") defenders = defenders.filter((d) => d.types.length === 2);
+  const attackers = dists.attackers.filter((a) => inChart(a.type));
+  if (defenders.length === 0 || attackers.length === 0) return null;
+
+  const def = pickWeighted(ctx.rng, defenders, defenders.map((d) => d.weight));
+  const atk = pickWeighted(ctx.rng, attackers, attackers.map((a) => a.weight)).type;
+  return { atk, defTypes: [...new Set(def.types)] as PokemonTypeName[] };
+}
+
 export const typeEffMode: QuizMode = {
   id: "type-eff",
   title: "Type Effectiveness",
   blurb: "Read attacker-vs-defender matchups instantly — the #1 battle fundamental.",
   needsSetPool: false,
+  prefersUsage: true,
   settings: SETTINGS,
   generate(ctx: QuizContext): QuizQuestion | null {
     const chart = getTypeChartForGeneration(ctx.generation);
     const kind = settingValue(typeEffMode, ctx, "defender") as DefenderKind;
-    const key = pickWeightedKey(cachedUniverse(ctx.generation, kind), ctx.records, ctx.rng);
-    if (!key) return null;
-    const parsed = parseKey(key);
-    if (!parsed) return null;
-    const { atk, defTypes } = parsed;
 
-    const mult = typeMultiplier(chart, atk, defTypes);
-    const correct = SCALE.find((s) => s.value === mult) ?? SCALE[3];
-    const defLabel = defTypes.map(cap).join(" / ");
+    // Meta-weighted scenarios by default (representative of real matchups);
+    // "Random" — and the fallback before usage loads — sweeps all matchups,
+    // SRS-weighted toward what you've missed.
+    let sel: { atk: PokemonTypeName; defTypes: PokemonTypeName[] } | null = null;
+    if (settingValue(typeEffMode, ctx, "scenario") !== "random") {
+      sel = metaSelect(ctx, chart, kind);
+    }
+    if (!sel) {
+      const key = pickWeightedKey(cachedUniverse(ctx.generation, kind), ctx.records, ctx.rng);
+      const parsed = key ? parseKey(key) : null;
+      if (!parsed) return null;
+      sel = parsed;
+    }
 
-    // A single type can only ever be 0/½/1/2×; ¼× and 4× need a second type, so
-    // drop those impossible options when the defender is mono-type.
-    const scale = defTypes.length === 1
-      ? SCALE.filter((s) => s.value !== 0.25 && s.value !== 4)
-      : SCALE;
-
-    // One plain line per defending type, so a dual matchup reads as two distinct
-    // facts ("Ghost is 2× against Ghost." / "Ghost is 1× against Grass.") rather
-    // than a combined "Ghost/Grass" statement. The rich variants colour the type
-    // names with their type backgrounds.
-    const explanation = defTypes
-      .map((d) => `${cap(atk)} is ${multLabel(singleMultiplier(chart, atk, d))} against ${cap(d)}.`)
-      .join("\n");
-    const explanationLines: RichSegment[][] = defTypes.map((d) => [
-      { type: atk },
-      ` is ${multLabel(singleMultiplier(chart, atk, d))} against `,
-      { type: d },
-      ".",
-    ]);
-
-    // Coloured prompt: [Atk] → [Def1] / [Def2]
-    const promptRich: RichSegment[] = [{ type: atk }, " → "];
-    defTypes.forEach((d, i) => {
-      if (i > 0) promptRich.push(" / ");
-      promptRich.push({ type: d });
-    });
-
-    return {
-      modeId: "type-eff",
-      srsKey: key,
-      prompt: `${cap(atk)} → ${defLabel}`,
-      promptRich,
-      choices: scale.map((s) => ({ id: String(s.value), label: s.short })),
-      choiceLayout: "row",
-      correctChoiceId: String(correct.value),
-      explanation,
-      explanationLines,
-      review: buildReview(chart, atk, defTypes),
-      explainLink: { kind: "type-chart", label: "Open Type Chart", attackingType: atk },
-    };
+    return buildQuestion(chart, sel.atk, sel.defTypes);
   },
 };

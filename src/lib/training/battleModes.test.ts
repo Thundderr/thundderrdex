@@ -3,6 +3,7 @@ import { speedMode } from "./speedMode";
 import { willItKoMode } from "./willItKoMode";
 import { KO_BUCKETS } from "./calcEngine";
 import type { SetPool } from "./setPool";
+import type { UsageDataset, SlimUsageEntry } from "@/lib/competitive/types";
 
 // Deterministic PRNG.
 function mulberry32(seed: number): () => number {
@@ -125,5 +126,64 @@ describe("willItKoMode.generate (integration)", () => {
 
   it("returns null when the pool is too small", () => {
     expect(willItKoMode.generate(baseCtx, [POOL[0]])).toBeNull();
+  });
+});
+
+// --- usage-driven path (the upgrade): build from real format meta ----------
+
+function usageEntry(
+  name: string,
+  items: string[],
+  moves: string[],
+  nature: string,
+  evs: SlimUsageEntry["spreads"][number]["evs"]
+): SlimUsageEntry {
+  return {
+    name,
+    species: name.toLowerCase(),
+    usagePct: 30,
+    rawCount: 1000,
+    abilities: [{ name: "intimidate", pct: 100 }],
+    items: items.map((id, i) => ({ name: id, pct: 60 - i * 10 })),
+    moves: moves.map((id, i) => ({ name: id, pct: 95 - i * 5 })),
+    tera: [],
+    teammates: [],
+    spreads: [{ nature, evs, pct: 50 }],
+  };
+}
+
+const USAGE: UsageDataset = {
+  smogonFormat: "gen9vgc2026regi",
+  month: "2026-05",
+  cutoff: 1760,
+  battles: 100000,
+  entries: [
+    usageEntry("Garchomp", ["choicescarf"], ["earthquake", "dragonclaw", "rockslide", "protect"], "Jolly", { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 }),
+    usageEntry("Dragapult", ["choicespecs"], ["dracometeor", "shadowball", "uturn", "protect"], "Timid", { hp: 4, atk: 0, def: 0, spa: 252, spd: 0, spe: 252 }),
+    usageEntry("Corviknight", ["leftovers"], ["bravebird", "bodypress", "roost", "protect"], "Impish", { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 }),
+  ],
+};
+
+describe("battle modes — usage path (ctx.usage)", () => {
+  it("speedMode builds level-50 meta builds from the usage dataset", () => {
+    for (let i = 0; i < 40; i++) {
+      const q = speedMode.generate({ ...baseCtx, rng: mulberry32(i + 1), usage: USAGE });
+      expect(q).not.toBeNull();
+      if (!q) continue;
+      expect(q.choices.map((c) => c.id)).toContain(q.correctChoiceId);
+      expect(q.explainLink?.kind).toBe("damage-calc");
+      // Deep-link reflects VGC level 50.
+      if (q.explainLink?.kind === "damage-calc") expect(q.explainLink.attacker.level).toBe(50);
+    }
+  });
+
+  it("willItKoMode builds a KO question from the usage dataset", () => {
+    for (let i = 0; i < 40; i++) {
+      const q = willItKoMode.generate({ ...baseCtx, rng: mulberry32(i + 1), usage: USAGE });
+      expect(q).not.toBeNull();
+      if (!q) continue;
+      expect(KO_BUCKETS).toContain(q.correctChoiceId);
+      if (q.explainLink?.kind === "damage-calc") expect(q.explainLink.defender.level).toBe(50);
+    }
   });
 });

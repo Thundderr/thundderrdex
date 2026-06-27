@@ -7,20 +7,48 @@
  */
 
 import type {
+  SmogonChaos,
   SmogonChaosEntry,
+  SlimUsageEntry,
   SpreadOption,
   StatsCutoff,
+  UsageCaps,
+  UsageDataset,
   UsageEntry,
   UsageOption,
   WeightedCounts,
 } from "./types";
 
-/** Latest published Smogon stats month (YYYY-MM). Bump when a new month lands. */
+/**
+ * Fallback floor for the Smogon stats month (YYYY-MM). The route resolves the
+ * real latest month from the live index daily; this is only used if that fetch
+ * fails. Safe to bump occasionally but no longer required for freshness.
+ */
 export const LATEST_STATS_MONTH = "2026-05";
 
 // --- Smogon usage stats URLs ----------------------------------------------
 
 const SMOGON_STATS_BASE = "https://www.smogon.com/stats";
+
+/** The stats directory index (lists every published YYYY-MM month folder). */
+export function smogonStatsIndexUrl(): string {
+  return `${SMOGON_STATS_BASE}/`;
+}
+
+/** Parse the latest YYYY-MM month folder from the Smogon stats index HTML. */
+export function parseLatestStatsMonth(html: string): string | null {
+  const months = html.match(/\d{4}-\d{2}(?=\/)/g);
+  if (!months || months.length === 0) return null;
+  // YYYY-MM sorts lexicographically, so the max string is the newest month.
+  return months.reduce((a, b) => (b > a ? b : a));
+}
+
+/** The month before a YYYY-MM (for falling back when a month isn't published yet). */
+export function previousMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  if (!y || !m) return month;
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
 
 /** Full structured chaos JSON (large: 2–7 MB). */
 export function smogonChaosUrl(format: string, cutoff: StatsCutoff = 1760, month = LATEST_STATS_MONTH): string {
@@ -126,4 +154,61 @@ export function normalizeChaosEntry(name: string, entry: SmogonChaosEntry): Usag
 /** Smogon display species ("Urshifu-Rapid-Strike") → app kebab id. */
 export function toAppSpecies(name: string): string {
   return name.toLowerCase().replace(/[\s_]+/g, "-");
+}
+
+/**
+ * Per-list caps when slimming a chaos file for the client. Keeps the proxied
+ * payload small (~150 KB for ~270 mons) while retaining the meaningful options.
+ */
+export const DEFAULT_USAGE_CAPS: UsageCaps = {
+  abilities: 4,
+  items: 6,
+  moves: 8,
+  tera: 6,
+  teammates: 8,
+  spreads: 8,
+};
+
+function slimEntry(name: string, entry: SmogonChaosEntry, caps: UsageCaps): SlimUsageEntry {
+  const full = normalizeChaosEntry(name, entry);
+  return {
+    ...full,
+    species: toAppSpecies(name),
+    abilities: full.abilities.slice(0, caps.abilities),
+    items: full.items.slice(0, caps.items),
+    moves: full.moves.slice(0, caps.moves),
+    tera: full.tera.slice(0, caps.tera),
+    teammates: full.teammates.slice(0, caps.teammates),
+    spreads: full.spreads.slice(0, caps.spreads),
+  };
+}
+
+/**
+ * Turn a raw Smogon chaos file into the app-facing, slimmed `UsageDataset`
+ * (normalised to %, option lists capped, entries sorted by usage desc). Pure —
+ * the proxy route runs this server-side before shipping to the client.
+ */
+export function buildUsageDataset(
+  chaos: SmogonChaos,
+  opts: { month: string; caps?: UsageCaps }
+): UsageDataset {
+  const caps = opts.caps ?? DEFAULT_USAGE_CAPS;
+  const entries = Object.entries(chaos.data)
+    .map(([name, entry]) => slimEntry(name, entry, caps))
+    .sort((a, b) => b.usagePct - a.usagePct);
+  return {
+    smogonFormat: chaos.info.metagame,
+    month: opts.month,
+    cutoff: chaos.info.cutoff,
+    battles: chaos.info["number of battles"],
+    entries,
+  };
+}
+
+/**
+ * The set of legal/played species in a format, derived from its usage data
+ * (every Pokémon in the dataset is in-format). App kebab ids.
+ */
+export function legalSpeciesFromUsage(dataset: UsageDataset): Set<string> {
+  return new Set(dataset.entries.map((e) => e.species));
 }

@@ -1,4 +1,4 @@
-import { pick, pickN, shuffle } from "./random";
+import { pick, pickN, pickWeightedPair, shuffle } from "./random";
 import {
   buildPokemon,
   computeKo,
@@ -10,6 +10,7 @@ import {
 } from "./calcEngine";
 import type { SmogonSet } from "@/hooks/useSmogonSets";
 import type { PoolEntry, SetPool } from "./setPool";
+import { usagePoolFromDataset } from "./usageBuilds";
 import {
   settingValue,
   type ModeSetting,
@@ -19,6 +20,15 @@ import {
 } from "./types";
 
 const SETTINGS: ModeSetting[] = [
+  {
+    key: "scenario",
+    label: "Matchups",
+    options: [
+      { id: "meta", label: "Meta-weighted" },
+      { id: "random", label: "Random" },
+    ],
+    default: "meta",
+  },
   {
     key: "move",
     label: "Move",
@@ -33,12 +43,21 @@ const SETTINGS: ModeSetting[] = [
 export const willItKoMode: QuizMode = {
   id: "will-it-ko",
   title: "Will It KO?",
-  blurb: "Predict OHKO/2HKO/3HKO from real sets — calc-in-your-head training.",
-  needsSetPool: true,
+  blurb: "Predict OHKO/2HKO/3HKO from real format builds — calc-in-your-head training.",
+  needsSetPool: false,
+  needsUsage: true,
   settings: SETTINGS,
-  generate(ctx: QuizContext, pool?: SetPool): QuizQuestion | null {
+  generate(ctx: QuizContext, poolArg?: SetPool): QuizQuestion | null {
+    // Prefer the selected format's real meta builds (level 50); fall back to a
+    // passed-in singles set pool (used by tests).
+    const pool = ctx.usage ? usagePoolFromDataset(ctx.usage) : poolArg;
     if (!pool || pool.length < 2) return null;
-    const [atk, def] = pickN(ctx.rng, pool, 2) as [PoolEntry, PoolEntry];
+    // Meta-weighted by default so the attacker/defender pairs reflect mons you
+    // actually face; "Random" gives uniform pure-chance matchups.
+    const metaWeighted = settingValue(willItKoMode, ctx, "scenario") !== "random" && !!ctx.usage;
+    const [atk, def] = metaWeighted
+      ? pickWeightedPair(ctx.rng, pool, pool.map((e) => e.usagePct ?? 1))
+      : (pickN(ctx.rng, pool, 2) as [PoolEntry, PoolEntry]);
     if (!atk || !def) return null;
 
     const gen = getGen(ctx.generation);
@@ -82,9 +101,9 @@ export const willItKoMode: QuizMode = {
         KO_BUCKETS.map((b) => ({ id: b, label: b }))
       ),
       correctChoiceId: chosen.ko.bucket,
-      explanation: `${chosen.move} is a guaranteed ${chosen.ko.bucket}${
-        chosen.ko.koText ? ` (${chosen.ko.koText})` : ""
-      }.`,
+      // Headline = the guaranteed (worst-roll) bucket; the exact KO chance and
+      // roll-dependent nuance live in the breakdown ("KO chance: …").
+      explanation: `${chosen.move} is a guaranteed ${chosen.ko.bucket} on ${def.species}.`,
       breakdown,
       explainLink: {
         kind: "damage-calc",

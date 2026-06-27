@@ -2,9 +2,10 @@ import { ModuleType } from "@/types/module";
 import { PokemonTypeName } from "@/types/pokemon";
 import type { SrsRecord } from "./srs";
 import type { SetPool } from "./setPool";
+import type { UsageDataset } from "@/lib/competitive/types";
 
 /** Canonical id for each quiz mode in the Training Dojo. */
-export type TrainingModeId = "type-eff" | "nature" | "speed" | "will-it-ko";
+export type TrainingModeId = "type-eff" | "nature" | "speed" | "will-it-ko" | "meta-build";
 
 export interface QuizChoice {
   /** Stable identifier compared against the question's correct answer. */
@@ -101,6 +102,10 @@ export interface QuizContext {
   rng: () => number;
   /** Selected option id per setting key; modes fall back to their defaults. */
   settings?: Record<string, string>;
+  /** Competitive usage dataset for the selected format (for `needsUsage` modes). */
+  usage?: UsageDataset;
+  /** Whether the selected competitive format has Terastallization. */
+  hasTera?: boolean;
 }
 
 /**
@@ -113,6 +118,14 @@ export interface QuizMode {
   blurb: string;
   /** True when the mode needs the async Smogon set pool before it can run. */
   needsSetPool: boolean;
+  /** True when the mode needs the competitive usage dataset (ctx.usage). */
+  needsUsage?: boolean;
+  /**
+   * True when the mode can *optionally* use usage data (e.g. a meta-weighted
+   * scenario) but works without it. The session background-loads usage for these
+   * so the mode starts instantly and upgrades once data arrives.
+   */
+  prefersUsage?: boolean;
   /** Practice toggles surfaced in the session header. */
   settings?: ModeSetting[];
   /**

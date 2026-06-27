@@ -9,6 +9,8 @@ import { useTrainingStore } from "@/stores/trainingStore";
 import { TRAINING_MODES, getMode, type ExplainLink, type CalcSetup } from "@/lib/training";
 import { accuracyPct, emptyModeStats } from "@/lib/training/srs";
 import { TrainingSession } from "./TrainingSession";
+import { CompetitiveFormatSelector } from "@/components/competitive/CompetitiveFormatSelector";
+import { FormatMetaPeek } from "@/components/competitive/FormatMetaPeek";
 
 interface Props {
   module: TrainingModuleType;
@@ -103,6 +105,18 @@ export function TrainingModule({ module, isOverlay = false }: Props) {
             <span className="font-medium text-fg">Generation {generation}</span> and resurface what
             you miss most.
           </p>
+
+          {/* Competitive format — gates the real-meta data for upcoming drills. */}
+          <div className="mb-3 rounded-lg border border-line bg-surface-raised p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-fg-subtle">
+                Competitive format
+              </span>
+              <CompetitiveFormatSelector />
+            </div>
+            <FormatMetaPeek />
+          </div>
+
           <ul className="flex flex-col gap-2">
             {TRAINING_MODES.map((mode) => {
               const stats = modeStats[mode.id] ?? emptyModeStats();

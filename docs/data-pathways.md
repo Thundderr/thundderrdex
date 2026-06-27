@@ -24,6 +24,44 @@ off a `competitiveFormat`, separate from the existing generation selector.
 
 We're targeting **both**, switchable.
 
+### Why they diverge (and why the data still shares one pipeline)
+
+**VGC** is the official circuit for the *mainline* games (Scarlet/Violet today) —
+Regionals → Worlds. **Pokémon Champions** is a *separate, dedicated* competitive
+battling game with its own regulation track. Both inherit the VGC format
+conventions (**Gen 9 mechanics, level 50, doubles, bring 6 / pick 4**), which is
+why our code treats them as gen-9 siblings — but the *contents* fork:
+
+| Axis | VGC Reg I | Champions Reg M-A | Seen in data as |
+|---|---|---|---|
+| Roster | full National Dex | curated pool (~242 mons) | different species keys |
+| Restricted legendaries | yes (≤2) | none | VGC keys incl. Miraidon, Calyrex-* |
+| Mega Evolutions | none (Gen 9) | reintroduced | Champions keys incl. `Charizard-Mega-Y`, `Floette-Mega` |
+| **Terastallization** | **yes** | **no** | Champions `Tera Types: {"nothing"}` |
+| Ladder volume | ~236k battles/mo | ~3.36M battles/mo | `info["number of battles"]` |
+
+The key plumbing fact: **both formats are laddered on Pokémon Showdown**, so the
+*same* sources serve both — the divergence is encoded in the data, not in
+separate feeds:
+
+```
+Pokémon Showdown ladder (runs gen9vgc2026regi AND gen9championsvgc2026regma)
+   └─ Smogon monthly aggregate → chaos JSON   (primary; same parser, divergent contents)
+        ├─ Pikalytics  (re-aggregates; clean %, win rate, cores)
+        └─ Limitless   (real tournaments — VGC events AND Champions events, tagged by format)
+```
+
+So switching format = swapping the format id in the same URL; everything else is
+identical. Naming gotcha: `gen9championsvgc2026regma` says both "gen9" and "vgc"
+even though it's the Champions game — Showdown namespaces under gen-9 mechanics
+and "vgc" denotes the doubles ruleset; the `champions` infix marks the game/roster.
+
+**Where the fork bites us:** Champions' *new invented* Megas (e.g. `Floette-Mega`)
+aren't in `@smogon/calc`/`@pkmn/dex` (verified: `Floette-Mega` throws, while the
+real `Charizard-Mega-Y` builds). Battle modes skip the unbuildable ones; Reg I is
+unaffected. We model the rest of the divergence in `formats.ts` (`hasTera`,
+`smogonFormat`, …) and derive legality per-format from the usage keys.
+
 ---
 
 ## 1. Smogon usage statistics — the backbone (free, no key)
@@ -230,6 +268,100 @@ legality (e.g. a "is this legal" quiz) later.
 
 ---
 
+## 6b. Deep dive — additional sources (verified June 2026)
+
+Beyond the tier-1 feeds above, these are worth knowing. Two are game-changers
+(★): the Showdown Replay API (real games → decision-making training) and
+`@pkmn/dex` (battle-accurate data we *already* have installed).
+
+### ★ Pokémon Showdown Replay API — real games (free, CORS `*`)
+The decision-making goldmine: millions of real ladder games, including our exact
+formats, as parseable battle logs.
+```
+GET https://replay.pokemonshowdown.com/search.json?format=<id>[&user=<name>][&before=<uploadtime>]
+    → [{ uploadtime, id, format, players[2], rating, private, password }]   (51/page; paginate via `before`)
+GET https://replay.pokemonshowdown.com/<id>.json
+    → { id, formatid, format, players, rating, uploadtime, views, log }
+```
+- Verified live for `gen9vgc2026regi` (format shows "[Gen 9] VGC 2026 Reg I").
+- `log` is the PS battle protocol (text): `|gametype|doubles`, `|player|…`,
+  `|rule|…`, then per-turn `|move|`, `|switch|`, `|-damage|`, `|turn|N`, etc. —
+  parseable into turn-by-turn states for "what's the best play here?" puzzles.
+- Each replay carries a `rating` → filter for high-ELO games client-side.
+- `inputlog` exists only for random-team formats (not VGC); for VGC we reconstruct
+  decisions from the `log`. Parsers exist (e.g. `@pkmn/sim` BattleStream, or
+  community `showdown-parser`).
+- Full endpoint reference: smogon/pokemon-showdown-client `WEB-API.md` (also covers
+  ladder ratings). Bulk historical dataset: HuggingFace `jakegrigsby/metamon-parsed-replays`.
+
+### ★ `@pkmn/dex` — battle-accurate data, already installed (offline, instant)
+We already depend on `@pkmn/dex` (currently unused). It wraps Showdown's data, so
+it replaces most PokéAPI fan-out for *battle-relevant* fields:
+- `Dex.forGen(9).species.get("Garchomp")` → `num`, `types`, `baseStats` (all 6),
+  `abilities` ({0,1,H}), `tier` ("UUBL"), `doublesTier` ("DUU"), `isNonstandard`,
+  `baseSpecies`, `prevo`, `evos`, `requiredItem`, weight, etc.
+- `.moves.get()` → basePower, type, category, accuracy, pp, priority, flags, desc.
+- `.items.get()` / `.abilities.get()` → name + description.
+- `.learnsets`, `.types` (type chart), `.natures` also available.
+- **No fetch, no rate limits, no kebab fan-out.** Trade-off vs PokéAPI: no sprites,
+  no flavor text / Pokédex entries, no encounter/location data, no past-gen type
+  history beyond what Showdown encodes. So: use `@pkmn/dex` for battle math/stats,
+  keep PokéAPI for sprites/dex/encounters.
+- Legality signal: `tier`/`doublesTier` of `AG`/`Uber`/`DUber` ≈ restricted-class
+  (Miraidon = `AG`/`DUber`) — a useful heuristic, but **not** VGC-reg legality.
+- **All 9 gens, but mind the gating:** `Dex.forGen(n)` applies *gen-accurate
+  values* (types e.g. Clefable Normal→Fairy in g6; move BP/acc e.g. Tackle 35→50→40;
+  type chart e.g. Ghost→Steel resisted pre-g6; ability/item/move effects). BUT it
+  does **not** restrict the roster — in `forGen(1)`, Garchomp/Intimidate still
+  `exists` (species/move counts are identical across gens). Each entry carries a
+  `.gen` (introduction gen: `Garchomp.gen=4`, `Tera Blast.gen=9`), so gate
+  availability yourself via `.gen <= targetGen` (or the app's existing ID-range gating).
+
+### Raw Showdown data files (if we ever want them without `@pkmn/dex`)
+`https://play.pokemonshowdown.com/data/` (CORS `*`, updated ~monthly):
+`pokedex.json` (1517 entries), `moves.json`, `learnsets.json` are **JSON**;
+`abilities`, `items`, `formats-data`, `formats`, `typechart` ship as **`.js`** only.
+`/data/sets/` has singles tiers (`gen9ou.json`) but **no Gen 9 VGC** (404) — same
+gap as `@smogon/sets`; keep using `data.pkmn.cc/sets` for those.
+
+### Tournament standings / team lists (alternatives to Limitless)
+| Source | What | Access |
+|---|---|---|
+| **Limitless VGC** (§3) | standings + full decklists + records | clean JSON API (our pick) |
+| **RK9.gg** | official regionals/IC/Worlds pairings, standings, teamsheets | HTML only → scrape (tools: `pokescraper`, `JulienGitHub/Standings`, `mikewVGC/vgc-standings`) |
+| **pokedata.ovh** | community VGC standings | JS app; per-event JSON exists but endpoint undocumented (needs digging) |
+| **LabMaus** (labmaus.net) | top-cut team usage + matchup data; powers VS Recorder | web app; API unverified |
+| **VS Recorder** (vsrecorder.app) | replay analysis / team planning (sources LabMaus) | consumer app, not an API |
+
+### Ruled out / dead ends
+- **Trainer Hill** — Pokémon **TCG** only, not VGC.
+- **Showdown `/data/sets/` for Gen 9 VGC** — 404 (use `data.pkmn.cc/sets`).
+- **`@pkmn/sim`** — too stale for 2026 formats (see §8 decision 4).
+
+### Updated recommended stack (with the new finds)
+- **Battle data** (base stats, types, abilities, moves, items, learnsets, type chart)
+  → **`@pkmn/dex`** (already installed) instead of PokéAPI fan-out.
+- **Sprites / Pokédex flavor / encounters** → PokéAPI (unchanged).
+- **Usage + spreads** → Smogon chaos (§1). **Win rates + real teams** → Limitless (§3).
+- **Decision-making content** → Showdown Replay API (real games).
+- **Curated named sets** → `@smogon/sets` + `data.pkmn.cc/sets`.
+
+## 6c. Timeframe: monthly, consistently
+
+We standardised on **one timeframe everywhere: the monthly Smogon feed.** Usage,
+spreads, meta-weighting (type matchups), Meta Builds, and the Speed/KO upgrades
+all read the same monthly `UsageDataset`. No mixed windows.
+
+Freshness is handled by the proxy route, not a cron or DB: `/api/usage/[format]`
+re-resolves the latest published month daily (ISR `revalidate`), caches the chaos
+per-month, and serves every user from that shared server cache — so it's
+"globally controlled by our backend, not fetched per-user" for $0 (§8).
+
+A true *sliding sub-monthly* window would require aggregating Showdown replays
+ourselves (the only daily-timestamped source; usage/leads but no EV spreads, and
+viable only for high-activity formats like Champions). We considered it (§6b lists
+replays as a source) but deferred it in favour of monthly consistency.
+
 ## 7. PokéAPI — how the app already consumes it
 
 Base: `https://pokeapi.co/api/v2` (`src/lib/pokeapi/client.ts`). Server-side
@@ -302,18 +434,45 @@ src/lib/competitive/
   pikalytics.ts  // fetch/parse /ai markdown (later)
 ```
 
-- **Caching:** chaos JSON is multi-MB → fetch once per format per session, persist
-  in IndexedDB keyed by `<format>:<month>` (immutable once published). Consider
-  using the 85 KB `moveset/*.txt` instead of chaos to cut transfer ~30–90×.
+- **Caching / daily refresh (implemented):** the `/api/usage/[format]` route
+  re-runs daily (`revalidate=86400`) and resolves the newest month from the
+  Smogon stats *index* (small ~17 KB HTML, cached daily) via `parseLatestStatsMonth`.
+  The heavy chaos file is cached **per-month** (`revalidate` ~30 days) since a
+  published month is immutable, so the 2–7 MB download happens only when the month
+  actually flips — not daily. If the newest month doesn't carry a format yet, the
+  route falls back to `previousMonth`. Net daily cost: one tiny index fetch +
+  the slim recompute; clients cache the result a day (`s-maxage=86400`) and persist
+  it in IndexedDB. Optional further saving: swap chaos for the 85 KB `moveset/*.txt`.
 - **Normalisation:** convert weighted counts to an app-facing `UsageEntry`
   (`usage`, `moves[]`, `items[]`, `spreads[]`, `tera[]`, `teammates[]` as `{name, pct}`)
   at parse time so the rest of the app never sees raw counts.
 - **Format-awareness:** a `competitiveFormat` selector (separate from gen) gates
   legality, Tera questions, and which sources to hit.
 
-### Open decisions (for next step)
-1. chaos JSON vs the 85 KB moveset `.txt` as the bulk feed (size vs parser complexity).
-2. Do we proxy Smogon/Limitless through a Next route handler (CORS, caching, slimming) or fetch client-side?
-3. How much Limitless tournament data to ingest (latest N majors? rolling window?).
-4. Add `@pkmn/sim` for exact legality, or derive from usage keys?
+### Locked decisions (Phase 1 — June 2026)
+1. **Bulk feed → chaos JSON.** It's already JSON matching our types; size is handled
+   by the proxy slimming it server-side. (Fallback to the 85 KB `moveset/*.txt`
+   only if proxy reliability becomes an issue.)
+2. **Fetch path → Next.js route handler proxy.** The app calls our own `/api/...`
+   route, which fetches Smogon/Limitless, caches, and strips unused fields before
+   returning. Avoids CORS, shrinks transfer, centralises caching. The browser never
+   sees the raw multi-MB chaos file.
+3. **Limitless → deferred to Phase 4.** Build the Smogon spine first; add real
+   teams + win rates when a feature needs them.
+4. **Legality → originally `@pkmn/sim`; CHECK FAILED → revised plan below.**
+   - ❌ **Verified (June 2026):** the latest `@pkmn/sim@0.10.11` does **not** bundle
+     our formats. Its newest VGC format is `gen9vgc2025regi`; it has **zero**
+     Champions formats. The package lags the live ladder ~a year, so exact banlists
+     via `@pkmn/sim` are not available for `gen9vgc2026regi` or
+     `gen9championsvgc2026regma`. (`@pkmn/dex` has no format rulesets at all — only
+     per-species `FormatsData` tier tags.) `@pkmn/sim` was uninstalled.
+   - ✅ **Revised legality plan (works for both formats today):**
+     1. **Legal species set → derive from usage keys.** Every Pokémon in a format's
+        chaos `data` is legal/played — immediate and accurate for "is this in-format".
+     2. **Authoritative bans → small hardcoded ruleset constant per regulation**
+        (sourced from official docs / Victory Road): Reg I = 16 mythicals banned +
+        ~22 restricted legendaries capped at 2; Champions Reg M-A = its species pool,
+        no restricteds, Megas allowed, no Tera. These lists are short and change rarely.
+     3. **Optional later:** if `@pkmn/sim` ships 2026 formats, or we pull Showdown's
+        live format config, swap in exact rule resolution. Not blocking.
 ```
