@@ -3,16 +3,21 @@
  * (legality, Tera, which Smogon/Pikalytics/Limitless feed to hit) keys off this,
  * independent of the app's generation selector.
  *
+ * Official Play! Pokémon competition moved off the mainline Scarlet/Violet game
+ * to Pokémon Champions on 2026-04-08, so the legacy `vgc-regi` (S&V) format was
+ * retired. The registry stays format-aware so future Champions regulations
+ * (M-B, etc.) drop straight in.
+ *
  * See docs/data-pathways.md for the full source map.
  */
 
-export type CompetitiveFormatId = "vgc-regi" | "champions-regma";
+export type CompetitiveFormatId = "champions-regma";
 
 export interface CompetitiveFormat {
   id: CompetitiveFormatId;
   label: string;
-  game: "sv" | "champions";
-  /** Smogon stats id, e.g. "gen9vgc2026regi". */
+  game: "champions";
+  /** Smogon stats id, e.g. "gen9championsvgc2026regma". */
   smogonFormat: string;
   /** Best-of-3 ladder variant id. */
   smogonBo3Format: string;
@@ -26,17 +31,6 @@ export interface CompetitiveFormat {
 }
 
 export const COMPETITIVE_FORMATS: Record<CompetitiveFormatId, CompetitiveFormat> = {
-  "vgc-regi": {
-    id: "vgc-regi",
-    label: "VGC Reg I",
-    game: "sv",
-    smogonFormat: "gen9vgc2026regi",
-    smogonBo3Format: "gen9vgc2026regibo3",
-    pikalyticsCode: "gen9vgc2026regi",
-    limitlessFormatTags: ["I"],
-    hasTera: true,
-    generation: 9,
-  },
   "champions-regma": {
     id: "champions-regma",
     label: "Champions Reg M-A",

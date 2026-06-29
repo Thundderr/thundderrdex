@@ -31,7 +31,7 @@ function entry(name: string, usagePct: number, moves: string[]): SlimUsageEntry 
 
 // Real species so @pkmn/dex resolves their typings/moves.
 const DATASET: UsageDataset = {
-  smogonFormat: "gen9vgc2026regi",
+  smogonFormat: "gen9championsvgc2026regma",
   month: "2026-05",
   cutoff: 1760,
   battles: 100000,

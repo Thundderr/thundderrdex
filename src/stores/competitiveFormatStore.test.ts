@@ -10,14 +10,15 @@ describe("competitiveFormatStore", () => {
     expect(useCompetitiveFormatStore.getState().format).toBe("champions-regma");
   });
 
-  it("switches between known formats", () => {
-    useCompetitiveFormatStore.getState().setFormat("vgc-regi");
-    expect(useCompetitiveFormatStore.getState().format).toBe("vgc-regi");
+  it("accepts a known format id", () => {
+    useCompetitiveFormatStore.getState().setFormat("champions-regma");
+    expect(useCompetitiveFormatStore.getState().format).toBe("champions-regma");
   });
 
-  it("ignores unknown format ids", () => {
+  it("ignores unknown / retired format ids", () => {
     // @ts-expect-error — exercising the runtime guard against stale persisted ids
-    useCompetitiveFormatStore.getState().setFormat("totally-fake");
+    // (e.g. the retired "vgc-regi") that are no longer in the registry.
+    useCompetitiveFormatStore.getState().setFormat("vgc-regi");
     expect(useCompetitiveFormatStore.getState().format).toBe("champions-regma");
   });
 });

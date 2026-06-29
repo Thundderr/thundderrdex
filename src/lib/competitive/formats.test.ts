@@ -6,18 +6,16 @@ import {
 } from "./formats";
 
 describe("competitive format registry", () => {
-  it("includes both target formats", () => {
-    expect(Object.keys(COMPETITIVE_FORMATS).sort()).toEqual(["champions-regma", "vgc-regi"]);
-    expect(COMPETITIVE_FORMAT_LIST).toHaveLength(2);
+  it("targets Pokémon Champions (the retired SV VGC format is gone)", () => {
+    expect(Object.keys(COMPETITIVE_FORMATS).sort()).toEqual(["champions-regma"]);
+    expect(COMPETITIVE_FORMAT_LIST).toHaveLength(1);
   });
 
-  it("encodes the key divergence: VGC has Tera, Champions does not", () => {
-    expect(getCompetitiveFormat("vgc-regi").hasTera).toBe(true);
+  it("encodes that Champions has no Tera", () => {
     expect(getCompetitiveFormat("champions-regma").hasTera).toBe(false);
   });
 
-  it("maps to the correct Smogon format ids", () => {
-    expect(getCompetitiveFormat("vgc-regi").smogonFormat).toBe("gen9vgc2026regi");
+  it("maps to the correct Smogon format id", () => {
     expect(getCompetitiveFormat("champions-regma").smogonFormat).toBe("gen9championsvgc2026regma");
   });
 

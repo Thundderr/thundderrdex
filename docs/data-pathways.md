@@ -7,22 +7,29 @@
 
 ---
 
-## 0. The two competitive scenes (this drives everything)
+## 0. The competitive scene (this drives everything)
 
-As of June 2026 there are **two parallel formats**, with different legal Pokémon,
-mechanics, and data. Anything format-specific (legality, spreads, Tera) must key
-off a `competitiveFormat`, separate from the existing generation selector.
+Official Play! Pokémon competition moved off the mainline Scarlet/Violet game to
+**Pokémon Champions** on **2026-04-08** (Indianapolis Regionals, May 29–31, was
+the first live event; all Premier Events — NAIC, Worlds — now run on Champions).
+We therefore target **Pokémon Champions only**; the legacy **SV VGC — Reg I**
+format was retired. The architecture stays `competitiveFormat`-keyed (separate
+from the generation selector) so future Champions regulations (Reg M-B, …) drop
+straight in, and legality/spreads/Tera continue to gate off the format.
 
-| | **SV VGC — Reg I** | **Pokémon Champions — Reg M-A** |
+| | **Pokémon Champions — Reg M-A** (active) | ~~SV VGC — Reg I~~ (retired 2026-04) |
 |---|---|---|
-| Smogon id | `gen9vgc2026regi` (+ `…regibo3`) | `gen9championsvgc2026regma` (+ `…regmabo3`) |
-| Game | Scarlet/Violet | Pokémon Champions (newer game) |
-| Dex | Full National Dex | ~242 species seen + Mega Evolutions |
-| Restricted legendaries | Yes, up to 2 (Miraidon, Calyrex-Shadow/Ice, Urshifu…) | No restricteds; **Megas instead** (e.g. `Floette-Mega`, `Charizard-Mega-Y`) |
-| **Tera** | **Yes** (real Tera Types in data) | **No** — chaos shows `Tera Types: {"nothing": …}` |
-| Sample size (May 2026, ≥1760) | 236k battles, 274 mons | 3.36M battles, 242 mons |
+| Smogon id | `gen9championsvgc2026regma` (+ `…regmabo3`) | ~~`gen9vgc2026regi`~~ |
+| Game | Pokémon Champions | ~~Scarlet/Violet~~ |
+| Dex | ~242 species seen + Mega Evolutions | ~~Full National Dex~~ |
+| Restricted legendaries | No restricteds; **Megas instead** (e.g. `Floette-Mega`, `Charizard-Mega-Y`) | ~~Yes, up to 2~~ |
+| **Tera** | **No** — chaos shows `Tera Types: {"nothing": …}` | ~~Yes~~ |
+| Sample size (May 2026, ≥1760) | 3.36M battles, 242 mons | ~~236k battles, 274 mons~~ |
 
-We're targeting **both**, switchable.
+The retired SV column is kept here only as historical context for why Champions
+data looks the way it does (Megas, no Tera). Tera itself stays a Gen-9 game
+mechanic in the general type-chart / damage-calc / Pokédex tools — it's only
+gone from the *competitive* feed.
 
 ### Why they diverge (and why the data still shares one pipeline)
 

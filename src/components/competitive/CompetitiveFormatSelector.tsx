@@ -4,8 +4,9 @@ import { COMPETITIVE_FORMAT_LIST } from "@/lib/competitive/formats";
 import { useCompetitiveFormatStore } from "@/stores/competitiveFormatStore";
 
 /**
- * Segmented control for the active competitive format (VGC Reg I ↔ Champions
- * Reg M-A). Reads/writes the competitiveFormatStore; reusable anywhere.
+ * Segmented control for the active competitive format. Reads/writes the
+ * competitiveFormatStore and renders every registered format, so it lights up
+ * automatically as future Champions regulations are added. Reusable anywhere.
  */
 export function CompetitiveFormatSelector({ className = "" }: { className?: string }) {
   const format = useCompetitiveFormatStore((s) => s.format);

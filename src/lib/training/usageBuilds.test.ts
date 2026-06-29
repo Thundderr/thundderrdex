@@ -24,7 +24,7 @@ function entry(over: Partial<SlimUsageEntry> & { name: string }): SlimUsageEntry
 }
 
 const dataset: UsageDataset = {
-  smogonFormat: "gen9vgc2026regi",
+  smogonFormat: "gen9championsvgc2026regma",
   month: "2026-05",
   cutoff: 1760,
   battles: 1000,

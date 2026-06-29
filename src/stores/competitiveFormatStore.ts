@@ -3,9 +3,11 @@ import { persist } from "zustand/middleware";
 import { COMPETITIVE_FORMATS, type CompetitiveFormatId } from "@/lib/competitive/formats";
 
 /**
- * The selected competitive format (VGC Reg I ↔ Champions Reg M-A). Deliberately
- * separate from the generation selector — both target Gen 9, but they gate
- * different things (legality, Tera, which usage/teams feed to load).
+ * The selected competitive format (Champions Reg M-A today; future Champions
+ * regulations slot in here). Deliberately separate from the generation selector
+ * — both target Gen 9, but this gates legality, Tera, and which usage/teams feed
+ * to load. A stale persisted id (e.g. the retired `vgc-regi`) migrates to the
+ * default on hydrate.
  *
  * Local-persisted only for now: cloud sync would need a new Supabase store_key
  * (see docs/data-pathways.md / the training store note).

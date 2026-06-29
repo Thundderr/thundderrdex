@@ -17,7 +17,7 @@ import {
 } from "./sources";
 import type { SmogonChaos, SmogonChaosEntry } from "./types";
 
-// Trimmed from the real gen9vgc2026regi-1760 Incineroar entry.
+// Trimmed from the real gen9championsvgc2026regma-1760 Incineroar entry.
 const INCINEROAR: SmogonChaosEntry = {
   "Raw count": 188638,
   "Viability Ceiling": [12664, 87, 76, 61],
@@ -33,11 +33,11 @@ const INCINEROAR: SmogonChaosEntry = {
 
 describe("URL builders", () => {
   it("builds Smogon chaos and moveset URLs with cutoff/month", () => {
-    expect(smogonChaosUrl("gen9vgc2026regi")).toBe(
-      "https://www.smogon.com/stats/2026-05/chaos/gen9vgc2026regi-1760.json"
+    expect(smogonChaosUrl("gen9championsvgc2026regma")).toBe(
+      "https://www.smogon.com/stats/2026-05/chaos/gen9championsvgc2026regma-1760.json"
     );
-    expect(smogonChaosUrl("gen9vgc2026regi", 0, "2026-04")).toBe(
-      "https://www.smogon.com/stats/2026-04/chaos/gen9vgc2026regi-0.json"
+    expect(smogonChaosUrl("gen9championsvgc2026regma", 0, "2026-04")).toBe(
+      "https://www.smogon.com/stats/2026-04/chaos/gen9championsvgc2026regma-0.json"
     );
     expect(smogonMovesetTxtUrl("gen9championsvgc2026regma")).toContain("/moveset/gen9championsvgc2026regma-1760.txt");
   });
@@ -127,7 +127,7 @@ const LOW_USAGE: SmogonChaosEntry = {
 
 const CHAOS: SmogonChaos = {
   info: {
-    metagame: "gen9vgc2026regi",
+    metagame: "gen9championsvgc2026regma",
     cutoff: 1760,
     "cutoff deviation": 0,
     "team type": null,
@@ -139,7 +139,7 @@ const CHAOS: SmogonChaos = {
 describe("buildUsageDataset", () => {
   it("normalises, sorts by usage desc, and carries metadata", () => {
     const ds = buildUsageDataset(CHAOS, { month: "2026-05" });
-    expect(ds.smogonFormat).toBe("gen9vgc2026regi");
+    expect(ds.smogonFormat).toBe("gen9championsvgc2026regma");
     expect(ds.month).toBe("2026-05");
     expect(ds.cutoff).toBe(1760);
     expect(ds.battles).toBe(236315);
