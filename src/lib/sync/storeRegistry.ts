@@ -11,6 +11,13 @@ import {
   partializeModuleState,
   useModuleStore,
 } from "@/stores/moduleStore";
+import {
+  TRAINING_STORE_VERSION,
+  TrainingPayload,
+  mergeTrainingPayloads,
+  pruneRecords,
+  useTrainingStore,
+} from "@/stores/trainingStore";
 import type { PokemonModule } from "@/types/module";
 import type { SyncStoreKey } from "./meta";
 import {
@@ -19,6 +26,7 @@ import {
   isCaughtPayload,
   isGenerationPayload,
   isModulesPayload,
+  isTrainingPayload,
 } from "./validators";
 
 export interface SyncedStoreConfig {
@@ -143,8 +151,48 @@ const modulesConfig: SyncedStoreConfig = {
   onFinishHydration: (listener) => useModuleStore.persist.onFinishHydration(listener),
 };
 
+const trainingConfig: SyncedStoreConfig = {
+  key: "training",
+  version: TRAINING_STORE_VERSION,
+  getPayload: () => {
+    const s = useTrainingStore.getState();
+    return {
+      records: s.records,
+      modeStats: s.modeStats,
+      modeSettings: s.modeSettings,
+    } satisfies TrainingPayload;
+  },
+  applyPayload: (payload) => {
+    const p = payload as TrainingPayload;
+    useTrainingStore.setState({
+      // Defensive: a remote payload is normally already capped, but never let a
+      // corrupt/oversized one bloat the store.
+      records: pruneRecords(p.records),
+      modeStats: p.modeStats,
+      modeSettings: p.modeSettings,
+    });
+  },
+  isDefault: (payload) => {
+    const p = payload as TrainingPayload;
+    return (
+      Object.keys(p.records).length === 0 &&
+      Object.keys(p.modeStats).length === 0 &&
+      Object.keys(p.modeSettings).length === 0
+    );
+  },
+  validate: isTrainingPayload,
+  // SRS progress is a natural union across devices; combine both histories on
+  // the adoption edge rather than discarding one device's study.
+  merge: (local, remote) =>
+    mergeTrainingPayloads(local as TrainingPayload, remote as TrainingPayload),
+  subscribe: (listener) => useTrainingStore.subscribe(listener),
+  hasHydrated: () => useTrainingStore.persist.hasHydrated(),
+  onFinishHydration: (listener) => useTrainingStore.persist.onFinishHydration(listener),
+};
+
 export const SYNCED_STORES: SyncedStoreConfig[] = [
   caughtConfig,
   modulesConfig,
   generationConfig,
+  trainingConfig,
 ];

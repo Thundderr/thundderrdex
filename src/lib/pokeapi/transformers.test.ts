@@ -4,9 +4,11 @@ import {
   getTypesForGeneration,
   abilitiesExistInGeneration,
   transformFullPokemon,
+  transformAbilities,
+  transformLearnset,
 } from "./transformers";
 import type { Pokemon, PokemonType } from "@/types/pokemon";
-import type { PokeAPIPokemon } from "@/types/api";
+import type { PokeAPIPokemon, PokeAPIMove } from "@/types/api";
 
 describe("formatPokemonName", () => {
   it("maps known special cases to their human-readable form", () => {
@@ -213,5 +215,96 @@ describe("transformFullPokemon", () => {
     expect(result.pastTypes).toEqual([
       { generation: 5, types: [{ name: "normal", color: "#A8A77A" }] },
     ]);
+  });
+});
+
+describe("transformAbilities", () => {
+  const ability = (name: string, slot: number, hidden = false) => ({
+    is_hidden: hidden,
+    slot,
+    ability: { name, url: "" },
+  });
+
+  it("enriches each ability with a @pkmn/dex description, sorted by slot", () => {
+    const result = transformAbilities([ability("blaze", 2), ability("intimidate", 1)]);
+    expect(result.map((a) => a.name)).toEqual(["intimidate", "blaze"]); // slot order
+    expect(result[0].displayName).toBe("Intimidate");
+    expect(result[0].description.length).toBeGreaterThan(0);
+    expect(result[0].description).not.toBe("No description available.");
+  });
+
+  it("marks the hidden ability", () => {
+    const result = transformAbilities([ability("intimidate", 1), ability("flash-fire", 3, true)]);
+    expect(result[1].isHidden).toBe(true);
+  });
+
+  it("falls back to a placeholder description for an ability unknown to the dex", () => {
+    const result = transformAbilities([ability("totally-fake-ability", 1)]);
+    expect(result[0].name).toBe("totally-fake-ability");
+    expect(result[0].description).toBe("No description available.");
+  });
+
+  it("does not mutate the caller's array order", () => {
+    const input = [ability("blaze", 2), ability("intimidate", 1)];
+    transformAbilities(input);
+    expect(input.map((a) => a.ability.name)).toEqual(["blaze", "intimidate"]);
+  });
+});
+
+describe("transformLearnset", () => {
+  const move = (name: string, method = "level-up", level = 1): PokeAPIMove => ({
+    move: { name, url: "" },
+    version_group_details: [
+      {
+        level_learned_at: level,
+        move_learn_method: { name: method, url: "" },
+        version_group: { name: "scarlet-violet", url: "" },
+      },
+    ],
+  });
+
+  it("resolves each move's battle data from the dex", () => {
+    const entries = transformLearnset([move("focus-blast", "machine")]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].move).toMatchObject({
+      name: "focus-blast",
+      displayName: "Focus Blast",
+      type: "fighting",
+      power: 120,
+    });
+    expect(entries[0].generation).toBe(9); // scarlet-violet
+    expect(entries[0].learnMethod).toBe("machine");
+  });
+
+  it("sets levelLearned for level-up entries", () => {
+    const entries = transformLearnset([move("tackle", "level-up", 5)]);
+    expect(entries[0].levelLearned).toBe(5);
+    expect(entries[0].move.displayName).toBe("Tackle");
+  });
+
+  it("skips a move the dex doesn't know but keeps the rest", () => {
+    const entries = transformLearnset([move("focus-blast"), move("totally-fake-move")]);
+    expect(entries.map((e) => e.move.name)).toEqual(["focus-blast"]);
+  });
+
+  it("dedupes two version groups that fall in the same generation+method", () => {
+    const entries = transformLearnset([
+      {
+        move: { name: "tackle", url: "" },
+        version_group_details: [
+          {
+            level_learned_at: 1,
+            move_learn_method: { name: "level-up", url: "" },
+            version_group: { name: "scarlet-violet", url: "" },
+          },
+          {
+            level_learned_at: 3,
+            move_learn_method: { name: "level-up", url: "" },
+            version_group: { name: "scarlet-violet", url: "" },
+          },
+        ],
+      },
+    ]);
+    expect(entries).toHaveLength(1); // same gen 9 + level-up collapses
   });
 });

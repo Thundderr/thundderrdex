@@ -14,8 +14,17 @@ import {
   legalSpeciesFromUsage,
   parseLatestStatsMonth,
   previousMonth,
+  recordWinPct,
+  pickLatestTournament,
+  toTournamentTeam,
+  buildTournamentTeams,
 } from "./sources";
-import type { SmogonChaos, SmogonChaosEntry } from "./types";
+import type {
+  SmogonChaos,
+  SmogonChaosEntry,
+  LimitlessStanding,
+  LimitlessTournament,
+} from "./types";
 
 // Trimmed from the real gen9championsvgc2026regma-1760 Incineroar entry.
 const INCINEROAR: SmogonChaosEntry = {
@@ -195,3 +204,112 @@ describe("legalSpeciesFromUsage", () => {
     expect(legal.size).toBe(2);
   });
 });
+
+// --- Limitless tournament transforms ---------------------------------------
+
+function tournament(over: Partial<LimitlessTournament> = {}): LimitlessTournament {
+  return {
+    game: "VGC",
+    name: "Some Regional",
+    date: "2026-05-30",
+    format: "M-A",
+    id: "t1",
+    players: 300,
+    organizerId: 1,
+    ...over,
+  };
+}
+
+function standing(over: Partial<LimitlessStanding> = {}): LimitlessStanding {
+  return {
+    name: "alias",
+    country: "US",
+    placing: 1,
+    player: "Ash",
+    record: { wins: 7, losses: 3, ties: 0 },
+    decklist: [
+      {
+        id: "urshifu-rapid-strike",
+        name: "Urshifu-Rapid-Strike",
+        item: "Mystic Water",
+        ability: "Unseen Fist",
+        attacks: ["Surging Strikes", "Close Combat", "Aqua Jet", "Protect"],
+        nature: "Jolly",
+        tera: "Water",
+      },
+    ],
+    ...over,
+  };
+}
+
+describe("recordWinPct", () => {
+  it("computes win percentage over all games", () => {
+    expect(recordWinPct({ wins: 7, losses: 3, ties: 0 })).toBe(70);
+    expect(recordWinPct({ wins: 5, losses: 4, ties: 1 })).toBe(50);
+  });
+
+  it("returns 0 for an empty record (no divide-by-zero)", () => {
+    expect(recordWinPct({ wins: 0, losses: 0, ties: 0 })).toBe(0);
+  });
+});
+
+describe("pickLatestTournament", () => {
+  it("returns the most recent tournament whose format is in the tag set", () => {
+    const picked = pickLatestTournament(
+      [
+        tournament({ id: "old", date: "2026-04-01", format: "M-A" }),
+        tournament({ id: "new", date: "2026-05-30", format: "M-A" }),
+        tournament({ id: "other", date: "2026-06-10", format: "I" }), // wrong format
+      ],
+      ["M-A", "M-B"]
+    );
+    expect(picked?.id).toBe("new");
+  });
+
+  it("returns null when no tournament matches the format tags", () => {
+    expect(pickLatestTournament([tournament({ format: "I" })], ["M-A"])).toBeNull();
+  });
+
+  it("returns null for an empty list", () => {
+    expect(pickLatestTournament([], ["M-A"])).toBeNull();
+  });
+});
+
+describe("toTournamentTeam", () => {
+  it("normalizes a standing into an app team with a derived win rate", () => {
+    const team = toTournamentTeam(standing());
+    expect(team.player).toBe("Ash");
+    expect(team.placing).toBe(1);
+    expect(team.winPct).toBe(70);
+    expect(team.mons).toHaveLength(1);
+    expect(team.mons[0]).toEqual({
+      species: "urshifu-rapid-strike",
+      name: "Urshifu-Rapid-Strike",
+      item: "Mystic Water",
+      ability: "Unseen Fist",
+      tera: "Water",
+      moves: ["Surging Strikes", "Close Combat", "Aqua Jet", "Protect"],
+    });
+  });
+});
+
+describe("buildTournamentTeams", () => {
+  it("sorts teams by placing and caps to topN", () => {
+    const standings = [
+      standing({ placing: 3, player: "C" }),
+      standing({ placing: 1, player: "A" }),
+      standing({ placing: 2, player: "B" }),
+    ];
+    const ds = buildTournamentTeams(tournament(), standings, { topN: 2 });
+    expect(ds.teams.map((t) => t.player)).toEqual(["A", "B"]);
+    expect(ds.tournamentId).toBe("t1");
+    expect(ds.format).toBe("M-A");
+  });
+
+  it("defaults to a sensible cap when topN is omitted", () => {
+    const many = Array.from({ length: 50 }, (_, i) => standing({ placing: i + 1 }));
+    const ds = buildTournamentTeams(tournament(), many);
+    expect(ds.teams.length).toBeLessThanOrEqual(16);
+    expect(ds.teams.length).toBeGreaterThan(0);
+  });
+})

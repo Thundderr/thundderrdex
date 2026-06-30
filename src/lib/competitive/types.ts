@@ -150,3 +150,42 @@ export interface UsageDataset {
   /** Entries sorted by usage descending. */
   entries: SlimUsageEntry[];
 }
+
+// ---------------------------------------------------------------------------
+// App-facing tournament data (normalized from Limitless standings)
+// ---------------------------------------------------------------------------
+
+/** One Pokémon on a real tournament team (no EV spread — Limitless omits them). */
+export interface TournamentTeamMon {
+  /** App kebab species id, e.g. "urshifu-rapid-strike". */
+  species: string;
+  name: string;
+  item: string | null;
+  ability: string | null;
+  tera: string | null;
+  moves: string[];
+}
+
+/** A real human team from a tournament, with a win rate derived from its record. */
+export interface TournamentTeam {
+  player: string;
+  country: string | null;
+  placing: number;
+  record: LimitlessRecord;
+  /** 0–100, derived from the match record (the real win rate Smogon can't give). */
+  winPct: number;
+  mons: TournamentTeamMon[];
+}
+
+/** Top teams from the most recent tournament for a format — what the app consumes. */
+export interface TournamentTeamsDataset {
+  tournamentId: string;
+  tournamentName: string;
+  /** ISO date of the event. */
+  date: string;
+  /** Limitless short format tag, e.g. "M-A". */
+  format: string;
+  players: number;
+  /** Teams sorted by placing ascending (winner first). */
+  teams: TournamentTeam[];
+}

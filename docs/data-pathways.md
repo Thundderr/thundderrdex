@@ -302,7 +302,10 @@ GET https://replay.pokemonshowdown.com/<id>.json
   ladder ratings). Bulk historical dataset: HuggingFace `jakegrigsby/metamon-parsed-replays`.
 
 ### ★ `@pkmn/dex` — battle-accurate data, already installed (offline, instant)
-We already depend on `@pkmn/dex` (currently unused). It wraps Showdown's data, so
+We depend on `@pkmn/dex` — now used both for competitive name resolution
+(`src/lib/competitive/dexNames.ts`) and as the source for move/ability battle
+detail in the Pokédex (`src/lib/pokeapi/battleData.ts`), replacing the old
+`/move` and `/ability` PokéAPI fan-out. It wraps Showdown's data, so
 it replaces most PokéAPI fan-out for *battle-relevant* fields:
 - `Dex.forGen(9).species.get("Garchomp")` → `num`, `types`, `baseStats` (all 6),
   `abilities` ({0,1,H}), `tier` ("UUBL"), `doublesTier` ("DUU"), `isNonstandard`,
@@ -391,10 +394,10 @@ Base: `https://pokeapi.co/api/v2` (`src/lib/pokeapi/client.ts`). Server-side
 ### Hooks → source map
 | Hook | Source | Returns |
 |---|---|---|
-| `usePokemon` | PokéAPI `/pokemon` | full stats/types/sprites; abilities fetched async (fan-out per ability) |
+| `usePokemon` | PokéAPI `/pokemon` + `@pkmn/dex` | full stats/types/sprites; ability descriptions resolved offline from `@pkmn/dex` (no per-ability fan-out) |
 | `usePokemonList` | PokéAPI `/pokemon?limit=1025` + local Mega/regional lists | `PokemonListItem[]` |
 | `usePokedex` | PokéAPI `/pokedex/{id}` + `dexForms` | per-region slots w/ form resolution |
-| `useLearnset` | PokéAPI `/pokemon.moves` + `/move` (fan-out) | grouped learnset |
+| `useLearnset` | PokéAPI `/pokemon.moves` (structure) + `@pkmn/dex` (move detail) | grouped learnset; move type/power/etc. from `@pkmn/dex`, **no `/move` fan-out** |
 | `useEvolution` | `/pokemon-species` + `/evolution-chain` | evolution tree |
 | `useEncounters` | `/pokemon/{id}/encounters` (1–7) + **static `gen8/9-encounters.json`** | grouped encounters |
 | `useLocationArea(List)` | `/location-area…` + static Gen 8/9 | encounters by version/method |
@@ -423,7 +426,8 @@ PokéAPI lacks Gen 8–9 encounters), `dexForms.ts`, `generations.ts`, `natures.
 - **Generation gating**: ID ranges → gen; type/ability history per gen (Clefairy
   Normal→Fairy); no abilities Gen 1–2.
 - **No rate-limit handling beyond React Query retries**; ISR + 7-day persist absorb most load.
-- `@pkmn/data` & `@pkmn/dex` are installed but currently unused.
+- `@pkmn/dex` is in active use (competitive name resolution + Pokédex move/ability
+  detail). `@pkmn/data` is installed but not yet used.
 
 ---
 
@@ -464,8 +468,13 @@ src/lib/competitive/
    route, which fetches Smogon/Limitless, caches, and strips unused fields before
    returning. Avoids CORS, shrinks transfer, centralises caching. The browser never
    sees the raw multi-MB chaos file.
-3. **Limitless → deferred to Phase 4.** Build the Smogon spine first; add real
-   teams + win rates when a feature needs them.
+3. **Limitless → WIRED.** `/api/tournaments/[format]` proxies the latest matching
+   Limitless event + standings, normalised to a `TournamentTeamsDataset` (real
+   teams + win rates from match records). Consumed by `useTournamentTeams` and
+   surfaced in `FormatMetaPeek`. Pure transforms in `sources.ts`
+   (`pickLatestTournament`, `toTournamentTeam`, `buildTournamentTeams`,
+   `recordWinPct`). **Pikalytics is still pending** — its markdown shape needs to
+   be confirmed against the live endpoint before a parser is trustworthy.
 4. **Legality → originally `@pkmn/sim`; CHECK FAILED → revised plan below.**
    - ❌ **Verified (June 2026):** the latest `@pkmn/sim@0.10.11` does **not** bundle
      our formats. Its newest VGC format is `gen9vgc2025regi`; it has **zero**

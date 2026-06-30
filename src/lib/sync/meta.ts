@@ -4,7 +4,7 @@
 // A missing stamp means this device has never recorded an edit since sync
 // shipped ("unstamped") — the reconcile algorithm treats that case specially.
 
-export type SyncStoreKey = "caught" | "modules" | "generation";
+export type SyncStoreKey = "caught" | "modules" | "generation" | "training";
 
 const META_KEY = "thundderrdex-sync-meta";
 

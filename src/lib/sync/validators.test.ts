@@ -3,6 +3,7 @@ import {
   isCaughtPayload,
   isGenerationPayload,
   isModulesPayload,
+  isTrainingPayload,
 } from "./validators";
 
 describe("isCaughtPayload", () => {
@@ -300,6 +301,175 @@ describe("isModulesPayload", () => {
       isModulesPayload({
         ...validPayload,
         tabs: [{ ...validTab, modules: [{ id: "m1" }] }],
+      })
+    ).toBe(false);
+  });
+});
+
+describe("isTrainingPayload", () => {
+  const validRecord = {
+    box: 2,
+    seen: 5,
+    correct: 3,
+    lastResult: true,
+    lastSeenAt: 1_700_000_000_000,
+  };
+  const validStats = { attempts: 10, correct: 7, bestStreak: 4 };
+
+  const validPayload = {
+    records: { "type-eff:fire>grass": validRecord },
+    modeStats: { "type-eff": validStats },
+    modeSettings: { "type-eff": { difficulty: "hard" } },
+  };
+
+  it("accepts a fully-populated valid payload", () => {
+    expect(isTrainingPayload(validPayload)).toBe(true);
+  });
+
+  it("accepts the empty default payload (no progress yet)", () => {
+    expect(
+      isTrainingPayload({ records: {}, modeStats: {}, modeSettings: {} })
+    ).toBe(true);
+  });
+
+  it("accepts box at both bounds (0 and MAX_BOX)", () => {
+    expect(
+      isTrainingPayload({
+        records: { a: { ...validRecord, box: 0 }, b: { ...validRecord, box: 5 } },
+        modeStats: {},
+        modeSettings: {},
+      })
+    ).toBe(true);
+  });
+
+  it("accepts a zero-attempt record (seen 0, correct 0, lastSeenAt 0)", () => {
+    expect(
+      isTrainingPayload({
+        records: { a: { box: 0, seen: 0, correct: 0, lastResult: false, lastSeenAt: 0 } },
+        modeStats: {},
+        modeSettings: {},
+      })
+    ).toBe(true);
+  });
+
+  it("rejects null, undefined, primitives, and arrays", () => {
+    expect(isTrainingPayload(null)).toBe(false);
+    expect(isTrainingPayload(undefined)).toBe(false);
+    expect(isTrainingPayload(42)).toBe(false);
+    expect(isTrainingPayload("training")).toBe(false);
+    expect(isTrainingPayload([])).toBe(false);
+  });
+
+  it("rejects when any of the three top-level maps is missing or not a record", () => {
+    expect(isTrainingPayload({ modeStats: {}, modeSettings: {} })).toBe(false);
+    expect(isTrainingPayload({ records: {}, modeSettings: {} })).toBe(false);
+    expect(isTrainingPayload({ records: {}, modeStats: {} })).toBe(false);
+    expect(
+      isTrainingPayload({ records: [], modeStats: {}, modeSettings: {} })
+    ).toBe(false);
+    expect(
+      isTrainingPayload({ records: {}, modeStats: null, modeSettings: {} })
+    ).toBe(false);
+    expect(
+      isTrainingPayload({ records: {}, modeStats: {}, modeSettings: "x" })
+    ).toBe(false);
+  });
+
+  it("rejects a record that is not an object", () => {
+    expect(
+      isTrainingPayload({ records: { a: 5 }, modeStats: {}, modeSettings: {} })
+    ).toBe(false);
+  });
+
+  it("rejects a record with a missing or non-number field", () => {
+    const drop = (field: string) => {
+      const r = { ...validRecord } as Record<string, unknown>;
+      delete r[field];
+      return { records: { a: r }, modeStats: {}, modeSettings: {} };
+    };
+    for (const field of ["box", "seen", "correct", "lastSeenAt"]) {
+      expect(isTrainingPayload(drop(field))).toBe(false);
+    }
+    expect(
+      isTrainingPayload({
+        records: { a: { ...validRecord, seen: "5" } },
+        modeStats: {},
+        modeSettings: {},
+      })
+    ).toBe(false);
+  });
+
+  it("rejects a record with a non-boolean lastResult", () => {
+    expect(
+      isTrainingPayload({
+        records: { a: { ...validRecord, lastResult: "yes" } },
+        modeStats: {},
+        modeSettings: {},
+      })
+    ).toBe(false);
+  });
+
+  it("rejects a box outside 0..MAX_BOX or non-integer", () => {
+    for (const box of [-1, 6, 2.5, NaN]) {
+      expect(
+        isTrainingPayload({
+          records: { a: { ...validRecord, box } },
+          modeStats: {},
+          modeSettings: {},
+        })
+      ).toBe(false);
+    }
+  });
+
+  it("rejects negative or non-integer seen/correct/lastSeenAt", () => {
+    for (const patch of [{ seen: -1 }, { correct: 1.5 }, { lastSeenAt: -10 }]) {
+      expect(
+        isTrainingPayload({
+          records: { a: { ...validRecord, ...patch } },
+          modeStats: {},
+          modeSettings: {},
+        })
+      ).toBe(false);
+    }
+  });
+
+  it("rejects an invalid modeStats entry", () => {
+    expect(
+      isTrainingPayload({
+        records: {},
+        modeStats: { "type-eff": { attempts: -1, correct: 0, bestStreak: 0 } },
+        modeSettings: {},
+      })
+    ).toBe(false);
+    expect(
+      isTrainingPayload({
+        records: {},
+        modeStats: { "type-eff": { attempts: 1, correct: 0 } },
+        modeSettings: {},
+      })
+    ).toBe(false);
+    expect(
+      isTrainingPayload({
+        records: {},
+        modeStats: { "type-eff": 5 },
+        modeSettings: {},
+      })
+    ).toBe(false);
+  });
+
+  it("rejects modeSettings whose value is not a string->string map", () => {
+    expect(
+      isTrainingPayload({
+        records: {},
+        modeStats: {},
+        modeSettings: { "type-eff": { difficulty: 5 } },
+      })
+    ).toBe(false);
+    expect(
+      isTrainingPayload({
+        records: {},
+        modeStats: {},
+        modeSettings: { "type-eff": "hard" },
       })
     ).toBe(false);
   });

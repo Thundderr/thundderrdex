@@ -8,12 +8,13 @@ import {
   PastTypeEntry,
   PastAbilityEntry,
 } from "@/types/pokemon";
-import { LearnsetEntry, Move, LearnMethod, DamageClass } from "@/types/moves";
-import { PokeAPIPokemon, PokeAPIAbility, PokeAPIMoveDetail, PokeAPIMove } from "@/types/api";
+import { LearnsetEntry, Move, LearnMethod } from "@/types/moves";
+import { PokeAPIPokemon, PokeAPIMove } from "@/types/api";
 import { TYPE_COLORS } from "@/data/typeChart";
 import { getGenerationFromId, getGenerationFromVersionGroup } from "@/data/generations";
 import { getTMNumber } from "@/data/tmLookup";
-import { getSpriteUrl, getOfficialArtworkUrl, fetchAbility, fetchMove } from "./client";
+import { getSpriteUrl, getOfficialArtworkUrl } from "./client";
+import { moveFromDex, abilityDescriptionFromDex } from "./battleData";
 
 // Pokemon name formatting with special cases
 const SPECIAL_NAMES: Record<string, string> = {
@@ -45,13 +46,6 @@ export function formatPokemonName(name: string): string {
     return SPECIAL_NAMES[name];
   }
 
-  return name
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-function formatMoveName(name: string): string {
   return name
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -160,41 +154,20 @@ export function transformPastAbilities(
   }));
 }
 
-export async function transformAbilities(
+export function transformAbilities(
   abilities: PokeAPIPokemon["abilities"]
-): Promise<PokemonAbility[]> {
-  const transformed: PokemonAbility[] = [];
-
-  for (const a of abilities.sort((x, y) => x.slot - y.slot)) {
-    try {
-      const abilityData = await fetchAbility(a.ability.name);
-      const englishEntry = abilityData.effect_entries.find(
-        (e) => e.language.name === "en"
-      );
-      const englishFlavor = abilityData.flavor_text_entries.find(
-        (e) => e.language.name === "en"
-      );
-
-      transformed.push({
-        name: a.ability.name,
-        displayName: formatAbilityName(a.ability.name),
-        description:
-          englishEntry?.short_effect ||
-          englishFlavor?.flavor_text ||
-          "No description available.",
-        isHidden: a.is_hidden,
-      });
-    } catch {
-      transformed.push({
-        name: a.ability.name,
-        displayName: formatAbilityName(a.ability.name),
-        description: "Description unavailable.",
-        isHidden: a.is_hidden,
-      });
-    }
-  }
-
-  return transformed;
+): PokemonAbility[] {
+  // Descriptions come from the offline @pkmn/dex (no per-ability network
+  // fan-out). The ability *list* and hidden flags still come from the parent
+  // /pokemon response. Copy before sorting so we never mutate the caller's array.
+  return [...abilities]
+    .sort((x, y) => x.slot - y.slot)
+    .map((a) => ({
+      name: a.ability.name,
+      displayName: formatAbilityName(a.ability.name),
+      description: abilityDescriptionFromDex(a.ability.name),
+      isHidden: a.is_hidden,
+    }));
 }
 
 export function transformBasicPokemon(data: PokeAPIPokemon): Pokemon {
@@ -220,7 +193,7 @@ export async function transformFullPokemon(
   data: PokeAPIPokemon
 ): Promise<Pokemon> {
   const basic = transformBasicPokemon(data);
-  const abilities = await transformAbilities(data.abilities);
+  const abilities = transformAbilities(data.abilities);
   return { ...basic, abilities };
 }
 
@@ -282,39 +255,6 @@ export function getAbilitiesForGeneration(
 }
 
 // Move transformers
-export async function transformMove(
-  data: PokeAPIMoveDetail
-): Promise<Move> {
-  const englishEffect = data.effect_entries.find(
-    (e) => e.language.name === "en"
-  );
-
-  // Replace $effect_chance placeholder with actual value
-  let description = englishEffect?.short_effect || "No description available.";
-  if (description.includes("$effect_chance")) {
-    if (data.effect_chance !== null) {
-      description = description.replace(/\$effect_chance/g, String(data.effect_chance));
-    } else {
-      // Fallback: remove the placeholder if no effect_chance data
-      description = description.replace(/\$effect_chance%/g, "a");
-      description = description.replace(/\$effect_chance/g, "");
-    }
-  }
-
-  return {
-    id: data.id,
-    name: data.name,
-    displayName: formatMoveName(data.name),
-    type: data.type.name as PokemonTypeName,
-    damageClass: data.damage_class.name as DamageClass,
-    power: data.power,
-    accuracy: data.accuracy,
-    pp: data.pp,
-    description,
-    priority: data.priority,
-  };
-}
-
 // Normalize learn method names from PokeAPI to our LearnMethod type
 function normalizeLearnMethod(method: string): LearnMethod {
   if (method === "level-up") return "level-up";
@@ -323,53 +263,45 @@ function normalizeLearnMethod(method: string): LearnMethod {
   return "tutor";
 }
 
-export async function transformLearnset(
-  moves: PokeAPIMove[]
-): Promise<LearnsetEntry[]> {
-  const entries: LearnsetEntry[] = [];
-  const moveCache = new Map<string, Move>();
+export function transformLearnset(moves: PokeAPIMove[]): LearnsetEntry[] {
+  // Resolve each *unique* move's battle data once from the offline @pkmn/dex —
+  // this used to be the app's largest network fan-out (a full movepool is 20+
+  // /move requests); now it's zero requests. A move the dex doesn't know
+  // resolves to null and is skipped below. The learn method/level/generation
+  // structure still comes from PokéAPI's version_group_details.
+  const moveByName = new Map<string, Move | null>();
+  for (const name of new Set(moves.map((m) => m.move.name))) {
+    moveByName.set(name, moveFromDex(name));
+  }
 
+  const entries: LearnsetEntry[] = [];
   for (const moveEntry of moves) {
     const moveName = moveEntry.move.name;
+    const move = moveByName.get(moveName);
+    if (!move) continue; // failed to load — skip
 
-    try {
-      let move = moveCache.get(moveName);
-      if (!move) {
-        const moveData = await fetchMove(moveName);
-        move = await transformMove(moveData);
-        moveCache.set(moveName, move);
-      }
+    // Create entries per (generation, learnMethod) combination, de-duping
+    // multiple version groups that fall in the same generation.
+    const seenCombos = new Set<string>();
+    for (const detail of moveEntry.version_group_details) {
+      const gen = getGenerationFromVersionGroup(detail.version_group.name);
+      if (gen === 0) continue;
 
-      // Create entries per (generation, learnMethod) combination
-      // Track seen combos to avoid duplicates (multiple version groups in same gen)
-      const seenCombos = new Set<string>();
+      const method = normalizeLearnMethod(detail.move_learn_method.name);
+      const comboKey = `${gen}-${method}`;
+      if (seenCombos.has(comboKey)) continue;
+      seenCombos.add(comboKey);
 
-      for (const detail of moveEntry.version_group_details) {
-        const gen = getGenerationFromVersionGroup(detail.version_group.name);
-        if (gen === 0) continue;
+      const levelLearned = method === "level-up" ? detail.level_learned_at : null;
+      const machineNumber = method === "machine" ? getTMNumber(moveName, gen) : null;
 
-        const method = normalizeLearnMethod(detail.move_learn_method.name);
-        const comboKey = `${gen}-${method}`;
-
-        if (seenCombos.has(comboKey)) {
-          continue;
-        }
-        seenCombos.add(comboKey);
-
-        const levelLearned = method === "level-up" ? detail.level_learned_at : null;
-        const machineNumber = method === "machine" ? getTMNumber(moveName, gen) : null;
-
-        entries.push({
-          move,
-          learnMethod: method,
-          levelLearned,
-          generation: gen,
-          machineNumber,
-        });
-      }
-    } catch {
-      // Skip moves that fail to load
-      console.warn(`Failed to load move: ${moveName}`);
+      entries.push({
+        move,
+        learnMethod: method,
+        levelLearned,
+        generation: gen,
+        machineNumber,
+      });
     }
   }
 

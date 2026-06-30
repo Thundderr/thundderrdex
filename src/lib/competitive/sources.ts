@@ -17,6 +17,11 @@ import type {
   UsageEntry,
   UsageOption,
   WeightedCounts,
+  LimitlessRecord,
+  LimitlessStanding,
+  LimitlessTournament,
+  TournamentTeam,
+  TournamentTeamsDataset,
 } from "./types";
 
 /**
@@ -211,4 +216,72 @@ export function buildUsageDataset(
  */
 export function legalSpeciesFromUsage(dataset: UsageDataset): Set<string> {
   return new Set(dataset.entries.map((e) => e.species));
+}
+
+// --- Limitless tournament transforms ---------------------------------------
+
+/** Default number of top-placing teams to keep from a tournament. */
+export const DEFAULT_TEAM_CAP = 16;
+
+/** Real win rate (0–100) from a match record. 0 when no games were played. */
+export function recordWinPct(r: LimitlessRecord): number {
+  const total = r.wins + r.losses + r.ties;
+  return total > 0 ? (r.wins / total) * 100 : 0;
+}
+
+/**
+ * The most recent tournament whose Limitless format tag matches the target
+ * format (a format can carry several tags, e.g. ["M-A", "M-B"]). Null if none.
+ */
+export function pickLatestTournament(
+  tournaments: LimitlessTournament[],
+  formatTags: string[]
+): LimitlessTournament | null {
+  const tags = new Set(formatTags);
+  const matching = tournaments.filter((t) => tags.has(t.format));
+  if (matching.length === 0) return null;
+  return matching.reduce((a, b) => (Date.parse(b.date) > Date.parse(a.date) ? b : a));
+}
+
+/** Normalize one Limitless standing into an app-facing team with a win rate. */
+export function toTournamentTeam(standing: LimitlessStanding): TournamentTeam {
+  return {
+    player: standing.player,
+    country: standing.country,
+    placing: standing.placing,
+    record: standing.record,
+    winPct: recordWinPct(standing.record),
+    mons: standing.decklist.map((m) => ({
+      species: m.id,
+      name: m.name,
+      item: m.item,
+      ability: m.ability,
+      tera: m.tera,
+      moves: m.attacks,
+    })),
+  };
+}
+
+/**
+ * Build the app-facing dataset for a tournament: its top-placing teams
+ * (sorted by placing ascending, capped to `topN`).
+ */
+export function buildTournamentTeams(
+  tournament: LimitlessTournament,
+  standings: LimitlessStanding[],
+  opts: { topN?: number } = {}
+): TournamentTeamsDataset {
+  const topN = opts.topN ?? DEFAULT_TEAM_CAP;
+  const teams = [...standings]
+    .sort((a, b) => a.placing - b.placing)
+    .slice(0, topN)
+    .map(toTournamentTeam);
+  return {
+    tournamentId: tournament.id,
+    tournamentName: tournament.name,
+    date: tournament.date,
+    format: tournament.format,
+    players: tournament.players,
+    teams,
+  };
 }

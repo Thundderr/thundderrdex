@@ -1,8 +1,6 @@
 import {
   PokeAPIPokemon,
   PokeAPIPokemonList,
-  PokeAPIAbility,
-  PokeAPIMoveDetail,
   PokeAPIMachine,
   PokeAPILocationEncounter,
   PokeAPILocationArea,
@@ -57,22 +55,6 @@ export async function fetchPokemonList(
 ): Promise<PokeAPIPokemonList> {
   return fetchWithCache<PokeAPIPokemonList>(
     `${POKEAPI_BASE}/pokemon?limit=${limit}&offset=${offset}`
-  );
-}
-
-export async function fetchAbility(
-  nameOrId: string | number
-): Promise<PokeAPIAbility> {
-  return fetchWithCache<PokeAPIAbility>(
-    `${POKEAPI_BASE}/ability/${nameOrId}`
-  );
-}
-
-export async function fetchMove(
-  nameOrId: string | number
-): Promise<PokeAPIMoveDetail> {
-  return fetchWithCache<PokeAPIMoveDetail>(
-    `${POKEAPI_BASE}/move/${nameOrId}`
   );
 }
 

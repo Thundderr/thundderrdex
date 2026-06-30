@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { getStamp, setStamp, SyncStoreKey } from "./meta";
 import { SYNCED_STORES, SyncedStoreConfig } from "./storeRegistry";
+import { exceedsPayloadLimit } from "./payloadSize";
 
 const TABLE = "user_state";
 const DEBOUNCE_MS = 2500;
@@ -37,6 +38,7 @@ interface StoreRuntime {
   dirty: boolean;
   failed: boolean;
   schemaLocked: boolean;
+  oversized: boolean;
   debounceTimer: ReturnType<typeof setTimeout> | null;
   unsubscribe: (() => void) | null;
 }
@@ -71,6 +73,7 @@ export async function startSync(userId: string): Promise<void> {
           dirty: false,
           failed: false,
           schemaLocked: false,
+          oversized: false,
           debounceTimer: null,
           unsubscribe: null,
         },
@@ -308,11 +311,21 @@ function onStoreChange(e: EngineState, rt: StoreRuntime): void {
 
 async function uploadStore(e: EngineState, rt: StoreRuntime): Promise<void> {
   if (!supabase || e.stopped || rt.schemaLocked || !rt.dirty) return;
+  const payload = rt.cfg.getPayload();
+  // A payload past the cloud's size ceiling can never succeed, so don't even
+  // try (and don't retry-loop). Surface a clear error; a later edit that shrinks
+  // the payload clears the flag and lets it sync. The data stays safe locally.
+  if (exceedsPayloadLimit(payload)) {
+    rt.oversized = true;
+    setStatus(e);
+    return;
+  }
+  rt.oversized = false;
   const stampAtSend = getStamp(rt.cfg.key) ?? Date.now();
   rt.failed = false;
   const { data, error } = await supabase.rpc("save_user_state", {
     p_store_key: rt.cfg.key,
-    p_payload: rt.cfg.getPayload(),
+    p_payload: payload,
     p_version: rt.cfg.version,
     p_updated_at: new Date(stampAtSend).toISOString(),
   });
@@ -446,6 +459,7 @@ function setStatus(e: EngineState, opts?: { failedNow?: boolean }): void {
   const runtimes = [...e.runtimes.values()];
   const anyFailed = opts?.failedNow || runtimes.some((rt) => rt.failed);
   const anyLocked = runtimes.some((rt) => rt.schemaLocked);
+  const anyOversized = runtimes.some((rt) => rt.oversized);
   const anyPending = runtimes.some((rt) => rt.dirty) || !e.reconciled;
   const { setSyncStatus } = useAuthStore.getState();
 
@@ -458,6 +472,8 @@ function setStatus(e: EngineState, opts?: { failedNow?: boolean }): void {
       "error",
       "Your cloud data was saved by a newer version of the app. Refresh to update."
     );
+  } else if (anyOversized) {
+    setSyncStatus("error", "Some data is too large to sync to the cloud.");
   } else if (anyPending) {
     setSyncStatus("syncing");
   } else {

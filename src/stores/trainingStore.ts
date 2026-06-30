@@ -7,14 +7,24 @@ import {
   type SrsRecord,
 } from "@/lib/training/srs";
 
-// Bump when the persisted shape changes. Exported so a future sync registry
-// entry can reuse it (see note below).
+// Bump when the persisted shape changes. Exported so the sync registry entry
+// can refuse a newer-schema cloud payload.
 export const TRAINING_STORE_VERSION = 0;
+
+/**
+ * The durable slice of the training store mirrored to the cloud — exactly what
+ * `partialize` keeps (session-scoped `currentStreak` is excluded).
+ */
+export interface TrainingPayload {
+  records: Record<string, SrsRecord>;
+  modeStats: Record<string, ModeStats>;
+  modeSettings: Record<string, Record<string, string>>;
+}
 
 // Matchup-based facts (KO / speed) have an effectively unbounded key space, so
 // cap the records map and evict least-recently-seen entries. Keeps the payload
-// small — and well under the 1MB cloud-sync limit when sync is enabled later.
-const MAX_RECORDS = 5000;
+// small — and well under the 1MB cloud-sync limit.
+export const MAX_RECORDS = 5000;
 
 interface TrainingState {
   /** SRS state per fact, keyed by `srsKey`. */
@@ -42,7 +52,7 @@ const MODE_KEY_PREFIX: Record<string, string> = {
   "meta-build": "meta:",
 };
 
-function pruneRecords(records: Record<string, SrsRecord>): Record<string, SrsRecord> {
+export function pruneRecords(records: Record<string, SrsRecord>): Record<string, SrsRecord> {
   const keys = Object.keys(records);
   if (keys.length <= MAX_RECORDS) return records;
   // Keep the most-recently-seen MAX_RECORDS entries.
@@ -52,6 +62,60 @@ function pruneRecords(records: Record<string, SrsRecord>): Record<string, SrsRec
   const next: Record<string, SrsRecord> = {};
   for (const k of kept) next[k] = records[k];
   return next;
+}
+
+/**
+ * Merge two independent training histories for the sync engine's adoption-edge
+ * case (this device has un-synced local progress AND the cloud already holds a
+ * copy from another device). The two histories are disjoint in time, so:
+ *  - records: union; an overlapping fact sums its seen/correct counts, takes the
+ *    higher Leitner box, and adopts the more-recent attempt's result.
+ *  - modeStats: union; sum attempts/correct, keep the better streak.
+ *  - modeSettings: union; this device's choice (local) wins a conflict.
+ * Pure — never mutates either input. Result is pruned to MAX_RECORDS.
+ */
+export function mergeTrainingPayloads(
+  local: TrainingPayload,
+  remote: TrainingPayload
+): TrainingPayload {
+  const records: Record<string, SrsRecord> = { ...remote.records };
+  for (const [k, l] of Object.entries(local.records)) {
+    const r = records[k];
+    if (!r) {
+      records[k] = l;
+    } else {
+      const newer = l.lastSeenAt >= r.lastSeenAt ? l : r;
+      records[k] = {
+        box: Math.max(l.box, r.box),
+        seen: l.seen + r.seen,
+        correct: l.correct + r.correct,
+        lastResult: newer.lastResult,
+        lastSeenAt: Math.max(l.lastSeenAt, r.lastSeenAt),
+      };
+    }
+  }
+
+  const modeStats: Record<string, ModeStats> = { ...remote.modeStats };
+  for (const [k, l] of Object.entries(local.modeStats)) {
+    const r = modeStats[k];
+    modeStats[k] = r
+      ? {
+          attempts: l.attempts + r.attempts,
+          correct: l.correct + r.correct,
+          bestStreak: Math.max(l.bestStreak, r.bestStreak),
+        }
+      : l;
+  }
+
+  const modeSettings: Record<string, Record<string, string>> = {};
+  for (const k of new Set([
+    ...Object.keys(remote.modeSettings),
+    ...Object.keys(local.modeSettings),
+  ])) {
+    modeSettings[k] = { ...remote.modeSettings[k], ...local.modeSettings[k] };
+  }
+
+  return { records: pruneRecords(records), modeStats, modeSettings };
 }
 
 export const useTrainingStore = create<TrainingState>()(
