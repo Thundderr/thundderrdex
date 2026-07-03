@@ -1,6 +1,7 @@
 import { calculate, Generations, Pokemon, Move, Field, type GenerationNum } from "@smogon/calc";
 import type { SmogonSet } from "@/hooks/useSmogonSets";
 import { getNatureByName } from "@/data/natures";
+import { toPokeApiName } from "@/lib/pokemon/names";
 import type { CalcSetup } from "./types";
 
 export type KoBucket = "OHKO" | "2HKO" | "3HKO" | "4HKO+";
@@ -146,9 +147,9 @@ export function computeKo(
   }
 }
 
-/** Convert a Smogon display species ("Great Tusk") to the app's kebab form. */
+/** Convert a Smogon display species ("Basculegion-F") to the app's PokéAPI slug. */
 export function toCalcSpecies(species: string): string {
-  return species.toLowerCase().replace(/[\s_]+/g, "-");
+  return toPokeApiName(species).pokeApiName;
 }
 
 /** Build a Damage Calculator setup from a real set, for the deep-link. */

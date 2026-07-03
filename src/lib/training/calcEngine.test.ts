@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { koBucket, KO_BUCKETS, moveName } from "./calcEngine";
+import { koBucket, KO_BUCKETS, moveName, toCalcSpecies } from "./calcEngine";
 
 describe("koBucket", () => {
   it("treats a guaranteed full-HP min roll as an OHKO", () => {
@@ -33,5 +33,14 @@ describe("moveName", () => {
 
   it("takes the first option of a slashed move list", () => {
     expect(moveName(["Earthquake", "Stone Edge"])).toBe("Earthquake");
+  });
+});
+
+describe("toCalcSpecies (Smogon display → PokéAPI slug)", () => {
+  it("maps gendered and base forms to fetchable PokéAPI slugs", () => {
+    expect(toCalcSpecies("Basculegion-F")).toBe("basculegion-female");
+    expect(toCalcSpecies("Urshifu")).toBe("urshifu-single-strike");
+    expect(toCalcSpecies("Incineroar")).toBe("incineroar");
+    expect(toCalcSpecies("Tapu Koko")).toBe("tapu-koko");
   });
 });
