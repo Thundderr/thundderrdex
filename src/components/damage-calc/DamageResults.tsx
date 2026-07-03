@@ -7,6 +7,7 @@ import { clampLeftToViewport } from "@/lib/utils/popoverPosition";
 
 interface Props {
   result: DamageCalcResult | null;
+  unresolvedSpecies?: string | null;
 }
 
 // Info icon. The breakdown shows on hover (mouse), on focus (keyboard), and when
@@ -137,8 +138,33 @@ function getKoBgColor(koChance: DamageCalcResult["koChance"]): string {
   return "bg-green-900/50";
 }
 
-export function DamageResults({ result }: Props) {
+export function DamageResults({ result, unresolvedSpecies }: Props) {
   if (!result) {
+    if (unresolvedSpecies) {
+      return (
+        <div className="bg-slate-800 rounded-lg p-3 flex flex-col justify-center">
+          <div className="text-center py-2">
+            <svg
+              className="w-8 h-8 mx-auto mb-1 text-yellow-500 opacity-80"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              />
+            </svg>
+            <p className="text-xs text-yellow-400">
+              Couldn&apos;t resolve &quot;{unresolvedSpecies}&quot; for the calculator.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-slate-800 rounded-lg p-3 flex flex-col justify-center">
         <div className="text-center text-slate-500 py-2">

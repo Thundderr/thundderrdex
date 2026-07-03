@@ -238,7 +238,7 @@ export function FullscreenDamageCalc({ module }: Props) {
           })()}
 
           {/* Damage Results */}
-          <DamageResults result={damageResult} />
+          <DamageResults result={damageResult} unresolvedSpecies={damageResult?.unresolvedSpecies} />
 
           {/* Move Quick Select */}
           {module.attacker.moves?.some((m) => m) && (

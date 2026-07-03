@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { calculate, Generations, Pokemon, Move, Field, type GenerationNum } from "@smogon/calc";
 import { useGenerationStore } from "@/stores/generationStore";
 import { DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcStatus } from "@/types/module";
+import { toShowdownName, resolveShowdown } from "@/lib/pokemon/names";
 
 export interface DamageCalcResult {
   damage: number | number[] | number[][];
@@ -26,6 +27,9 @@ export interface DamageCalcResult {
     spikes: number;
     steelsurge: number;
   };
+  // Non-null when a species name couldn't be resolved to a known Showdown name;
+  // the UI should show an error message instead of silently showing nothing.
+  unresolvedSpecies: string | null;
 }
 
 // @smogon/calc status names
@@ -53,13 +57,9 @@ function convertToSmogonPokemon(
   if (!config.pokemonName) return null;
 
   try {
-    // Clean and convert Pokemon name to proper format (capitalize first letter)
-    const pokemonName = config.pokemonName
-      .trim()
-      .toLowerCase()
-      .split("-")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join("-");
+    // Resolve the app's PokéAPI slug to the Showdown display name @smogon/calc
+    // expects (handles forms/gender/punctuation the old title-casing broke).
+    const pokemonName = toShowdownName(config.pokemonName);
 
     // @smogon/calc is lenient with Pokemon names - it will find them even if they're
     // not "officially" in that gen's dex. Just pass the name directly.
@@ -290,6 +290,18 @@ export function useDamageCalc(
       return null;
     }
 
+    // Detect unresolvable species before attempting the calc so we can surface
+    // a visible error instead of silently returning null.
+    const attackerUnresolved =
+      attackerConfig.pokemonName && !resolveShowdown(attackerConfig.pokemonName).resolved
+        ? attackerConfig.pokemonName
+        : null;
+    const defenderUnresolved =
+      defenderConfig.pokemonName && !resolveShowdown(defenderConfig.pokemonName).resolved
+        ? defenderConfig.pokemonName
+        : null;
+    const unresolvedSpecies = attackerUnresolved ?? defenderUnresolved;
+
     try {
       const gen = Generations.get(globalGeneration as GenerationNum);
 
@@ -325,14 +337,7 @@ export function useDamageCalc(
       if (attackerConfig.isDynamaxed && globalGeneration === 8) {
         moveOptions.useMax = true;
         if (attackerConfig.pokemonName) {
-          // Convert Pokemon name to proper format for species
-          const speciesName = attackerConfig.pokemonName
-            .trim()
-            .toLowerCase()
-            .split("-")
-            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-            .join("-");
-          moveOptions.species = speciesName;
+          moveOptions.species = toShowdownName(attackerConfig.pokemonName);
         }
         if (attackerConfig.ability) {
           moveOptions.ability = attackerConfig.ability;
@@ -454,6 +459,7 @@ export function useDamageCalc(
           spikes: hazardDamage.spikes,
           steelsurge: hazardDamage.steelsurge,
         },
+        unresolvedSpecies,
       };
     } catch {
       return null;
