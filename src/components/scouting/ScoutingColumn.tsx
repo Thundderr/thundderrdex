@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { usePokemon } from "@/hooks/usePokemon";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import { SlimUsageEntry } from "@/lib/competitive/types";
 import { formatEvSpread } from "@/lib/scouting/scoutingData";
+import { getChampionsMegas } from "@/lib/pokemon/championsMega";
 import { StatBars } from "./StatBars";
 import { UsageList } from "./UsageList";
 
@@ -18,6 +20,8 @@ interface Props {
 
 export function ScoutingColumn({ name, entry, usageLoading, onClear }: Props) {
   const { data: pokemon, isError } = usePokemon(name);
+  const [spriteFailed, setSpriteFailed] = useState(false);
+  const champ = getChampionsMegas().find((m) => m.name === name);
 
   return (
     <div className="flex w-[220px] shrink-0 flex-col gap-2 rounded-lg border border-line bg-surface-raised p-2">
@@ -26,12 +30,13 @@ export function ScoutingColumn({ name, entry, usageLoading, onClear }: Props) {
         <div className="h-12 w-12 shrink-0">
           {pokemon ? (
             <Image
-              src={pokemon.sprites.front_default ?? getSpriteUrl(pokemon.id)}
+              src={spriteFailed ? getSpriteUrl(pokemon.id) : (pokemon.sprites.front_default ?? getSpriteUrl(pokemon.id))}
               alt=""
               width={48}
               height={48}
               className="pixelated"
               unoptimized
+              onError={() => setSpriteFailed(true)}
             />
           ) : (
             <div className="h-12 w-12 animate-pulse rounded bg-surface-hover" />
@@ -49,6 +54,11 @@ export function ScoutingColumn({ name, entry, usageLoading, onClear }: Props) {
                 {t.name}
               </span>
             ))}
+            {champ && (
+              <span className="rounded bg-teal-600/80 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+                Champions
+              </span>
+            )}
           </div>
         </div>
         <button
@@ -70,6 +80,9 @@ export function ScoutingColumn({ name, entry, usageLoading, onClear }: Props) {
         <p className="text-2xs text-red-400">Failed to load base stats.</p>
       ) : (
         <div className="h-24 animate-pulse rounded bg-surface-hover" />
+      )}
+      {champ && (
+        <p className="text-2xs text-fg-subtle">Mega Stone: {champ.stone}</p>
       )}
 
       {/* Usage sections */}
