@@ -58,13 +58,24 @@ export function ScoutingModule({ module, isOverlay = false }: Props) {
               className="flex w-[220px] shrink-0 flex-col rounded-lg border border-dashed border-line bg-surface p-2"
             >
               {pickingSlot === i ? (
-                <SearchBar
-                  currentPokemon={null}
-                  onSelect={(picked) => {
-                    setScoutingSlot(module.id, i, picked);
-                    setPickingSlot(null);
-                  }}
-                />
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xs text-fg-subtle">Add Pokémon</span>
+                    <button
+                      onClick={() => setPickingSlot(null)}
+                      className="rounded px-1 text-2xs text-fg-subtle transition-colors hover:bg-surface-hover hover:text-fg"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <SearchBar
+                    currentPokemon={null}
+                    onSelect={(picked) => {
+                      setScoutingSlot(module.id, i, picked);
+                      setPickingSlot(null);
+                    }}
+                  />
+                </div>
               ) : (
                 <button
                   onClick={() => setPickingSlot(i)}
