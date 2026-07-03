@@ -1,6 +1,6 @@
 import { Dex } from "@pkmn/dex";
 import { TYPE_COLORS } from "@/data/typeChart";
-import { getChampionsMegaSpriteUrl, getOfficialArtworkUrl } from "@/lib/pokeapi/client";
+import { getChampionsMegaSpriteUrl } from "@/lib/pokeapi/client";
 import type { Pokemon, PokemonType, PokemonTypeName } from "@/types/pokemon";
 import { getChampionsMegas } from "./championsMega";
 
@@ -43,7 +43,7 @@ export function transformDexSpecies(name: string): Pokemon {
     sprites: {
       front_default: getChampionsMegaSpriteUrl(meta.name),
       front_shiny: null,
-      official_artwork: getOfficialArtworkUrl(meta.baseNum),
+      official_artwork: null,
     },
     generation: 9,
     pastTypes: [],

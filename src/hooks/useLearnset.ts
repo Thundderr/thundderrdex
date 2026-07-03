@@ -4,12 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPokemon } from "@/lib/pokeapi/client";
 import { transformLearnset } from "@/lib/pokeapi/transformers";
 import { LearnsetEntry } from "@/types/moves";
+import { isChampionsMega } from "@/lib/pokemon/championsMega";
+import { getChampionsMegaLearnset } from "@/lib/pokemon/championsLearnset";
 
 export function useLearnset(pokemonName: string | null) {
   return useQuery({
     queryKey: ["learnset", pokemonName],
     queryFn: async (): Promise<LearnsetEntry[]> => {
       if (!pokemonName) throw new Error("No Pokemon specified");
+      if (isChampionsMega(pokemonName)) return getChampionsMegaLearnset(pokemonName);
       const data = await fetchPokemon(pokemonName);
       return transformLearnset(data.moves);
     },
