@@ -62,6 +62,8 @@ describe("toPokeApiName (→ PokéAPI slug for usePokemon)", () => {
     expect(toPokeApiName("Urshifu").pokeApiName).toBe("urshifu-single-strike");
     expect(toPokeApiName("Tornadus").pokeApiName).toBe("tornadus-incarnate");
     expect(toPokeApiName("Lycanroc").pokeApiName).toBe("lycanroc-midday");
+    expect(toPokeApiName("Palafin").pokeApiName).toBe("palafin-zero");
+    expect(toPokeApiName("Aegislash").pokeApiName).toBe("aegislash-shield");
   });
   it("accepts usage-key input too (basculegion-f → basculegion-female)", () => {
     expect(toPokeApiName("basculegion-f").pokeApiName).toBe("basculegion-female");

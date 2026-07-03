@@ -94,6 +94,8 @@ const BASE_DEFAULT_SLUG: Record<string, string> = {
   Eiscue: "eiscue-ice",
   Morpeko: "morpeko-full-belly",
   Mimikyu: "mimikyu-disguised",
+  Palafin: "palafin-zero",
+  Aegislash: "aegislash-shield",
 };
 
 /** General Showdown-display → PokéAPI slug: lowercase, spaces→-, drop . : ' (U+0027) ' (U+2019) */
