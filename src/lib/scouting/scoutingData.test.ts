@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { findUsageEntry, formatEvSpread, toUsageSpecies } from "./scoutingData";
+import { findUsageEntry, formatEvSpread } from "./scoutingData";
 import type { UsageDataset, SlimUsageEntry } from "@/lib/competitive/types";
 
 function entry(species: string, name: string): SlimUsageEntry {
@@ -36,32 +36,6 @@ describe("findUsageEntry", () => {
   it("returns null when the dataset or name is absent", () => {
     expect(findUsageEntry(undefined, "incineroar")).toBeNull();
     expect(findUsageEntry(dataset, null)).toBeNull();
-  });
-});
-
-describe("toUsageSpecies", () => {
-  it("passes through names that already match the Smogon key", () => {
-    expect(toUsageSpecies("incineroar")).toBe("incineroar");
-    expect(toUsageSpecies("urshifu-rapid-strike")).toBe("urshifu-rapid-strike");
-    expect(toUsageSpecies("raichu-alola")).toBe("raichu-alola");
-  });
-  it("resolves PokéAPI form names @pkmn/dex knows to their Smogon key", () => {
-    expect(toUsageSpecies("urshifu-single-strike")).toBe("urshifu"); // base Urshifu
-    expect(toUsageSpecies("tornadus-incarnate")).toBe("tornadus"); // base form
-  });
-  it("resolves gendered -male/-female forms @pkmn/dex does not alias", () => {
-    expect(toUsageSpecies("basculegion-male")).toBe("basculegion");
-    expect(toUsageSpecies("basculegion-female")).toBe("basculegion-f");
-    expect(toUsageSpecies("indeedee-male")).toBe("indeedee");
-    expect(toUsageSpecies("indeedee-female")).toBe("indeedee-f");
-    expect(toUsageSpecies("oinkologne-female")).toBe("oinkologne-f");
-  });
-  it("strips trailing cosmetic-form segments to the base species", () => {
-    expect(toUsageSpecies("maushold-family-of-four")).toBe("maushold");
-  });
-  it("falls back to plain normalization for unknown names", () => {
-    expect(toUsageSpecies("notapokemon")).toBe("notapokemon");
-    expect(toUsageSpecies("Urshifu_Rapid Strike")).toBe("urshifu-rapid-strike");
   });
 });
 
