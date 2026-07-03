@@ -28,6 +28,7 @@ import { LocationModule } from "@/components/location-module/LocationModule";
 import { PokedexModule } from "@/components/pokedex-module/PokedexModule";
 import { CatchRateModule } from "@/components/catch-rate-module/CatchRateModule";
 import { TrainingModule } from "@/components/training-module/TrainingModule";
+import { ScoutingModule } from "@/components/scouting/ScoutingModule";
 import { AnyModule } from "@/types/module";
 import { DamageCalcModule as DamageCalcModuleType, PokedexModule as PokedexModuleType } from "@/types/module";
 import { TeamBattlePanel } from "@/components/damage-calc/TeamBattlePanel";
@@ -56,7 +57,7 @@ function renderModule(module: AnyModule, isOverlay = false) {
     case "training":
       return <TrainingModule module={module} isOverlay={isOverlay} />;
     case "scouting":
-      return null; // UI component added in a later task
+      return <ScoutingModule module={module} isOverlay={isOverlay} />;
     default:
       return <PokemonModule module={module} isOverlay={isOverlay} />;
   }
