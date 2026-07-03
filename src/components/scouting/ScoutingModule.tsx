@@ -8,7 +8,7 @@ import { useCompetitiveFormatStore } from "@/stores/competitiveFormatStore";
 import { useUsageStats } from "@/hooks/useUsageStats";
 import { getCompetitiveFormat } from "@/lib/competitive/formats";
 import { indexBySpecies } from "@/lib/competitive/smogonStats";
-import { toAppSpecies } from "@/lib/competitive/sources";
+import { toUsageSpecies } from "@/lib/scouting/scoutingData";
 import { ScoutingModule as ScoutingModuleType } from "@/types/module";
 import { ScoutingColumn } from "./ScoutingColumn";
 
@@ -41,7 +41,7 @@ export function ScoutingModule({ module, isOverlay = false }: Props) {
       <div className="flex gap-2">
         {module.slots.map((name, i) => {
           if (name) {
-            const entry = speciesIndex ? speciesIndex.get(toAppSpecies(name)) ?? null : null;
+            const entry = speciesIndex ? speciesIndex.get(toUsageSpecies(name)) ?? null : null;
             return (
               <ScoutingColumn
                 key={i}
