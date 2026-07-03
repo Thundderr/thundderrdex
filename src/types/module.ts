@@ -1,7 +1,7 @@
 import { StatModifiers, StatValues } from "@/lib/utils/statCalculator";
 
 export type ModuleTab = "stats" | "abilities" | "types" | "moves" | "locations" | "evolution";
-export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location" | "pokedex" | "catch-rate" | "training";
+export type ModuleType = "pokemon" | "type-chart" | "nature-chart" | "team-builder" | "damage-calc" | "location" | "pokedex" | "catch-rate" | "training" | "scouting";
 
 // Base module interface
 export interface BaseModule {
@@ -199,8 +199,14 @@ export interface TrainingModule extends BaseModule {
   selectedModeId: string | null;
 }
 
+// Scouting module specific fields
+export interface ScoutingModule extends BaseModule {
+  moduleType: "scouting";
+  slots: (string | null)[]; // length 6, Pokémon app names (usePokemonList `name`)
+}
+
 // Union type for all modules
-export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule | PokedexModule | CatchRateModule | TrainingModule;
+export type AnyModule = PokemonModule | TeamBuilderModule | DamageCalcModule | LocationModule | PokedexModule | CatchRateModule | TrainingModule | ScoutingModule;
 
 export interface RecentSearch {
   pokemonName: string;

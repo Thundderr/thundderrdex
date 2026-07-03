@@ -30,6 +30,7 @@ export const MODULE_ACCENTS: Record<ModuleType, ModuleAccent> = {
   pokedex: { name: "emerald", solid: "bg-emerald-600 hover:bg-emerald-500", text: "text-emerald-300", ring: "ring-emerald-500", dot: "bg-emerald-500" },
   "catch-rate": { name: "red", solid: "bg-red-600 hover:bg-red-500", text: "text-red-300", ring: "ring-red-500", dot: "bg-red-500" },
   training: { name: "indigo", solid: "bg-indigo-600 hover:bg-indigo-500", text: "text-indigo-300", ring: "ring-indigo-500", dot: "bg-indigo-500" },
+  scouting: { name: "teal", solid: "bg-teal-600 hover:bg-teal-500", text: "text-teal-300", ring: "ring-teal-500", dot: "bg-teal-500" },
 };
 
 export function moduleAccent(type: ModuleType): ModuleAccent {

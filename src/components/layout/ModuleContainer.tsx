@@ -55,6 +55,8 @@ function renderModule(module: AnyModule, isOverlay = false) {
       return <CatchRateModule module={module} isOverlay={isOverlay} />;
     case "training":
       return <TrainingModule module={module} isOverlay={isOverlay} />;
+    case "scouting":
+      return null; // UI component added in a later task
     default:
       return <PokemonModule module={module} isOverlay={isOverlay} />;
   }
