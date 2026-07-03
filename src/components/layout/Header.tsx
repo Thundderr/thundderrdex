@@ -22,6 +22,7 @@ const MODULE_BUTTONS = [
   { key: "pokedex", type: "pokedex", action: "addPokedexModule", label: "Pokedex", shortLabel: "Dex" },
   { key: "catchrate", type: "catch-rate", action: "addCatchRateModule", label: "Catch Rate", shortLabel: "Catch" },
   { key: "training", type: "training", action: "addTrainingModule", label: "Training", shortLabel: "Train" },
+  { key: "scouting", type: "scouting", action: "addScoutingModule", label: "Scouting", shortLabel: "Scout" },
 ] as const satisfies ReadonlyArray<{ key: string; type: ModuleType; action: string; label: string; shortLabel: string }>;
 
 export function Header() {

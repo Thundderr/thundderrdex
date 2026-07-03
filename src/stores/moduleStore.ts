@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, CatchRateModule, TrainingModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
+import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, CatchRateModule, TrainingModule, ScoutingModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
 
 const MAX_RECENT_SEARCHES = 20;
@@ -162,6 +162,13 @@ const createTrainingModule = (): TrainingModule => ({
   selectedModeId: null,
 });
 
+const createScoutingModule = (): ScoutingModule => ({
+  id: uuidv4(),
+  moduleType: "scouting",
+  isMinimized: false,
+  slots: [null, null, null, null, null, null],
+});
+
 const createDefaultTab = (name: string = "Main"): WorkspaceTab => ({
   id: uuidv4(),
   name,
@@ -224,6 +231,10 @@ interface ModuleStore {
   // Training Dojo module methods
   addTrainingModule: () => void;
   setTrainingMode: (moduleId: string, modeId: string | null) => void;
+  // Scouting module methods
+  addScoutingModule: () => void;
+  setScoutingSlot: (moduleId: string, slotIndex: number, pokemonName: string | null) => void;
+  clearScoutingSlot: (moduleId: string, slotIndex: number) => void;
   // Location module methods
   addLocationModule: (locationAreaName?: string | null) => void;
   setLocationArea: (moduleId: string, locationAreaName: string | null) => void;
@@ -784,6 +795,48 @@ export const useModuleStore = create<ModuleStore>()(
                 ? ({ ...m, selectedModeId: modeId } as TrainingModule)
                 : m
             )
+          ),
+        }));
+      },
+
+      // Scouting module methods
+      addScoutingModule: () => {
+        const newModule = createScoutingModule();
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
+          newlyCreatedModuleId: newModule.id,
+          selectedModuleId: newModule.id,
+        }));
+      },
+
+      setScoutingSlot: (moduleId, slotIndex, pokemonName) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "scouting") {
+                const sm = m as ScoutingModule;
+                const newSlots = [...sm.slots];
+                newSlots[slotIndex] = pokemonName;
+                return { ...sm, slots: newSlots };
+              }
+              return m;
+            })
+          ),
+        }));
+      },
+
+      clearScoutingSlot: (moduleId, slotIndex) => {
+        set((state) => ({
+          tabs: updateActiveTabModules(state, (modules) =>
+            modules.map((m) => {
+              if (m.id === moduleId && m.moduleType === "scouting") {
+                const sm = m as ScoutingModule;
+                const newSlots = [...sm.slots];
+                newSlots[slotIndex] = null;
+                return { ...sm, slots: newSlots };
+              }
+              return m;
+            })
           ),
         }));
       },

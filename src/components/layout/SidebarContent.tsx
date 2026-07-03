@@ -135,6 +135,8 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         return { label: "Catch Rate", color: "text-red-300", icon: "🎯" };
       case "training":
         return { label: "Training Dojo", color: "text-indigo-300", icon: "🎓" };
+      case "scouting":
+        return { label: "Scouting", color: "text-teal-300", icon: "🕵️" };
       default:
         return { label: "Module", color: "text-slate-300", icon: "📦" };
     }

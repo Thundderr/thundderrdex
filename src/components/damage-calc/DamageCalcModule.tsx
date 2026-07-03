@@ -57,7 +57,7 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
   const { data: attackerLearnset } = useLearnset(module.attacker.pokemonName);
 
   // Calculate damage
-  const damageResult = useDamageCalc(
+  const { result: damageResult, unresolvedSpecies } = useDamageCalc(
     module.attacker,
     module.defender,
     module.selectedMove,
@@ -208,10 +208,10 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
             {/* 1. Damage Results */}
             {isFullscreen ? (
               <div className="flex-1 min-h-0">
-                <DamageResults result={damageResult} />
+                <DamageResults result={damageResult} unresolvedSpecies={unresolvedSpecies} />
               </div>
             ) : (
-              <DamageResults result={damageResult} />
+              <DamageResults result={damageResult} unresolvedSpecies={unresolvedSpecies} />
             )}
 
             {/* 2. Move Quick Select - 2x2 grid */}

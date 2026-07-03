@@ -54,7 +54,7 @@ export function FullscreenDamageCalc({ module }: Props) {
   const { data: defenderPokemon } = usePokemon(module.defender.pokemonName);
   const { data: attackerLearnset } = useLearnset(module.attacker.pokemonName);
 
-  const damageResult = useDamageCalc(
+  const { result: damageResult, unresolvedSpecies } = useDamageCalc(
     module.attacker,
     module.defender,
     module.selectedMove,
@@ -238,7 +238,7 @@ export function FullscreenDamageCalc({ module }: Props) {
           })()}
 
           {/* Damage Results */}
-          <DamageResults result={damageResult} />
+          <DamageResults result={damageResult} unresolvedSpecies={unresolvedSpecies} />
 
           {/* Move Quick Select */}
           {module.attacker.moves?.some((m) => m) && (

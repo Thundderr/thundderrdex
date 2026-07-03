@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useGenerationStore } from "@/stores/generationStore";
+import { toShowdownName } from "@/lib/pokemon/names";
 
 // Format display names and priorities
 const FORMAT_INFO: Record<string, { display: string; priority: number }> = {
@@ -47,11 +48,9 @@ export interface SmogonSet {
 async function fetchSmogonSets(pokemonName: string, generation: number): Promise<SmogonSet[]> {
   const sets: SmogonSet[] = [];
 
-  // Normalize Pokemon name for Smogon lookup (capitalize first letter of each word)
-  const normalizedName = pokemonName
-    .split("-")
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("-");
+  // @smogon/sets is keyed by the Showdown display name ("Tapu Koko", "Type: Null",
+  // "Basculegion"), not the hyphenated PokéAPI slug — resolve via the canonical map.
+  const normalizedName = toShowdownName(pokemonName);
 
   const formats = GEN_FORMATS[generation] || GEN_FORMATS[9];
 

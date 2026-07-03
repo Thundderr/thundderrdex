@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { calculate, Generations, Pokemon, Move, Field, type GenerationNum } from "@smogon/calc";
 import { useGenerationStore } from "@/stores/generationStore";
 import { DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcStatus } from "@/types/module";
+import { toShowdownName, resolveShowdown } from "@/lib/pokemon/names";
 
 export interface DamageCalcResult {
   damage: number | number[] | number[][];
@@ -53,13 +54,9 @@ function convertToSmogonPokemon(
   if (!config.pokemonName) return null;
 
   try {
-    // Clean and convert Pokemon name to proper format (capitalize first letter)
-    const pokemonName = config.pokemonName
-      .trim()
-      .toLowerCase()
-      .split("-")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join("-");
+    // Resolve the app's PokéAPI slug to the Showdown display name @smogon/calc
+    // expects (handles forms/gender/punctuation the old title-casing broke).
+    const pokemonName = toShowdownName(config.pokemonName);
 
     // @smogon/calc is lenient with Pokemon names - it will find them even if they're
     // not "officially" in that gen's dex. Just pass the name directly.
@@ -282,13 +279,25 @@ export function useDamageCalc(
   defenderConfig: DamageCalcPokemonConfig,
   moveName: string | null,
   fieldConfig: DamageCalcFieldConfig
-): DamageCalcResult | null {
+): { result: DamageCalcResult | null; unresolvedSpecies: string | null } {
   const { globalGeneration } = useGenerationStore();
 
   return useMemo(() => {
     if (!attackerConfig.pokemonName || !defenderConfig.pokemonName || !moveName) {
-      return null;
+      return { result: null, unresolvedSpecies: null };
     }
+
+    // Detect unresolvable species before attempting the calc so we can surface
+    // a visible error instead of silently returning null.
+    const attackerUnresolved =
+      attackerConfig.pokemonName && !resolveShowdown(attackerConfig.pokemonName).resolved
+        ? attackerConfig.pokemonName
+        : null;
+    const defenderUnresolved =
+      defenderConfig.pokemonName && !resolveShowdown(defenderConfig.pokemonName).resolved
+        ? defenderConfig.pokemonName
+        : null;
+    const unresolvedSpecies = attackerUnresolved ?? defenderUnresolved;
 
     try {
       const gen = Generations.get(globalGeneration as GenerationNum);
@@ -297,7 +306,7 @@ export function useDamageCalc(
       const defender = convertToSmogonPokemon(gen, defenderConfig);
 
       if (!attacker || !defender) {
-        return null;
+        return { result: null, unresolvedSpecies };
       }
 
       // Convert move name to proper format for @smogon/calc
@@ -325,14 +334,7 @@ export function useDamageCalc(
       if (attackerConfig.isDynamaxed && globalGeneration === 8) {
         moveOptions.useMax = true;
         if (attackerConfig.pokemonName) {
-          // Convert Pokemon name to proper format for species
-          const speciesName = attackerConfig.pokemonName
-            .trim()
-            .toLowerCase()
-            .split("-")
-            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-            .join("-");
-          moveOptions.species = speciesName;
+          moveOptions.species = toShowdownName(attackerConfig.pokemonName);
         }
         if (attackerConfig.ability) {
           moveOptions.ability = attackerConfig.ability;
@@ -347,7 +349,7 @@ export function useDamageCalc(
         try {
           move = new Move(gen, moveName, moveOptions);
         } catch {
-          return null;
+          return { result: null, unresolvedSpecies };
         }
       }
 
@@ -439,24 +441,27 @@ export function useDamageCalc(
       const hazardDamage = calculateHazardDamage(defender, fieldConfig);
 
       return {
-        damage: result.damage,
-        minDamage,
-        maxDamage,
-        minPercent,
-        maxPercent,
-        defenderMaxHp,
-        fullDesc: result.fullDesc(),
-        moveDesc: result.moveDesc(),
-        koChance: parseKoChance(result),
-        hazardPercent: hazardDamage.total,
-        hazardBreakdown: {
-          stealthRock: hazardDamage.stealthRock,
-          spikes: hazardDamage.spikes,
-          steelsurge: hazardDamage.steelsurge,
+        result: {
+          damage: result.damage,
+          minDamage,
+          maxDamage,
+          minPercent,
+          maxPercent,
+          defenderMaxHp,
+          fullDesc: result.fullDesc(),
+          moveDesc: result.moveDesc(),
+          koChance: parseKoChance(result),
+          hazardPercent: hazardDamage.total,
+          hazardBreakdown: {
+            stealthRock: hazardDamage.stealthRock,
+            spikes: hazardDamage.spikes,
+            steelsurge: hazardDamage.steelsurge,
+          },
         },
+        unresolvedSpecies,
       };
     } catch {
-      return null;
+      return { result: null, unresolvedSpecies };
     }
   }, [attackerConfig, defenderConfig, moveName, fieldConfig, globalGeneration]);
 }

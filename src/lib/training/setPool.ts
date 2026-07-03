@@ -2,6 +2,7 @@ import type { SmogonSet } from "@/hooks/useSmogonSets";
 
 /** A species paired with its real competitive sets, the unit the battle modes sample. */
 export interface PoolEntry {
+  /** Showdown display name (e.g. "Basculegion-F", "Tapu Koko"), not the app kebab id. */
   species: string;
   sets: SmogonSet[];
   /** Format usage % when the pool is built from usage data; absent for singles sets. */
