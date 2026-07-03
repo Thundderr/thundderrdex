@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchPokemonList, getSpriteUrl } from "@/lib/pokeapi/client";
+import { fetchPokemonList, getSpriteUrl, getChampionsMegaSpriteUrl } from "@/lib/pokeapi/client";
 import { transformPokemonListItem } from "@/lib/pokeapi/transformers";
 import { PokemonListItem } from "@/types/pokemon";
 import { MEGA_POKEMON, REGIONAL_VARIANTS } from "@/lib/utils/generationConfig";
+import { getChampionsMegas } from "@/lib/pokemon/championsMega";
 
 /**
  * Convert Mega Pokemon data to PokemonListItem format
@@ -32,6 +33,20 @@ function getRegionalVariantListItems(): PokemonListItem[] {
   }));
 }
 
+/**
+ * Convert Champions Mega data to PokemonListItem format
+ * Uses Showdown sprite URLs for animated gifs
+ */
+function getChampionsMegaListItems(): PokemonListItem[] {
+  return getChampionsMegas().map((m) => ({
+    id: m.baseNum,
+    name: m.name,
+    displayName: m.displayName,
+    spriteUrl: getChampionsMegaSpriteUrl(m.name),
+    isChampionsMega: true,
+  }));
+}
+
 export function usePokemonList() {
   return useQuery({
     queryKey: ["pokemon-list"],
@@ -46,7 +61,7 @@ export function usePokemonList() {
       const regionalVariants = getRegionalVariantListItems();
 
       // Combine and deduplicate by name (in case of any overlap)
-      const combined = [...basePokemon, ...megaPokemon, ...regionalVariants];
+      const combined = [...basePokemon, ...megaPokemon, ...regionalVariants, ...getChampionsMegaListItems()];
       const seen = new Set<string>();
       const deduplicated = combined.filter((p) => {
         if (seen.has(p.name)) return false;
