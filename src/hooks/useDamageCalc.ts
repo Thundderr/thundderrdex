@@ -27,9 +27,6 @@ export interface DamageCalcResult {
     spikes: number;
     steelsurge: number;
   };
-  // Non-null when a species name couldn't be resolved to a known Showdown name;
-  // the UI should show an error message instead of silently showing nothing.
-  unresolvedSpecies: string | null;
 }
 
 // @smogon/calc status names
@@ -282,12 +279,12 @@ export function useDamageCalc(
   defenderConfig: DamageCalcPokemonConfig,
   moveName: string | null,
   fieldConfig: DamageCalcFieldConfig
-): DamageCalcResult | null {
+): { result: DamageCalcResult | null; unresolvedSpecies: string | null } {
   const { globalGeneration } = useGenerationStore();
 
   return useMemo(() => {
     if (!attackerConfig.pokemonName || !defenderConfig.pokemonName || !moveName) {
-      return null;
+      return { result: null, unresolvedSpecies: null };
     }
 
     // Detect unresolvable species before attempting the calc so we can surface
@@ -309,7 +306,7 @@ export function useDamageCalc(
       const defender = convertToSmogonPokemon(gen, defenderConfig);
 
       if (!attacker || !defender) {
-        return null;
+        return { result: null, unresolvedSpecies };
       }
 
       // Convert move name to proper format for @smogon/calc
@@ -352,7 +349,7 @@ export function useDamageCalc(
         try {
           move = new Move(gen, moveName, moveOptions);
         } catch {
-          return null;
+          return { result: null, unresolvedSpecies };
         }
       }
 
@@ -444,25 +441,27 @@ export function useDamageCalc(
       const hazardDamage = calculateHazardDamage(defender, fieldConfig);
 
       return {
-        damage: result.damage,
-        minDamage,
-        maxDamage,
-        minPercent,
-        maxPercent,
-        defenderMaxHp,
-        fullDesc: result.fullDesc(),
-        moveDesc: result.moveDesc(),
-        koChance: parseKoChance(result),
-        hazardPercent: hazardDamage.total,
-        hazardBreakdown: {
-          stealthRock: hazardDamage.stealthRock,
-          spikes: hazardDamage.spikes,
-          steelsurge: hazardDamage.steelsurge,
+        result: {
+          damage: result.damage,
+          minDamage,
+          maxDamage,
+          minPercent,
+          maxPercent,
+          defenderMaxHp,
+          fullDesc: result.fullDesc(),
+          moveDesc: result.moveDesc(),
+          koChance: parseKoChance(result),
+          hazardPercent: hazardDamage.total,
+          hazardBreakdown: {
+            stealthRock: hazardDamage.stealthRock,
+            spikes: hazardDamage.spikes,
+            steelsurge: hazardDamage.steelsurge,
+          },
         },
         unresolvedSpecies,
       };
     } catch {
-      return null;
+      return { result: null, unresolvedSpecies };
     }
   }, [attackerConfig, defenderConfig, moveName, fieldConfig, globalGeneration]);
 }

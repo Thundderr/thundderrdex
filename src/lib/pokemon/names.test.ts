@@ -69,4 +69,8 @@ describe("toPokeApiName (→ PokéAPI slug for usePokemon)", () => {
   it("flags unresolved names", () => {
     expect(toPokeApiName("notapokemon").resolved).toBe(false);
   });
+  it("strips curly apostrophe (U+2019) from names like Farfetch’d and Sirfetch’d", () => {
+    expect(toPokeApiName("Farfetch’d").pokeApiName).toBe("farfetchd");
+    expect(toPokeApiName("Sirfetch’d").pokeApiName).toBe("sirfetchd");
+  });
 });

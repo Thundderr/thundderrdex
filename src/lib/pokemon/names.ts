@@ -96,12 +96,12 @@ const BASE_DEFAULT_SLUG: Record<string, string> = {
   Mimikyu: "mimikyu-disguised",
 };
 
-/** General Showdown-display → PokéAPI slug: lowercase, spaces→-, drop . : ' */
+/** General Showdown-display → PokéAPI slug: lowercase, spaces→-, drop . : ' (U+0027) ' (U+2019) */
 function generalSlug(showdownName: string): string {
   return showdownName
     .toLowerCase()
     .replace(/[\s_]+/g, "-")
-    .replace(/[.:']/g, "");
+    .replace(/[.:'’]/g, "");
 }
 
 /**
