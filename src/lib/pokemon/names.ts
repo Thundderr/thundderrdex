@@ -73,3 +73,51 @@ export function toUsageSpecies(name: string): string {
   const { showdownName, resolved } = resolveShowdown(name);
   return resolved ? toAppSpecies(showdownName) : toAppSpecies(name);
 }
+
+const OVERRIDE_BY_SHOWDOWN = new Map(FORM_OVERRIDES.map((o) => [o.showdown, o.pokeapi]));
+
+/**
+ * Base Showdown species whose PokéAPI DEFAULT form carries a suffix, so the
+ * general "lowercase + strip punctuation" transform would 404. Verified against
+ * PokéAPI. (Ogerpon/Zacian/Zamazenta have bare PokéAPI slugs → not listed.)
+ */
+const BASE_DEFAULT_SLUG: Record<string, string> = {
+  Urshifu: "urshifu-single-strike",
+  Tornadus: "tornadus-incarnate",
+  Thundurus: "thundurus-incarnate",
+  Landorus: "landorus-incarnate",
+  Enamorus: "enamorus-incarnate",
+  Lycanroc: "lycanroc-midday",
+  Keldeo: "keldeo-ordinary",
+  Toxtricity: "toxtricity-amped",
+  Basculin: "basculin-red-striped",
+  Eiscue: "eiscue-ice",
+  Morpeko: "morpeko-full-belly",
+  Mimikyu: "mimikyu-disguised",
+};
+
+/** General Showdown-display → PokéAPI slug: lowercase, spaces→-, drop . : ' */
+function generalSlug(showdownName: string): string {
+  return showdownName
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[.:']/g, "");
+}
+
+/**
+ * Reverse: any input name (Showdown display, usage key, or PokéAPI slug) → the
+ * PokéAPI slug that usePokemon / sprite lookups expect. `resolved` is false when
+ * the species couldn't be identified (caller should surface it, not silently 404).
+ */
+export function toPokeApiName(name: string): { pokeApiName: string; resolved: boolean } {
+  const { showdownName, resolved } = resolveShowdown(name);
+  if (!resolved) return { pokeApiName: generalSlug(name), resolved: false };
+
+  const override = OVERRIDE_BY_SHOWDOWN.get(showdownName);
+  if (override) return { pokeApiName: override, resolved: true };
+
+  const baseDefault = BASE_DEFAULT_SLUG[showdownName];
+  if (baseDefault) return { pokeApiName: baseDefault, resolved: true };
+
+  return { pokeApiName: generalSlug(showdownName), resolved: true };
+}
