@@ -75,6 +75,7 @@ describe("getTypesForGeneration", () => {
     sprites: {
       front_default: null,
       front_shiny: null,
+      front_female: null,
       official_artwork: null,
     },
     generation: 1,

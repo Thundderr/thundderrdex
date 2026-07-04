@@ -43,6 +43,7 @@ export interface PokemonAbility {
 export interface PokemonSprites {
   front_default: string | null;
   front_shiny: string | null;
+  front_female: string | null;
   official_artwork: string | null;
 }
 

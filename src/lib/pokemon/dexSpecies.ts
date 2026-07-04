@@ -40,6 +40,7 @@ export function transformDexSpecies(showdownName: string): Pokemon {
     sprites: {
       front_default: getShowdownSpriteUrl(s.name.toLowerCase()),
       front_shiny: null,
+      front_female: null,
       official_artwork: null,
     },
     generation: 9,

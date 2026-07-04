@@ -181,6 +181,7 @@ export function transformBasicPokemon(data: PokeAPIPokemon): Pokemon {
     sprites: {
       front_default: data.sprites.front_default,
       front_shiny: data.sprites.front_shiny,
+      front_female: data.sprites.front_female ?? null,
       official_artwork: getOfficialArtworkUrl(data.id),
     },
     generation: getGenerationFromId(data.id),

@@ -23,6 +23,12 @@ export const FORM_OVERRIDES: { pokeapi: string; showdown: string }[] = [
   // @pkmn calls Galarian Darmanitan "Darmanitan-Galar"; PokéAPI + the regional
   // table key it "-galar-standard". Without this the roster id mis-gates it.
   { pokeapi: "darmanitan-galar-standard", showdown: "Darmanitan-Galar" },
+  // PokéAPI models these gender-cosmetic species as separate "-male"/"-female"
+  // Pokémon (default is -male); resolve their base to the -male slug so PokéAPI
+  // data (incl. the front_female sprite) loads and the gender toggle works.
+  { pokeapi: "pyroar-male", showdown: "Pyroar" },
+  { pokeapi: "frillish-male", showdown: "Frillish" },
+  { pokeapi: "jellicent-male", showdown: "Jellicent" },
 ];
 
 const OVERRIDE_BY_POKEAPI = new Map(FORM_OVERRIDES.map((o) => [o.pokeapi, o.showdown]));

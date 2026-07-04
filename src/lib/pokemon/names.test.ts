@@ -58,6 +58,11 @@ describe("toPokeApiName (→ PokéAPI slug for usePokemon)", () => {
     expect(toPokeApiName("Tauros-Paldea-Aqua").pokeApiName).toBe("tauros-paldea-aqua-breed");
     expect(toPokeApiName("Maushold").pokeApiName).toBe("maushold-family-of-four");
   });
+  it("maps split-slug gender-cosmetic species to their -male default", () => {
+    expect(toPokeApiName("Pyroar").pokeApiName).toBe("pyroar-male");
+    expect(toPokeApiName("Frillish").pokeApiName).toBe("frillish-male");
+    expect(toPokeApiName("Jellicent").pokeApiName).toBe("jellicent-male");
+  });
   it("maps base forms whose PokéAPI default is suffixed", () => {
     expect(toPokeApiName("Urshifu").pokeApiName).toBe("urshifu-single-strike");
     expect(toPokeApiName("Tornadus").pokeApiName).toBe("tornadus-incarnate");
