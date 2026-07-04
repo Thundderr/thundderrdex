@@ -19,8 +19,8 @@ import {
   getCommonItemsForGeneration,
   isMegaPokemon,
   getMegaStone,
-  getRegionalVariantInfo,
 } from "@/lib/utils/generationConfig";
+import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
 import { Move } from "@/types/moves";
 
 // ─── Item icon ──────────────────────────────────────────────────────
@@ -141,27 +141,6 @@ const STAT_TO_BOOST: Record<keyof StatValues, string | null> = {
 };
 
 const BOOST_OPTIONS = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
-
-// ─── Helpers ─────────────────────────────────────────────────────────
-
-function getPokemonGenerationById(pokedexId: number): number {
-  if (pokedexId <= 151) return 1;
-  if (pokedexId <= 251) return 2;
-  if (pokedexId <= 386) return 3;
-  if (pokedexId <= 493) return 4;
-  if (pokedexId <= 649) return 5;
-  if (pokedexId <= 721) return 6;
-  if (pokedexId <= 809) return 7;
-  if (pokedexId <= 905) return 8;
-  return 9;
-}
-
-function getPokemonGeneration(pokemonName: string, pokedexId: number) {
-  if (isMegaPokemon(pokemonName)) return { minGen: 6, maxGen: 7 as number | null };
-  const regional = getRegionalVariantInfo(pokemonName);
-  if (regional) return { minGen: regional.minGeneration, maxGen: null };
-  return { minGen: getPokemonGenerationById(pokedexId), maxGen: null };
-}
 
 // ─── Component ───────────────────────────────────────────────────────
 
@@ -336,7 +315,7 @@ export function TeamBattleSlotCard({
         e.preventDefault();
         if (activeDropdown === "pokemon" && filteredPokemon[highlightedIndex]) {
           const p = filteredPokemon[highlightedIndex];
-          const { minGen, maxGen } = getPokemonGeneration(p.name, p.id);
+          const { minGen, maxGen } = getPokemonGenerationRange(p.name, p.id);
           const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
           if (!existsInGen) break;
           handleConfigChange({ pokemonName: p.name, ability: null, item: null });
@@ -460,7 +439,7 @@ export function TeamBattleSlotCard({
 
     if (!found) return { error: `Pokemon "${pokeName}" not found` };
 
-    const { minGen, maxGen } = getPokemonGeneration(found.name, found.id);
+    const { minGen, maxGen } = getPokemonGenerationRange(found.name, found.id);
     const exists = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
     if (!exists) return { error: `${found.displayName} not in Gen ${globalGeneration}` };
 
@@ -591,7 +570,7 @@ export function TeamBattleSlotCard({
               <ul ref={listRef}
                 className="absolute z-50 top-full left-0 w-[220px] max-w-[calc(100vw-1rem)] mt-0.5 bg-slate-800 border border-slate-600 rounded shadow-xl max-h-48 overflow-y-auto">
                 {filteredPokemon.map((p, i) => {
-                  const { minGen, maxGen } = getPokemonGeneration(p.name, p.id);
+                  const { minGen, maxGen } = getPokemonGenerationRange(p.name, p.id);
                   const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
                   return (
                     <li key={p.name}
