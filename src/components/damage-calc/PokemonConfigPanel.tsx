@@ -1015,7 +1015,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                   <GenderToggle
                     showFemale={/-female$/.test(config.pokemonName ?? "")}
                     onToggle={(female) =>
-                      storeSetConfig(moduleId, { pokemonName: female ? gender.femaleId! : gender.maleId })
+                      storeSetConfig(moduleId, { pokemonName: female ? gender.femaleId : gender.maleId })
                     }
                   />
                 )}

@@ -619,7 +619,7 @@ export function TeamBattleSlotCard({
             <GenderToggle
               showFemale={/-female$/.test(config.pokemonName ?? "")}
               onToggle={(female) =>
-                handleConfigChange({ pokemonName: female ? gender.femaleId! : gender.maleId })
+                handleConfigChange({ pokemonName: female ? gender.femaleId : gender.maleId })
               }
             />
           )}

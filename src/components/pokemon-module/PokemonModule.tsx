@@ -357,11 +357,16 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     data: pokemon,
     isLoading,
     error,
+    activeId,
     hasGenderToggle,
     showFemale,
     setShowFemale,
     spriteOverride,
   } = useGender(module.pokemonName);
+  // The active-gender slug (female form when toggled ♀ for a distinct-gender mon,
+  // else the base). Gender-divergent data — movepool and competitive sets — is
+  // keyed off this so ♀ Meowstic/Indeedee show their own moves and sets.
+  const activeName = activeId ?? module.pokemonName;
 
   // Fetch evolution data
   const { data: evolutionData, isLoading: isEvolutionLoading, isError: isEvolutionError, refetch: refetchEvolution } = useEvolution(module.pokemonName);
@@ -402,7 +407,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
 
   // Load Set dropdown state
   const [showSetsDropdown, setShowSetsDropdown] = useState(false);
-  const { data: smogonSets, isLoading: setsLoading } = useSmogonSets(module.pokemonName);
+  const { data: smogonSets, isLoading: setsLoading } = useSmogonSets(activeName);
 
   // Serialize to Showdown format
   const serializeToShowdown = () => {
@@ -1149,7 +1154,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                 {/* Tab Content */}
                 <div>
                   {module.activeTab === "stats" && (
-                    <StatsDisplay stats={pokemon.stats} moduleId={module.id} abilities={pokemon.abilities} pokemonName={module.pokemonName} />
+                    <StatsDisplay stats={pokemon.stats} moduleId={module.id} abilities={pokemon.abilities} pokemonName={activeName} />
                   )}
                   {module.activeTab === "abilities" && (
                     <>
@@ -1167,7 +1172,7 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                   )}
                   {module.activeTab === "moves" && module.pokemonName && (
                     <LearnsetTable
-                      pokemonName={module.pokemonName}
+                      pokemonName={activeName ?? module.pokemonName}
                       pokemonTypes={genTypes}
                     />
                   )}

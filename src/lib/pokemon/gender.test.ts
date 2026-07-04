@@ -24,6 +24,13 @@ describe("genderState", () => {
       kind: "distinct", maleId: "basculegion-male", femaleId: "basculegion-female",
     });
   });
+  it("distinct: normalizes a -female id back to its -male base so the toggle can flip back", () => {
+    // The damage calc passes the currently-picked slug, which becomes -female
+    // after toggling ♀; genderState must still resolve it as distinct.
+    expect(genderState("basculegion-female", undefined)).toEqual({
+      kind: "distinct", maleId: "basculegion-male", femaleId: "basculegion-female",
+    });
+  });
   it("cosmetic: returns the front_female sprite", () => {
     expect(genderState("pyroar-male", mon("f.png"))).toEqual({
       kind: "cosmetic", maleId: "pyroar-male", femaleSprite: "f.png",
