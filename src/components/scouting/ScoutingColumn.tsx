@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { usePokemon } from "@/hooks/usePokemon";
+import { useGender } from "@/hooks/useGender";
+import { GenderToggle } from "@/components/pokemon-module/GenderToggle";
 import { usePikalyticsMon } from "@/hooks/usePikalyticsMon";
 import { getSpriteUrl } from "@/lib/pokeapi/client";
 import { formatPokemonName } from "@/lib/pokeapi/transformers";
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export function ScoutingColumn({ name, onClear }: Props) {
-  const { data: pokemon, isError } = usePokemon(name);
+  const { data: pokemon, isError, hasGenderToggle, showFemale, setShowFemale, spriteOverride } = useGender(name);
   const [spriteFailed, setSpriteFailed] = useState(false);
   const champ = getChampionsMegas().find((m) => m.name === name);
   const [megaForm, setMegaForm] = useState(false);
@@ -30,7 +31,7 @@ export function ScoutingColumn({ name, onClear }: Props) {
         <div className="h-12 w-12 shrink-0">
           {pokemon ? (
             <Image
-              src={spriteFailed ? getSpriteUrl(pokemon.id) : (pokemon.sprites.front_default ?? getSpriteUrl(pokemon.id))}
+              src={spriteOverride ?? (spriteFailed ? getSpriteUrl(pokemon.id) : (pokemon.sprites.front_default ?? getSpriteUrl(pokemon.id)))}
               alt=""
               width={48}
               height={48}
@@ -54,6 +55,11 @@ export function ScoutingColumn({ name, onClear }: Props) {
               <span className="rounded bg-teal-600/80 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">Champions</span>
             )}
           </div>
+          {hasGenderToggle && (
+            <div className="mt-0.5">
+              <GenderToggle showFemale={showFemale} onToggle={setShowFemale} />
+            </div>
+          )}
         </div>
         <button onClick={onClear} aria-label="Remove Pokémon" title="Remove" className="shrink-0 rounded p-0.5 text-fg-subtle transition-colors hover:bg-red-600/20 hover:text-red-400">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
