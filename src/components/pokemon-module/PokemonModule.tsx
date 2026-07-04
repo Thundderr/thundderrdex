@@ -1086,22 +1086,16 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               <div className={module.isExtended ? "w-48 flex-shrink-0" : ""}>
                 <div className={`flex ${module.isExtended ? "flex-col items-center text-center" : "items-center"} gap-4 mb-4`}>
                   <div className={`relative ${module.isExtended ? "w-32 h-32" : "w-20 h-20"} bg-slate-800 rounded-lg flex items-center justify-center`}>
-                    {pokemon.sprites.official_artwork ? (
+                    {/* Female cosmetic sprite (spriteOverride) wins over official
+                        artwork — PokéAPI has no female official artwork, so it's
+                        the only way to show the gender difference. */}
+                    {(spriteOverride ?? pokemon.sprites.official_artwork ?? pokemon.sprites.front_default) ? (
                       <Image
-                        src={pokemon.sprites.official_artwork}
+                        src={spriteOverride ?? pokemon.sprites.official_artwork ?? pokemon.sprites.front_default!}
                         alt={pokemon.displayName}
                         width={module.isExtended ? 128 : 80}
                         height={module.isExtended ? 128 : 80}
-                        className="object-contain"
-                        unoptimized
-                      />
-                    ) : (spriteOverride ?? pokemon.sprites.front_default) ? (
-                      <Image
-                        src={spriteOverride ?? pokemon.sprites.front_default!}
-                        alt={pokemon.displayName}
-                        width={module.isExtended ? 128 : 80}
-                        height={module.isExtended ? 128 : 80}
-                        className="pixelated"
+                        className={spriteOverride || !pokemon.sprites.official_artwork ? "pixelated" : "object-contain"}
                         unoptimized
                       />
                     ) : (
