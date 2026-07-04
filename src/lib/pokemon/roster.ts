@@ -53,7 +53,7 @@ export function getRoster(): RosterEntry[] {
   for (const s of all) {
     if (!s.exists) continue;
     if (s.isNonstandard === "CAP") continue;
-    if (/-Gmax$|-Totem$/.test(s.name) || /Gmax|Totem/.test(s.forme)) continue;
+    if (/-Gmax$|-Totem$|-Zen$/.test(s.name) || /Gmax|Totem/.test(s.forme)) continue; // Gmax/Totem/Zen: not buildable team members
     if (s.forme === "F" || s.forme === "M") continue; // gender → Phase 2
     if (cosmetic.has(s.name)) continue;
 

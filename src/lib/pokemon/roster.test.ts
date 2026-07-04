@@ -1,5 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { getRoster, isAppPokemon } from "./roster";
+import { getRegionalVariantInfo } from "@/lib/utils/generationConfig";
+
+describe("roster ↔ regional gating consistency", () => {
+  // Every regional-variant roster entry's id must resolve via getRegionalVariantInfo,
+  // or its generation gating (and regional badge) silently breaks. Guards @pkmn ↔
+  // PokéAPI/REGIONAL_VARIANTS naming drift (e.g. Darmanitan-Galar vs -galar-standard).
+  it("every regional roster entry resolves via getRegionalVariantInfo", () => {
+    const regionals = getRoster().filter((e) => /-(Alola|Galar|Hisui|Paldea)\b/.test(e.showdownName));
+    const broken = regionals
+      .filter((e) => !getRegionalVariantInfo(e.id))
+      .map((e) => `${e.showdownName} (id=${e.id})`);
+    expect(broken).toEqual([]);
+  });
+});
 
 describe("getRoster", () => {
   const roster = getRoster();

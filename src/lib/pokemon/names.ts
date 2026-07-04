@@ -20,6 +20,9 @@ export const FORM_OVERRIDES: { pokeapi: string; showdown: string }[] = [
   { pokeapi: "tauros-paldea-combat-breed", showdown: "Tauros-Paldea-Combat" },
   { pokeapi: "tauros-paldea-blaze-breed", showdown: "Tauros-Paldea-Blaze" },
   { pokeapi: "tauros-paldea-aqua-breed", showdown: "Tauros-Paldea-Aqua" },
+  // @pkmn calls Galarian Darmanitan "Darmanitan-Galar"; PokéAPI + the regional
+  // table key it "-galar-standard". Without this the roster id mis-gates it.
+  { pokeapi: "darmanitan-galar-standard", showdown: "Darmanitan-Galar" },
 ];
 
 const OVERRIDE_BY_POKEAPI = new Map(FORM_OVERRIDES.map((o) => [o.pokeapi, o.showdown]));
