@@ -46,10 +46,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       persistOptions={{
         persister,
         maxAge: SEVEN_DAYS, // Cache expires after 7 days
-        // Bump on any change to a cached query's SHAPE. v2: PokedexEntry gained
-        // `catchKey`; old cached entries lacked it, collapsing every tile onto a
-        // single `marks[undefined]` key (right-click toggled all at once).
-        buster: "v2",
+        // Bump on any change to a cached query's SHAPE or CONTENTS that old
+        // caches would miss. v2: PokedexEntry gained `catchKey`. v3: the
+        // `pokemon-list` now includes the ~40 Pokémon Champions Megas — a stale
+        // v2 cache (staleTime: Infinity) would never show them until busted.
+        buster: "v3",
       }}
     >
       <SyncManager />
