@@ -50,7 +50,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         // caches would miss. v2: PokedexEntry gained `catchKey`. v3: the
         // `pokemon-list` now includes the ~40 Pokémon Champions Megas — a stale
         // v2 cache (staleTime: Infinity) would never show them until busted.
-        buster: "v3",
+        // v4: pokemon-list is now @pkmn/dex-derived (base names + alt forms) — old caches lack them.
+        buster: "v4",
       }}
     >
       <SyncManager />
