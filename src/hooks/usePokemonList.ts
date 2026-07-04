@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchPokemonList, getSpriteUrl, getChampionsMegaSpriteUrl } from "@/lib/pokeapi/client";
+import { fetchPokemonList, getSpriteUrl, getShowdownSpriteUrl } from "@/lib/pokeapi/client";
 import { transformPokemonListItem } from "@/lib/pokeapi/transformers";
 import { PokemonListItem } from "@/types/pokemon";
 import { MEGA_POKEMON, REGIONAL_VARIANTS } from "@/lib/utils/generationConfig";
@@ -42,7 +42,7 @@ function getChampionsMegaListItems(): PokemonListItem[] {
     id: m.baseNum,
     name: m.name,
     displayName: m.displayName,
-    spriteUrl: getChampionsMegaSpriteUrl(m.name),
+    spriteUrl: getShowdownSpriteUrl(m.name),
     isChampionsMega: true,
   }));
 }

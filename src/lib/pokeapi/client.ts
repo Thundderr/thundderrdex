@@ -79,8 +79,8 @@ export function getOfficialArtworkUrl(pokemonId: number): string {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
 }
 
-/** Animated Showdown sprite for a Champions Mega (name = lowercase-hyphenated). */
-export function getChampionsMegaSpriteUrl(name: string): string {
+/** Animated Showdown sprite for any species (name = lowercase-hyphenated). */
+export function getShowdownSpriteUrl(name: string): string {
   return `https://play.pokemonshowdown.com/sprites/ani/${name}.gif`;
 }
 

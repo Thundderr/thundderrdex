@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPokemon } from "@/lib/pokeapi/client";
 import { transformFullPokemon } from "@/lib/pokeapi/transformers";
 import { isChampionsMega } from "@/lib/pokemon/championsMega";
-import { transformDexSpecies } from "@/lib/pokemon/championsData";
+import { transformDexSpecies } from "@/lib/pokemon/dexSpecies";
 import { Pokemon } from "@/types/pokemon";
 
 export function usePokemon(nameOrId: string | number | null) {
