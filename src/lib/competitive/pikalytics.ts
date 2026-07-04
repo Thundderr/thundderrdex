@@ -16,7 +16,8 @@ export interface PikalyticsEntry {
   notCharted: boolean;
 }
 
-/** Body of a `## {header}` section, up to the next `## ` heading. */
+/** Body of a `## {header}` section, up to the next `## ` heading.
+ *  Assumes newlines are already normalized to `\n` (see parsePikalyticsMon). */
 function section(md: string, header: string): string {
   const start = md.indexOf(`## ${header}`);
   if (start === -1) return "";
@@ -42,8 +43,13 @@ const EMPTY = (name: string): PikalyticsEntry => ({
   moves: [], items: [], abilities: [], spread: null, teammates: [], notCharted: true,
 });
 
-export function parsePikalyticsMon(name: string, markdown: string): PikalyticsEntry {
-  if (!markdown || !/## Common Moves|## Best/.test(markdown)) return EMPTY(name);
+export function parsePikalyticsMon(name: string, rawMarkdown: string): PikalyticsEntry {
+  // Normalize CRLF so the `\n## ` section terminator is reliable.
+  const markdown = (rawMarkdown ?? "").replace(/\r\n/g, "\n");
+  // Require the moves section — the reliable marker of a real charted page. A
+  // 404/error/unrelated page (which may still contain a "## Best…" heading)
+  // must fall through to notCharted rather than parse as an empty entry.
+  if (!markdown.includes("## Common Moves")) return EMPTY(name);
 
   const win = markdown.match(/\*\*Win Rate\*\*\s*\|\s*([\d.]+)%/);
   const rec = markdown.match(/\*\*Record\*\*\s*\|\s*([\d-]+)/);
@@ -85,7 +91,7 @@ export function pikalyticsSlug(appName: string, opts: { megaForm?: boolean } = {
 export function extractChampionsCode(text: string): { code: string; label: string } | null {
   const m = text.match(/battledataregm[a-z0-9]+/i);
   if (!m) return null;
-  const label = text.match(/Pokemon Champions VGC[^\n|)]*Ranked Battle Data/)?.[0]?.trim()
+  const label = text.match(/Pok[eé]mon Champions VGC[^\n|)]*Ranked Battle Data/)?.[0]?.trim()
     ?? "Champions Ranked";
   return { code: m[0].toLowerCase(), label };
 }

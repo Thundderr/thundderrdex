@@ -56,6 +56,18 @@ describe("parsePikalyticsMon", () => {
     expect(nc.notCharted).toBe(true);
     expect(nc.moves).toEqual([]);
   });
+  it("treats a page with a '## Best' heading but no moves section as notCharted", () => {
+    const nc = parsePikalyticsMon("X", "# X\n## Best Practices\nsome unrelated content");
+    expect(nc.notCharted).toBe(true);
+  });
+  it("handles CRLF line endings without bleeding sections together", () => {
+    const crlf = PYROAR_MD.replace(/\n/g, "\r\n");
+    const e2 = parsePikalyticsMon("Pyroar", crlf);
+    expect(e2.notCharted).toBe(false);
+    expect(e2.moves[0]).toEqual({ name: "Heat Wave", pct: 99.6 });
+    // Items must not contain moves — sections stayed separate.
+    expect(e2.items.map((i) => i.name)).not.toContain("Heat Wave");
+  });
 });
 
 describe("pikalyticsSlug", () => {
