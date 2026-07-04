@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { useGenerationStore } from "@/stores/generationStore";
 import { isMegaPokemon, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
+import { isChampionsMega } from "@/lib/pokemon/championsMega";
 import Image from "next/image";
 
 interface Props {
@@ -23,6 +24,9 @@ export function SearchBar({ onSelect, currentPokemon }: Props) {
 
   // Get generation range for any Pokemon (including Megas and Regional Variants)
   const getPokemonGenerationRange = (pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } => {
+    if (isChampionsMega(pokemonName)) {
+      return { minGen: 9, maxGen: null };
+    }
     if (isMegaPokemon(pokemonName)) {
       return { minGen: 6, maxGen: 7 };
     }
@@ -185,6 +189,11 @@ export function SearchBar({ onSelect, currentPokemon }: Props) {
                 <span className={`${existsInGen ? "text-white" : "text-slate-500 line-through"}`}>
                   {pokemon.displayName}
                 </span>
+                {pokemon.isChampionsMega && (
+                  <span className="ml-1 rounded bg-teal-600/80 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+                    Champions
+                  </span>
+                )}
                 <span className="text-slate-400 text-sm ml-auto">
                   #{pokemon.id}
                 </span>

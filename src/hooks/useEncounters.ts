@@ -10,6 +10,7 @@ import {
 import { LocationEncounter, VersionEncounter, EncounterDetail } from "@/types/pokemon";
 import { PokeAPILocationEncounter } from "@/types/api";
 import { findPokemonInStaticData } from "@/lib/staticEncounters";
+import { isChampionsMega } from "@/lib/pokemon/championsMega";
 
 function transformEncounters(data: PokeAPILocationEncounter[]): LocationEncounter[] {
   return data.map((location) => ({
@@ -35,6 +36,7 @@ export function useEncounters(pokemonName: string | null) {
     queryKey: ["encounters", pokemonName],
     queryFn: async (): Promise<LocationEncounter[]> => {
       if (!pokemonName) throw new Error("No Pokemon specified");
+      if (isChampionsMega(pokemonName)) return [];
 
       // Fetch from PokeAPI (Gen 1-7)
       const apiData = await fetchEncounters(pokemonName);

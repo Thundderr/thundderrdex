@@ -9,6 +9,7 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TYPES_BY_GENERATION } from "@/data/typeChart";
 import { isMegaPokemon, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
+import { getChampionsMegas } from "@/lib/pokemon/championsMega";
 import { PokemonModule as PokemonModuleType, ModuleTab } from "@/types/module";
 import { QueryState, Modal } from "@/components/ui";
 import { ModuleShell } from "@/components/layout/ModuleShell";
@@ -1127,10 +1128,15 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                     <p className="text-sm text-slate-400 mb-1">
                       #{getDisplayId(module.pokemonName ?? "", pokemon.id).toString().padStart(4, "0")}
                     </p>
-                    <div className={`flex items-center gap-1.5 ${module.isExtended ? "justify-center" : ""}`}>
+                    <div className={`flex items-center gap-1.5 flex-wrap ${module.isExtended ? "justify-center" : ""}`}>
                       {genTypes.map((type) => (
                         <TypeBadge key={type.name} type={type.name} size="sm" />
                       ))}
+                      {module.pokemonName && getChampionsMegas().find((m) => m.name === module.pokemonName) && (
+                        <span className="rounded bg-teal-600/80 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+                          Champions
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1161,7 +1167,15 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                     <StatsDisplay stats={pokemon.stats} moduleId={module.id} abilities={pokemon.abilities} pokemonName={module.pokemonName} />
                   )}
                   {module.activeTab === "abilities" && (
-                    <AbilitiesPanel abilities={pokemon.abilities} />
+                    <>
+                      {module.pokemonName && (() => {
+                        const champEntry = getChampionsMegas().find((m) => m.name === module.pokemonName);
+                        return champEntry ? (
+                          <p className="text-2xs text-fg-subtle mb-2">Mega Stone: {champEntry.stone}</p>
+                        ) : null;
+                      })()}
+                      <AbilitiesPanel abilities={pokemon.abilities} />
+                    </>
                   )}
                   {module.activeTab === "types" && (
                     <TypeEffectivenessDisplay pokemon={pokemon} />

@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchPokemon } from "@/lib/pokeapi/client";
 import { transformFullPokemon } from "@/lib/pokeapi/transformers";
+import { isChampionsMega } from "@/lib/pokemon/championsMega";
+import { transformDexSpecies } from "@/lib/pokemon/championsData";
 import { Pokemon } from "@/types/pokemon";
 
 export function usePokemon(nameOrId: string | number | null) {
@@ -10,6 +12,9 @@ export function usePokemon(nameOrId: string | number | null) {
     queryKey: ["pokemon", nameOrId],
     queryFn: async (): Promise<Pokemon> => {
       if (!nameOrId) throw new Error("No Pokemon specified");
+      if (typeof nameOrId === "string" && isChampionsMega(nameOrId)) {
+        return transformDexSpecies(nameOrId);
+      }
       const data = await fetchPokemon(nameOrId);
       return transformFullPokemon(data);
     },

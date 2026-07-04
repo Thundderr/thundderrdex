@@ -77,6 +77,7 @@ export interface PokemonListItem {
   name: string;
   displayName: string;
   spriteUrl: string;
+  isChampionsMega?: boolean;
 }
 
 // Encounter/Location types
