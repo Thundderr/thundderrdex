@@ -75,8 +75,10 @@ describe("pikalyticsSlug", () => {
     expect(pikalyticsSlug("pyroar-male")).toBe("Pyroar");
     expect(pikalyticsSlug("incineroar")).toBe("Incineroar");
   });
-  it("maps a Champions mega to its base species by default", () => {
+  it("maps a Champions mega to its pre-mega form by default", () => {
     expect(pikalyticsSlug("pyroar-mega")).toBe("Pyroar");
+    // Mega Floette's competitive form is Floette-Eternal, not plain Floette.
+    expect(pikalyticsSlug("floette-mega")).toBe("Floette-Eternal");
   });
   it("uses the mega name when megaForm is set", () => {
     expect(pikalyticsSlug("pyroar-mega", { megaForm: true })).toBe("Pyroar-Mega");

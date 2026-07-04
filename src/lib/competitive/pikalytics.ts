@@ -82,7 +82,10 @@ export function parsePikalyticsMon(name: string, rawMarkdown: string): Pikalytic
 export function pikalyticsSlug(appName: string, opts: { megaForm?: boolean } = {}): string {
   if (!opts.megaForm) {
     const mega = getChampionsMegas().find((m) => m.name === appName.toLowerCase());
-    if (mega) return mega.baseSpecies; // Pikalytics charts the mega under its base
+    // Pikalytics charts the mega under its PRE-mega form (`changesFrom`), which is
+    // the base species for most, but Floette-Eternal (not plain Floette) for Mega
+    // Floette — the form that actually carries the competitive/Floettite data.
+    if (mega) return mega.changesFrom;
   }
   return toShowdownName(appName);
 }
