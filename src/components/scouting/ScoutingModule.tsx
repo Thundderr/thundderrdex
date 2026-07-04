@@ -4,8 +4,6 @@ import { useState } from "react";
 import { ModuleShell } from "@/components/layout/ModuleShell";
 import { SearchBar } from "@/components/pokemon-module/SearchBar";
 import { useModuleStore } from "@/stores/moduleStore";
-import { useCompetitiveFormatStore } from "@/stores/competitiveFormatStore";
-import { getCompetitiveFormat } from "@/lib/competitive/formats";
 import { ScoutingModule as ScoutingModuleType } from "@/types/module";
 import { ScoutingColumn } from "./ScoutingColumn";
 
@@ -16,15 +14,13 @@ interface Props {
 
 export function ScoutingModule({ module, isOverlay = false }: Props) {
   const { setScoutingSlot, clearScoutingSlot } = useModuleStore();
-  const format = useCompetitiveFormatStore((s) => s.format);
-  const formatLabel = getCompetitiveFormat(format).label;
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
 
   return (
     <ModuleShell
       module={module}
       isOverlay={isOverlay}
-      title={`Scouting · ${formatLabel}`}
+      title={`Scouting · Official Ranked (Pikalytics)`}
       defaultTall
       className="col-span-1 md:col-span-2"
       bodyClassName="p-3 flex-1 overflow-auto"

@@ -16,6 +16,9 @@ async function currentCode(): Promise<string> {
   } catch {
     // fall through to the pinned fallback
   }
+  // Pinned fallback used only when the live /ai hub is unreachable. It can go
+  // stale across a season rollover — the live extraction above is the primary
+  // path; bump this to the current season code if Pikalytics changes it.
   return "battledataregmbs3";
 }
 
