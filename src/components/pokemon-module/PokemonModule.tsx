@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { usePokemon } from "@/hooks/usePokemon";
 import { usePokemonList } from "@/hooks/usePokemonList";
+import { useGender } from "@/hooks/useGender";
+import { GenderToggle } from "@/components/pokemon-module/GenderToggle";
 import { useEvolution, EvolutionNode } from "@/hooks/useEvolution";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
@@ -356,7 +357,11 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
     data: pokemon,
     isLoading,
     error,
-  } = usePokemon(module.pokemonName);
+    hasGenderToggle,
+    showFemale,
+    setShowFemale,
+    spriteOverride,
+  } = useGender(module.pokemonName);
 
   // Fetch evolution data
   const { data: evolutionData, isLoading: isEvolutionLoading, isError: isEvolutionError, refetch: refetchEvolution } = useEvolution(module.pokemonName);
@@ -1085,9 +1090,9 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                         className="object-contain"
                         unoptimized
                       />
-                    ) : pokemon.sprites.front_default ? (
+                    ) : (spriteOverride ?? pokemon.sprites.front_default) ? (
                       <Image
-                        src={pokemon.sprites.front_default}
+                        src={spriteOverride ?? pokemon.sprites.front_default!}
                         alt={pokemon.displayName}
                         width={module.isExtended ? 128 : 80}
                         height={module.isExtended ? 128 : 80}
@@ -1113,6 +1118,9 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                         <span className="rounded bg-teal-600/80 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
                           Champions
                         </span>
+                      )}
+                      {hasGenderToggle && (
+                        <GenderToggle showFemale={showFemale} onToggle={setShowFemale} />
                       )}
                     </div>
                   </div>
