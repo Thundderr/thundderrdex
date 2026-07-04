@@ -16,7 +16,8 @@ import { NATURES, getNatureByName, STAT_DISPLAY_NAMES, StatKey } from "@/data/na
 import { TYPE_COLORS } from "@/data/typeChart";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
-import { getGenerationFeatures, POKEMON_TYPES, getZCrystals, isZCrystal, getItemsForGeneration, getCommonItemsForGeneration, getDynamaxHpMultiplier, canGigantamax, getMaxMoveName, getZMoveName, getGMaxMove, isMegaPokemon, getMegaStone, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
+import { getGenerationFeatures, POKEMON_TYPES, getZCrystals, isZCrystal, getItemsForGeneration, getCommonItemsForGeneration, getDynamaxHpMultiplier, canGigantamax, getMaxMoveName, getZMoveName, getGMaxMove, isMegaPokemon, getMegaStone } from "@/lib/utils/generationConfig";
+import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
 
 interface Props {
   moduleId: string;
@@ -24,36 +25,6 @@ interface Props {
   isAttacker: boolean;
   isFullscreen?: boolean;
   onConfigChange?: (config: Partial<DamageCalcPokemonConfig>) => void;
-}
-
-// Pokemon generation ranges by Pokedex number
-function getPokemonGenerationById(pokedexId: number): number {
-  if (pokedexId <= 151) return 1;
-  if (pokedexId <= 251) return 2;
-  if (pokedexId <= 386) return 3;
-  if (pokedexId <= 493) return 4;
-  if (pokedexId <= 649) return 5;
-  if (pokedexId <= 721) return 6;
-  if (pokedexId <= 809) return 7;
-  if (pokedexId <= 905) return 8;
-  return 9;
-}
-
-// Get generation for any Pokemon, including Megas and Regional Variants
-function getPokemonGeneration(pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } {
-  // Check if it's a Mega Pokemon (Gen 6-7 only)
-  if (isMegaPokemon(pokemonName)) {
-    return { minGen: 6, maxGen: 7 };
-  }
-
-  // Check if it's a Regional Variant
-  const regionalInfo = getRegionalVariantInfo(pokemonName);
-  if (regionalInfo) {
-    return { minGen: regionalInfo.minGeneration, maxGen: null };
-  }
-
-  // Regular Pokemon - use Pokedex ID
-  return { minGen: getPokemonGenerationById(pokedexId), maxGen: null };
 }
 
 // Stat keys for the table
@@ -192,7 +163,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
   // Check if Pokemon exists in the current generation
   const pokemonExistsInGen = useMemo(() => {
     if (!pokemon || !config.pokemonName) return true;
-    const { minGen, maxGen } = getPokemonGeneration(config.pokemonName, pokemon.id);
+    const { minGen, maxGen } = getPokemonGenerationRange(config.pokemonName, pokemon.id);
     // Pokemon exists if current gen is >= minGen and (no maxGen or current gen <= maxGen)
     return globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
   }, [pokemon, config.pokemonName, globalGeneration]);
@@ -200,7 +171,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
   // Get the min generation for the selected Pokemon (for "Gen X" button)
   const pokemonMinGen = useMemo(() => {
     if (!pokemon || !config.pokemonName) return 1;
-    return getPokemonGeneration(config.pokemonName, pokemon.id).minGen;
+    return getPokemonGenerationRange(config.pokemonName, pokemon.id).minGen;
   }, [pokemon, config.pokemonName]);
 
   // Get abilities for the Pokemon
@@ -713,7 +684,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
       return { error: `Pokemon "${pokemonName}" not found` };
     }
 
-    const { minGen, maxGen } = getPokemonGeneration(foundPokemon.name, foundPokemon.id);
+    const { minGen, maxGen } = getPokemonGenerationRange(foundPokemon.name, foundPokemon.id);
     const existsInCurrentGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
     if (!existsInCurrentGen) {
       if (maxGen !== null) {
@@ -953,7 +924,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-xl max-h-48 overflow-auto"
             >
               {filteredResults.map((poke, index) => {
-                const { minGen, maxGen } = getPokemonGeneration(poke.name, poke.id);
+                const { minGen, maxGen } = getPokemonGenerationRange(poke.name, poke.id);
                 const existsInGen = globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
 
                 return (

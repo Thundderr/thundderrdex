@@ -9,6 +9,7 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TYPES_BY_GENERATION } from "@/data/typeChart";
 import { isMegaPokemon, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
+import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
 import { getChampionsMegas } from "@/lib/pokemon/championsMega";
 import { PokemonModule as PokemonModuleType, ModuleTab } from "@/types/module";
 import { QueryState, Modal } from "@/components/ui";
@@ -39,19 +40,6 @@ const TABS: { id: ModuleTab; label: string }[] = [
   { id: "evolution", label: "Evo" },
 ];
 
-// Pokemon generation ranges by Pokedex number
-function getPokemonGeneration(pokedexId: number): number {
-  if (pokedexId <= 151) return 1;
-  if (pokedexId <= 251) return 2;
-  if (pokedexId <= 386) return 3;
-  if (pokedexId <= 493) return 4;
-  if (pokedexId <= 649) return 5;
-  if (pokedexId <= 721) return 6;
-  if (pokedexId <= 809) return 7;
-  if (pokedexId <= 905) return 8;
-  return 9;
-}
-
 // Get the display ID - use base species ID for variants/megas
 function getDisplayId(pokemonName: string, apiId: number): number {
   if (isMegaPokemon(pokemonName)) {
@@ -63,18 +51,6 @@ function getDisplayId(pokemonName: string, apiId: number): number {
     return variantInfo?.baseSpeciesId ?? apiId;
   }
   return apiId;
-}
-
-// Get generation range for any Pokemon (including Megas and Regional Variants)
-function getPokemonGenerationRange(pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } {
-  if (isMegaPokemon(pokemonName)) {
-    return { minGen: 6, maxGen: 7 };
-  }
-  const regionalInfo = getRegionalVariantInfo(pokemonName);
-  if (regionalInfo) {
-    return { minGen: regionalInfo.minGeneration, maxGen: null };
-  }
-  return { minGen: getPokemonGeneration(pokedexId), maxGen: null };
 }
 
 // Pokemon Card Component for evolution display
@@ -548,9 +524,10 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
       return { error: `Pokemon "${pokemonName}" not found` };
     }
 
-    const pokeGen = getPokemonGeneration(foundPokemon.id);
-    if (pokeGen > globalGeneration) {
-      return { error: `${foundPokemon.displayName} is from Gen ${pokeGen}, but current generation is Gen ${globalGeneration}` };
+    const { minGen: pokeMinGen, maxGen: pokeMaxGen } = getPokemonGenerationRange(foundPokemon.name, foundPokemon.id);
+    const existsInCurrentGen = globalGeneration >= pokeMinGen && (pokeMaxGen === null || globalGeneration <= pokeMaxGen);
+    if (!existsInCurrentGen) {
+      return { error: `${foundPokemon.displayName} is from Gen ${pokeMinGen}, but current generation is Gen ${globalGeneration}` };
     }
 
     const result: { pokemonName: string; level?: number; nature?: string; ability?: string; item?: string; ivs?: Partial<StatValues>; evs?: Partial<StatValues>; moves?: string[] } = {

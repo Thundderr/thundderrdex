@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { useGenerationStore } from "@/stores/generationStore";
-import { isMegaPokemon, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
-import { isChampionsMega } from "@/lib/pokemon/championsMega";
+import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
 import Image from "next/image";
 
 interface Props {
@@ -21,30 +20,6 @@ export function SearchBar({ onSelect, currentPokemon }: Props) {
 
   const { globalGeneration, setGeneration } = useGenerationStore();
   const { data: pokemonList, isLoading } = usePokemonList();
-
-  // Get generation range for any Pokemon (including Megas and Regional Variants)
-  const getPokemonGenerationRange = (pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } => {
-    if (isChampionsMega(pokemonName)) {
-      return { minGen: 9, maxGen: null };
-    }
-    if (isMegaPokemon(pokemonName)) {
-      return { minGen: 6, maxGen: 7 };
-    }
-    const regionalInfo = getRegionalVariantInfo(pokemonName);
-    if (regionalInfo) {
-      return { minGen: regionalInfo.minGeneration, maxGen: null };
-    }
-    // Regular Pokemon - use Pokedex ID ranges
-    if (pokedexId <= 151) return { minGen: 1, maxGen: null };
-    if (pokedexId <= 251) return { minGen: 2, maxGen: null };
-    if (pokedexId <= 386) return { minGen: 3, maxGen: null };
-    if (pokedexId <= 493) return { minGen: 4, maxGen: null };
-    if (pokedexId <= 649) return { minGen: 5, maxGen: null };
-    if (pokedexId <= 721) return { minGen: 6, maxGen: null };
-    if (pokedexId <= 809) return { minGen: 7, maxGen: null };
-    if (pokedexId <= 905) return { minGen: 8, maxGen: null };
-    return { minGen: 9, maxGen: null };
-  };
 
   const filteredResults = useMemo(() => {
     if (!query || !pokemonList) return [];

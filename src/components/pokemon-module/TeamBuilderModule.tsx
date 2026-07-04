@@ -11,38 +11,13 @@ import { PokemonTypeName } from "@/types/pokemon";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { calculateDualTypeEffectiveness } from "@/lib/utils/typeEffectiveness";
 import { TYPES_BY_GENERATION, TYPE_COLORS } from "@/data/typeChart";
-import { isMegaPokemon, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
+import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { ModuleShell } from "@/components/layout/ModuleShell";
 
 interface Props {
   module: TeamBuilderModuleType;
   isOverlay?: boolean;
-}
-
-// Pokemon generation ranges by Pokedex number
-function getPokemonGeneration(pokedexId: number): number {
-  if (pokedexId <= 151) return 1;
-  if (pokedexId <= 251) return 2;
-  if (pokedexId <= 386) return 3;
-  if (pokedexId <= 493) return 4;
-  if (pokedexId <= 649) return 5;
-  if (pokedexId <= 721) return 6;
-  if (pokedexId <= 809) return 7;
-  if (pokedexId <= 905) return 8;
-  return 9;
-}
-
-// Get generation range for any Pokemon (including Megas and Regional Variants)
-function getPokemonGenerationRange(pokemonName: string, pokedexId: number): { minGen: number; maxGen: number | null } {
-  if (isMegaPokemon(pokemonName)) {
-    return { minGen: 6, maxGen: 7 };
-  }
-  const regionalInfo = getRegionalVariantInfo(pokemonName);
-  if (regionalInfo) {
-    return { minGen: regionalInfo.minGeneration, maxGen: null };
-  }
-  return { minGen: getPokemonGeneration(pokedexId), maxGen: null };
 }
 
 // Team slot component with search
@@ -76,10 +51,10 @@ function TeamSlot({
 
   // Check if Pokemon exists in the current generation
   const pokemonExistsInGen = useMemo(() => {
-    if (!pokemon) return true;
-    const pokeGen = getPokemonGeneration(pokemon.id);
-    return pokeGen <= globalGeneration;
-  }, [pokemon, globalGeneration]);
+    if (!pokemon || !pokemonName) return true;
+    const { minGen, maxGen } = getPokemonGenerationRange(pokemonName, pokemon.id);
+    return globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
+  }, [pokemon, pokemonName, globalGeneration]);
 
   const filteredResults = useMemo(() => {
     if (!query || !pokemonList) return [];
@@ -320,8 +295,8 @@ function TeamCoverage({
       if (!pokemon) continue;
 
       // Check if Pokemon exists in this generation
-      const pokeGen = getPokemonGeneration(pokemon.id);
-      if (pokeGen > globalGeneration) continue;
+      const { minGen: pokeMinGen, maxGen: pokeMaxGen } = getPokemonGenerationRange(pokemon.name, pokemon.id);
+      if (globalGeneration < pokeMinGen || (pokeMaxGen !== null && globalGeneration > pokeMaxGen)) continue;
 
       // Get types for this generation
       const types = getTypesForGeneration(pokemon, globalGeneration);
@@ -346,7 +321,11 @@ function TeamCoverage({
   }, [pokemonQueries, globalGeneration, availableTypes]);
 
   // Count team members
-  const teamCount = pokemonQueries.filter((q) => q.data && getPokemonGeneration(q.data.id) <= globalGeneration).length;
+  const teamCount = pokemonQueries.filter((q) => {
+    if (!q.data) return false;
+    const { minGen, maxGen } = getPokemonGenerationRange(q.data.name, q.data.id);
+    return globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
+  }).length;
 
   // Calculate totals
   const totals = useMemo(() => {
