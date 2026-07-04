@@ -22,6 +22,8 @@ import {
 } from "@/lib/utils/generationConfig";
 import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
 import { Move } from "@/types/moves";
+import { genderState } from "@/lib/pokemon/gender";
+import { GenderToggle } from "@/components/pokemon-module/GenderToggle";
 
 // ─── Item icon ──────────────────────────────────────────────────────
 
@@ -167,6 +169,7 @@ export function TeamBattleSlotCard({
 
   const config = slot?.config ?? DEFAULT_CONFIG;
   const types = pokemon ? getTypesForGeneration(pokemon, globalGeneration) : [];
+  const gender = config.pokemonName ? genderState(config.pokemonName, pokemon) : null;
 
   // ── Dropdown state (one at a time) ──
   type DropdownType = null | "pokemon" | "item" | "loadSet" | { type: "move"; slot: number };
@@ -611,6 +614,14 @@ export function TeamBattleSlotCard({
             <div className="flex items-center gap-0.5 flex-shrink-0">
               {types.map(t => <TypeBadge key={t.name} type={t.name} size="sm" />)}
             </div>
+          )}
+          {gender?.kind === "distinct" && (
+            <GenderToggle
+              showFemale={/-female$/.test(config.pokemonName ?? "")}
+              onToggle={(female) =>
+                handleConfigChange({ pokemonName: female ? gender.femaleId! : gender.maleId })
+              }
+            />
           )}
         </div>
 

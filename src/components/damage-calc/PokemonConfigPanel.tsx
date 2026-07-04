@@ -18,6 +18,8 @@ import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { getGenerationFeatures, POKEMON_TYPES, getZCrystals, isZCrystal, getItemsForGeneration, getCommonItemsForGeneration, getDynamaxHpMultiplier, canGigantamax, getMaxMoveName, getZMoveName, getGMaxMove, isMegaPokemon, getMegaStone } from "@/lib/utils/generationConfig";
 import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
+import { genderState } from "@/lib/pokemon/gender";
+import { GenderToggle } from "@/components/pokemon-module/GenderToggle";
 
 interface Props {
   moduleId: string;
@@ -153,6 +155,8 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
   const setConfig = onConfigChange
     ? (_moduleId: string, updates: Partial<DamageCalcPokemonConfig>) => onConfigChange(updates)
     : storeSetConfig;
+
+  const gender = config.pokemonName ? genderState(config.pokemonName, pokemon) : null;
 
   // Get types for the selected generation
   const genTypes = useMemo(() => {
@@ -997,7 +1001,7 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               <p className={`text-sm font-medium truncate ${!pokemonExistsInGen ? "text-slate-400 line-through" : "text-white"}`}>
                 {pokemon.displayName}
               </p>
-              <div className="flex gap-1 mt-1">
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
                 {genTypes.map((type) => (
                   <span
                     key={type.name}
@@ -1007,6 +1011,14 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                     {type.name.toUpperCase()}
                   </span>
                 ))}
+                {gender?.kind === "distinct" && (
+                  <GenderToggle
+                    showFemale={/-female$/.test(config.pokemonName ?? "")}
+                    onToggle={(female) =>
+                      storeSetConfig(moduleId, { pokemonName: female ? gender.femaleId! : gender.maleId })
+                    }
+                  />
+                )}
               </div>
             </div>
           </div>
