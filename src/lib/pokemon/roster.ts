@@ -1,11 +1,12 @@
 import { Dex } from "@pkmn/dex";
 import { toPokeApiName } from "@/lib/pokemon/names";
 import { isChampionsMega } from "@/lib/pokemon/championsMega";
+import { formatPokemonName } from "@/lib/pokeapi/transformers";
 
 /** A searchable Pokémon/form, derived from @pkmn/dex (source of truth for forms). */
 export interface RosterEntry {
   id: string;           // app id / fetch key = PokéAPI slug (or @pkmn id fallback)
-  displayName: string;  // @pkmn plain name: "Landorus", "Landorus-Therian"
+  displayName: string;  // user-facing label: "Landorus", "Landorus Therian", "Mega Charizard X"
   num: number;          // national dex number
   baseSpecies: string;
   forme: string;        // "" for the base form
@@ -62,7 +63,7 @@ export function getRoster(): RosterEntry[] {
     seen.add(id);
     out.push({
       id,
-      displayName: s.name,
+      displayName: formatPokemonName(s.name),
       num: s.num,
       baseSpecies: s.baseSpecies,
       forme: s.forme,

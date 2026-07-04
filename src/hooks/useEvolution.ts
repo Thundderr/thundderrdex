@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchPokemonSpecies, fetchEvolutionChain, getSpriteUrl } from "@/lib/pokeapi/client";
+import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import { PokeAPIEvolutionChainLink, PokeAPIEvolutionDetail } from "@/types/api";
 
 export interface EvolutionMethod {
@@ -23,13 +24,8 @@ export interface EvolutionTreeData {
   currentPokemonName: string;
 }
 
-// Helper to format Pokemon name for display
-function formatDisplayName(name: string): string {
-  return name
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
+// Canonical display name (mega reorder, gender strip, special names).
+const formatDisplayName = formatPokemonName;
 
 // Helper to extract Pokemon ID from species URL
 function getIdFromUrl(url: string): number {

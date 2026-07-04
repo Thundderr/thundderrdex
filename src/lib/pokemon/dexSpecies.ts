@@ -1,6 +1,7 @@
 import { Dex } from "@pkmn/dex";
 import { TYPE_COLORS } from "@/data/typeChart";
 import { getShowdownSpriteUrl } from "@/lib/pokeapi/client";
+import { formatPokemonName } from "@/lib/pokeapi/transformers";
 import type { Pokemon, PokemonType, PokemonTypeName } from "@/types/pokemon";
 
 /**
@@ -30,7 +31,7 @@ export function transformDexSpecies(showdownName: string): Pokemon {
   return {
     id: s.num,
     name: s.name.toLowerCase(),
-    displayName: s.name,
+    displayName: formatPokemonName(s.name),
     types,
     stats: {
       hp: bs.hp, attack: bs.atk, defense: bs.def,

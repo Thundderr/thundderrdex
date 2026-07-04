@@ -21,20 +21,37 @@ describe("formatPokemonName", () => {
     expect(formatPokemonName("tapu-koko")).toBe("Tapu Koko");
   });
 
-  it("title-cases each hyphen segment for non-special names, joining with spaces", () => {
+  it("matches special cases case-insensitively (so @pkmn names like 'Nidoran-F' map too)", () => {
+    expect(formatPokemonName("Nidoran-F")).toBe("Nidoran♀");
+    expect(formatPokemonName("Nidoran-M")).toBe("Nidoran♂");
+  });
+
+  it("reorders mega forms to 'Mega <base> [X/Y]'", () => {
+    expect(formatPokemonName("charizard-mega-x")).toBe("Mega Charizard X");
+    expect(formatPokemonName("Charizard-Mega-Y")).toBe("Mega Charizard Y");
+    expect(formatPokemonName("pyroar-mega")).toBe("Mega Pyroar");
+    expect(formatPokemonName("Venusaur-Mega")).toBe("Mega Venusaur");
+    expect(formatPokemonName("mewtwo-mega-x")).toBe("Mega Mewtwo X");
+  });
+
+  it("drops the -male/-female split-slug gender suffix", () => {
+    expect(formatPokemonName("pyroar-male")).toBe("Pyroar");
+    expect(formatPokemonName("meowstic-female")).toBe("Meowstic");
+    expect(formatPokemonName("basculegion-male")).toBe("Basculegion");
+    // Distinct-species genders (Nidoran) use -f/-m, not -male/-female — untouched.
+    expect(formatPokemonName("nidoran-m")).toBe("Nidoran♂");
+  });
+
+  it("title-cases other forms, joining segments with spaces", () => {
     expect(formatPokemonName("charizard")).toBe("Charizard");
-    // Not in the special table -> generic split-on-hyphen formatting
-    expect(formatPokemonName("charizard-mega-x")).toBe("Charizard Mega X");
+    expect(formatPokemonName("landorus-therian")).toBe("Landorus Therian");
+    expect(formatPokemonName("raichu-alola")).toBe("Raichu Alola");
     expect(formatPokemonName("bulbasaur")).toBe("Bulbasaur");
   });
 
-  it("handles empty string", () => {
-    // "".split("-") => [""], charAt(0) of "" is "", toUpperCase "" => ""
+  it("handles empty and trailing-hyphen input without stray spaces", () => {
     expect(formatPokemonName("")).toBe("");
-  });
-
-  it("does not break on a trailing hyphen (produces a trailing space)", () => {
-    expect(formatPokemonName("foo-")).toBe("Foo ");
+    expect(formatPokemonName("foo-")).toBe("Foo");
   });
 });
 

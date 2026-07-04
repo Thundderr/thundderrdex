@@ -41,15 +41,39 @@ const SPECIAL_NAMES: Record<string, string> = {
   "chi-yu": "Chi-Yu",
 };
 
+const titleCase = (w: string): string => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
+
+/**
+ * Canonical user-facing Pokémon name. Accepts either a PokéAPI slug
+ * ("charizard-mega-x", "pyroar-male") or a @pkmn display name ("Charizard-Mega-X",
+ * "Nidoran-F"), and applies the app's presentation rules:
+ *   - Mega forms read "Mega Charizard X" / "Mega Pyroar" (not "…-Mega[-X]").
+ *   - The "-male"/"-female" split-slug suffix is dropped ("Pyroar", "Meowstic") —
+ *     the ♂/♀ toggle conveys gender. Genuinely distinct genders (Nidoran♀/♂) use
+ *     "-f"/"-m" and are handled by SPECIAL_NAMES, so they're never stripped.
+ * Other formes keep their words ("Landorus Therian", "Raichu Alola").
+ */
 export function formatPokemonName(name: string): string {
-  if (SPECIAL_NAMES[name]) {
-    return SPECIAL_NAMES[name];
+  const special = SPECIAL_NAMES[name.toLowerCase()];
+  if (special) return special;
+
+  const parts = name.split(/[\s-]+/).filter(Boolean);
+
+  // Mega: reorder "<base>-mega[-x/y]" → "Mega <base> [X/Y]".
+  const megaIdx = parts.findIndex((p) => p.toLowerCase() === "mega");
+  if (megaIdx > 0) {
+    const base = parts.slice(0, megaIdx).map(titleCase).join(" ");
+    const suffix = parts.slice(megaIdx + 1).map(titleCase).join(" ");
+    return suffix ? `Mega ${base} ${suffix}` : `Mega ${base}`;
   }
 
-  return name
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  // Drop the split-slug gender suffix (cosmetic + distinct-toggle species).
+  const last = parts[parts.length - 1]?.toLowerCase();
+  if (parts.length > 1 && (last === "male" || last === "female")) {
+    return parts.slice(0, -1).map(titleCase).join(" ");
+  }
+
+  return parts.map(titleCase).join(" ");
 }
 
 function formatAbilityName(name: string): string {
