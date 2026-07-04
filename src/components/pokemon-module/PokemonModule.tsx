@@ -26,6 +26,7 @@ import { NATURES } from "@/data/natures";
 import { StatValues } from "@/lib/utils/statCalculator";
 import { useSmogonSets, SmogonSet } from "@/hooks/useSmogonSets";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 
 interface Props {
   module: PokemonModuleType;
@@ -405,8 +406,18 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
 
-  // Load Set dropdown state
+  // Load Set dropdown state. The dropdown is portaled to <body> with fixed
+  // positioning so it isn't clipped by the module's overflow-y-auto body.
   const [showSetsDropdown, setShowSetsDropdown] = useState(false);
+  const setsButtonRef = useRef<HTMLButtonElement>(null);
+  const [setsMenuPos, setSetsMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const toggleSetsDropdown = () => {
+    if (!showSetsDropdown) {
+      const r = setsButtonRef.current?.getBoundingClientRect();
+      if (r) setSetsMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+    setShowSetsDropdown((v) => !v);
+  };
   const { data: smogonSets, isLoading: setsLoading } = useSmogonSets(activeName);
 
   // Serialize to Showdown format
@@ -972,15 +983,19 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
               {/* Load Set Button with Dropdown */}
               <div className="relative flex items-center">
                 <button
-                  onClick={() => setShowSetsDropdown(!showSetsDropdown)}
+                  ref={setsButtonRef}
+                  onClick={toggleSetsDropdown}
                   onBlur={() => setTimeout(() => setShowSetsDropdown(false), 200)}
                   className="px-1.5 py-1 hover:bg-slate-700 rounded text-[10px] font-medium text-slate-400 hover:text-blue-400"
                   title="Load competitive set"
                 >
                   Sets
                 </button>
-                {showSetsDropdown && (
-                  <div className="absolute z-50 right-0 top-full mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
+                {showSetsDropdown && setsMenuPos && createPortal(
+                  <div
+                    className="fixed z-[100] w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-xl"
+                    style={{ top: setsMenuPos.top, right: setsMenuPos.right }}
+                  >
                     <div className="py-1">
                       {/* Blank/Reset option */}
                       <button
@@ -1020,7 +1035,8 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                         ))
                       ) : null}
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               {/* Import/Export Button */}
