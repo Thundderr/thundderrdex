@@ -51,7 +51,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         // `pokemon-list` now includes the ~40 Pokémon Champions Megas — a stale
         // v2 cache (staleTime: Infinity) would never show them until busted.
         // v4: pokemon-list is now @pkmn/dex-derived (base names + alt forms) — old caches lack them.
-        buster: "v4",
+        // v5: display names reformatted ("Mega <Pkmn>", gender suffix dropped) — old caches show the raw names.
+        buster: "v5",
       }}
     >
       <SyncManager />
