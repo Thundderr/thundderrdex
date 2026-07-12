@@ -13,7 +13,13 @@ describe("isCaughtPayload", () => {
     );
   });
 
-  it("accepts not-caught marks", () => {
+  it("accepts transit marks", () => {
+    expect(
+      isCaughtPayload({ caught: { national: { "1": "transit" } } })
+    ).toBe(true);
+  });
+
+  it("still accepts legacy not-caught marks (coerced to transit on apply)", () => {
     expect(
       isCaughtPayload({ caught: { national: { "1": "not-caught" } } })
     ).toBe(true);

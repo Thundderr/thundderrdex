@@ -33,7 +33,10 @@ export function isCaughtPayload(raw: unknown): raw is CaughtPayload {
     if (!isRecord(bucket)) return false;
     return Object.entries(bucket).every(
       ([id, value]) =>
-        /^\d+(-[a-z]+)?$/.test(id) && (value === "caught" || value === "not-caught")
+        /^\d+(-[a-z]+)?$/.test(id) &&
+        // "not-caught" is the legacy third state; still accepted so older cloud
+        // payloads validate before they're coerced to "transit".
+        (value === "caught" || value === "transit" || value === "not-caught")
     );
   });
 }

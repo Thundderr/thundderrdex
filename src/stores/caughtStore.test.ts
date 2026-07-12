@@ -15,7 +15,7 @@ describe("caughtStore", () => {
   it("exposes the expected constants", () => {
     expect(NATIONAL_BUCKET).toBe("national");
     expect(PALDEA_BUCKET).toBe("Paldea");
-    expect(CAUGHT_STORE_VERSION).toBe(4);
+    expect(CAUGHT_STORE_VERSION).toBe(5);
   });
 
   it("starts with an empty caught map", () => {
@@ -23,18 +23,18 @@ describe("caughtStore", () => {
   });
 
   describe("cycleCaught cycle order", () => {
-    it("cycles unmarked -> caught -> not-caught -> unmarked", () => {
+    it("cycles unmarked -> caught -> transit -> unmarked", () => {
       const { cycleCaught } = useCaughtStore.getState();
 
       // unmarked -> caught
       cycleCaught(NATIONAL_BUCKET, "79");
       expect(useCaughtStore.getState().caught[NATIONAL_BUCKET]["79"]).toBe("caught");
 
-      // caught -> not-caught
+      // caught -> transit
       cycleCaught(NATIONAL_BUCKET, "79");
-      expect(useCaughtStore.getState().caught[NATIONAL_BUCKET]["79"]).toBe("not-caught");
+      expect(useCaughtStore.getState().caught[NATIONAL_BUCKET]["79"]).toBe("transit");
 
-      // not-caught -> unmarked (key removed)
+      // transit -> unmarked (key removed)
       cycleCaught(NATIONAL_BUCKET, "79");
       expect(useCaughtStore.getState().caught[NATIONAL_BUCKET]["79"]).toBeUndefined();
     });
@@ -63,11 +63,11 @@ describe("caughtStore", () => {
       const { cycleCaught } = useCaughtStore.getState();
       cycleCaught(NATIONAL_BUCKET, "79"); // base Slowpoke -> caught
       cycleCaught(NATIONAL_BUCKET, "79-galar"); // Galarian -> caught
-      cycleCaught(NATIONAL_BUCKET, "79-galar"); // Galarian -> not-caught
+      cycleCaught(NATIONAL_BUCKET, "79-galar"); // Galarian -> transit
 
       const marks = useCaughtStore.getState().caught[NATIONAL_BUCKET];
       expect(marks["79"]).toBe("caught");
-      expect(marks["79-galar"]).toBe("not-caught");
+      expect(marks["79-galar"]).toBe("transit");
     });
   });
 
@@ -76,17 +76,17 @@ describe("caughtStore", () => {
       const { cycleCaught } = useCaughtStore.getState();
       cycleCaught(NATIONAL_BUCKET, "150"); // -> caught
       cycleCaught("Paldea", "150"); // -> caught
-      cycleCaught("Paldea", "150"); // -> not-caught
+      cycleCaught("Paldea", "150"); // -> transit
 
       const state = useCaughtStore.getState().caught;
       expect(state[NATIONAL_BUCKET]["150"]).toBe("caught");
-      expect(state["Paldea"]["150"]).toBe("not-caught");
+      expect(state["Paldea"]["150"]).toBe("transit");
     });
 
     it("the same key in a fresh bucket starts unmarked", () => {
       const { cycleCaught } = useCaughtStore.getState();
       cycleCaught(NATIONAL_BUCKET, "6");
-      cycleCaught(NATIONAL_BUCKET, "6"); // national -> not-caught
+      cycleCaught(NATIONAL_BUCKET, "6"); // national -> transit
       cycleCaught("Galar", "6"); // Galar starts fresh -> caught
       expect(useCaughtStore.getState().caught["Galar"]["6"]).toBe("caught");
     });
@@ -125,13 +125,13 @@ describe("caughtStore", () => {
       expect(result.caught[PALDEA_BUCKET]).toEqual({ "1": "caught", "4": "caught" });
     });
 
-    it("migrates v1 flat 3-state map into the Paldea bucket", () => {
+    it("migrates v1 flat 3-state map into the Paldea bucket, converting the legacy third state to transit", () => {
       const result = migrateCaughtState({
         caught: { "1": "caught", "4": "not-caught" },
       });
       expect(result.caught[PALDEA_BUCKET]).toEqual({
         "1": "caught",
-        "4": "not-caught",
+        "4": "transit",
       });
     });
 
@@ -140,7 +140,7 @@ describe("caughtStore", () => {
       expect(result.caught[PALDEA_BUCKET]).toBeUndefined();
     });
 
-    it("normalizes an already-bucketed (v2+) map", () => {
+    it("normalizes an already-bucketed (v2+) map, converting legacy not-caught to transit", () => {
       const result = migrateCaughtState({
         caught: {
           national: { "1": "caught", "79-galar": "not-caught" },
@@ -149,7 +149,7 @@ describe("caughtStore", () => {
       });
       expect(result.caught.national).toEqual({
         "1": "caught",
-        "79-galar": "not-caught",
+        "79-galar": "transit",
       });
       expect(result.caught.Paldea).toEqual({ "4": "caught" });
     });

@@ -32,7 +32,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
 
   // Selected dex lives on the module in the store so it survives refreshes
   const selectedDexId = selectedDexIdProp ?? null;
-  // When on, tiles marked "caught" are hidden (unmarked and not-caught stay visible)
+  // When on, tiles marked "caught" are hidden (unmarked and transit stay visible)
   const [showUncaughtOnly, setShowUncaughtOnly] = useState(false);
   // Mark mode: a touch-friendly alternative to right-clicking. When on, tapping a
   // tile cycles its catch mark instead of opening the Pokemon (great for marking a
@@ -281,7 +281,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
             }`}
             title={markMode
-              ? "Mark mode on — tap a Pokémon to cycle caught / not caught / clear. Tap here to turn off."
+              ? "Mark mode on — tap a Pokémon to cycle caught / transit / clear. Tap here to turn off."
               : "Mark mode: tap Pokémon to mark them caught (touch-friendly alternative to right-click)"}
           >
             <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
@@ -305,7 +305,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
 
       {markMode && (
         <div className="mb-2 shrink-0 rounded bg-emerald-600/10 border border-emerald-500/40 px-2.5 py-1.5 text-[11px] text-emerald-300">
-          Mark mode: tap a Pokémon to cycle caught → not caught → clear. Tapping won&apos;t open it.
+          Mark mode: tap a Pokémon to cycle caught → transit → clear. Tapping won&apos;t open it.
         </div>
       )}
 
@@ -497,8 +497,8 @@ function markTileClasses(mark: CatchMark | undefined): string {
   if (mark === "caught") {
     return "bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/60 hover:bg-emerald-500/20";
   }
-  if (mark === "not-caught") {
-    return "bg-rose-500/10 ring-1 ring-inset ring-rose-500/60 hover:bg-rose-500/20";
+  if (mark === "transit") {
+    return "bg-amber-500/10 ring-1 ring-inset ring-amber-500/60 hover:bg-amber-500/20";
   }
   return "hover:bg-slate-800";
 }
@@ -506,13 +506,14 @@ function markTileClasses(mark: CatchMark | undefined): string {
 /** Tooltip suffix describing the current mark and what right-click does next. */
 function markTitleHint(mark: CatchMark | undefined): string {
   if (mark === "caught") return " — Caught (right-click or Mark mode to change)";
-  if (mark === "not-caught") return " — Not caught (right-click or Mark mode to change)";
+  if (mark === "transit") return " — In transit: owned elsewhere, waiting to move (right-click or Mark mode to change)";
   return " — Right-click or use Mark mode to mark caught";
 }
 
 /**
  * Small mark indicator shown in the corner of a Pokemon tile.
- * Clear but unobtrusive: an emerald check for caught, a rose X for not caught.
+ * Clear but unobtrusive: an emerald check for caught, an amber arrow for a
+ * Pokemon in transit (owned elsewhere, waiting to be moved in).
  */
 function MarkBadge({ mark }: { mark: CatchMark | undefined }) {
   if (!mark) return null;
@@ -520,14 +521,14 @@ function MarkBadge({ mark }: { mark: CatchMark | undefined }) {
   return (
     <span
       className={`absolute top-0.5 right-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full shadow ring-1 ring-slate-900 ${
-        isCaught ? "bg-emerald-500" : "bg-rose-500"
+        isCaught ? "bg-emerald-500" : "bg-amber-500"
       }`}
     >
       <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5}>
         {isCaught ? (
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         ) : (
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h13m0 0l-5-5m5 5l-5 5" />
         )}
       </svg>
     </span>

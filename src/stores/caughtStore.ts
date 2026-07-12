@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// Right-clicking a Pokedex tile cycles: unmarked -> "caught" -> "not-caught" -> unmarked.
-// Absent from the map means unmarked.
-export type CatchMark = "caught" | "not-caught";
+// Right-clicking a Pokedex tile cycles: unmarked -> "caught" -> "transit" -> unmarked.
+// Absent from the map means unmarked, i.e. not caught. "transit" marks a Pokemon
+// you own elsewhere and are waiting to move into this game.
+export type CatchMark = "caught" | "transit";
 
 // Each dex tracks its catch marks in its own bucket, so the same species can be
 // caught in one game and uncaught in another. The bucket key is "national" for
@@ -30,7 +31,9 @@ export const PALDEA_BUCKET = "Paldea";
 //      (bare-number v2 keys are forward-compatible: they read as base forms)
 //   4: same shape as 3, but drops malformed keys (notably the "undefined" junk
 //      key a cache-shape regression wrote when entries briefly had no catchKey).
-export const CAUGHT_STORE_VERSION = 4;
+//   5: renames the third state "not-caught" -> "transit" (same shape); old
+//      "not-caught" marks carry over as "transit".
+export const CAUGHT_STORE_VERSION = 5;
 
 // A valid catch key: a bare national id ("79") or a form key ("79-galar").
 // Mirrors the sync validator's regex so migrated data always passes validation.
@@ -38,7 +41,8 @@ const VALID_CATCH_KEY = /^\d+(-[a-z]+)?$/;
 
 function coerceMark(value: unknown): CatchMark | undefined {
   if (value === true || value === "caught") return "caught";
-  if (value === "not-caught") return "not-caught";
+  // "not-caught" was the old third state; existing marks carry over as "transit".
+  if (value === "transit" || value === "not-caught") return "transit";
   return undefined;
 }
 
@@ -110,7 +114,7 @@ export const useCaughtStore = create<CaughtStore>()(
           if (current === undefined) {
             marks[key] = "caught";
           } else if (current === "caught") {
-            marks[key] = "not-caught";
+            marks[key] = "transit";
           } else {
             delete marks[key];
           }
