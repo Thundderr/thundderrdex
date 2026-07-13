@@ -103,6 +103,15 @@ body {
   .module-cols {
     grid-column: span var(--module-cols) / span var(--module-cols) !important;
   }
+
+  /* Column filling: `grid-auto-flow: dense` only backfills a hole with a
+     module placed AFTER it, so a 2-column-wide module added before the narrow
+     ones leaves a permanently empty trailing column. Laying wide modules out
+     first (lower order) lets the narrow modules slot into those 1/3 gaps,
+     keeping columns filled without changing DOM order (drag/sort intact). */
+  [data-module-grid] > * { order: 2; }
+  [data-module-grid] > [class~="md:col-span-2"],
+  [data-module-grid] > .module-cols { order: 1; }
 }
 
 /* Hide number input spinners */

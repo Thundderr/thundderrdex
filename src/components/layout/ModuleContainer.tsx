@@ -235,7 +235,7 @@ export function ModuleContainer() {
           items={modules.map((m) => m.id)}
           strategy={rectSortingStrategy}
         >
-          <div ref={gridRef} className="grid gap-4 grid-flow-row-dense grid-cols-1 md:[grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
+          <div ref={gridRef} data-module-grid className="grid gap-4 grid-flow-row-dense grid-cols-1 md:[grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
             {modules.map((module) => {
               // Fullscreen module gets a hidden placeholder to preserve dnd-kit ordering
               if (module.isFullscreen) {
