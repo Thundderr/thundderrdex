@@ -7,17 +7,12 @@ import { useGenerationStore } from "./generationStore";
 beforeEach(() => {
   useGenerationStore.setState({
     globalGeneration: 9,
-    selectorCollapsed: false,
   });
 });
 
 describe("generationStore", () => {
   it("defaults to Gen 9", () => {
     expect(useGenerationStore.getState().globalGeneration).toBe(9);
-  });
-
-  it("defaults selectorCollapsed to false", () => {
-    expect(useGenerationStore.getState().selectorCollapsed).toBe(false);
   });
 
   describe("setGeneration", () => {
@@ -35,19 +30,6 @@ describe("generationStore", () => {
 
     it("does not throw when calling into moduleStore", () => {
       expect(() => useGenerationStore.getState().setGeneration(4)).not.toThrow();
-    });
-  });
-
-  describe("setSelectorCollapsed", () => {
-    it("sets collapsed to true", () => {
-      useGenerationStore.getState().setSelectorCollapsed(true);
-      expect(useGenerationStore.getState().selectorCollapsed).toBe(true);
-    });
-
-    it("sets collapsed back to false", () => {
-      useGenerationStore.getState().setSelectorCollapsed(true);
-      useGenerationStore.getState().setSelectorCollapsed(false);
-      expect(useGenerationStore.getState().selectorCollapsed).toBe(false);
     });
   });
 });

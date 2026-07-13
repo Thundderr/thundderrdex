@@ -5,8 +5,6 @@ import { useModuleStore } from "./moduleStore";
 interface GenerationStore {
   globalGeneration: number;
   setGeneration: (gen: number) => void;
-  selectorCollapsed: boolean;
-  setSelectorCollapsed: (collapsed: boolean) => void;
 }
 
 export const useGenerationStore = create<GenerationStore>()(
@@ -18,8 +16,6 @@ export const useGenerationStore = create<GenerationStore>()(
         // Reset all damage calc gimmicks when generation changes
         useModuleStore.getState().resetDamageCalcGimmicks();
       },
-      selectorCollapsed: false,
-      setSelectorCollapsed: (collapsed) => set({ selectorCollapsed: collapsed }),
     }),
     {
       name: "thundderrdex-generation",

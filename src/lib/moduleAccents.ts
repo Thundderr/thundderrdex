@@ -3,9 +3,10 @@ import { ModuleType } from "@/types/module";
 /**
  * Single source of truth for per-module accent colours.
  *
- * Previously the Header (solid button backgrounds) and the Sidebar (text colours)
- * each kept their own, slightly disagreeing colour maps. Every surface that needs
- * a module's colour now reads from here, keyed by the canonical `ModuleType`.
+ * Different surfaces (header button backgrounds, badges, selection rings, status
+ * dots) used to keep their own, slightly disagreeing colour maps. Every surface
+ * that needs a module's colour now reads from here, keyed by the canonical
+ * `ModuleType`.
  */
 export interface ModuleAccent {
   /** Tailwind colour family, e.g. "blue". */
