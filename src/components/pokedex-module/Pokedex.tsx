@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useCallback, useState } from "react";
+import { useRef, useMemo, useCallback, useState, useEffect } from "react";
 import Image from "next/image";
 import { usePokemonList } from "@/hooks/usePokemonList";
 import { usePokedex } from "@/hooks/usePokedex";
@@ -34,6 +34,12 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const selectedDexId = selectedDexIdProp ?? null;
   // When on, tiles marked "caught" are hidden (unmarked and transit stay visible)
   const [showUncaughtOnly, setShowUncaughtOnly] = useState(false);
+  // The cycle passes through "caught" on the way to "transit". Without this, a
+  // tile would vanish from the uncaught-only view the instant you cycled it to
+  // "caught", making in-transit unreachable there. So we keep any tile you cycle
+  // during an uncaught-only session pinned as visible until the next refresh —
+  // toggling the filter or switching dex clears the set (see the effect below).
+  const [keepVisible, setKeepVisible] = useState<Set<string>>(() => new Set());
   // Mark mode: a touch-friendly alternative to right-clicking. When on, tapping a
   // tile cycles its catch mark instead of opening the Pokemon (great for marking a
   // whole dex on mobile, where right-click doesn't exist).
@@ -51,6 +57,35 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   // dexes share one bucket, separate from Galar, Hisui, and National).
   const bucketKey = selectedDex ? selectedDex.group : NATIONAL_BUCKET;
   const marks = useMemo(() => caught[bucketKey] ?? {}, [caught, bucketKey]);
+
+  // Start each uncaught-only session (and each dex) with a clean slate: caught
+  // tiles are hidden again until you cycle them within this session.
+  useEffect(() => {
+    setKeepVisible(new Set());
+  }, [bucketKey, showUncaughtOnly]);
+
+  // Cycle a tile's mark, and — when filtering to uncaught only — pin it visible
+  // so it doesn't disappear mid-cycle before you can reach in-transit.
+  const handleCycle = useCallback(
+    (key: string) => {
+      cycleCaught(bucketKey, key);
+      if (showUncaughtOnly) {
+        setKeepVisible((prev) => {
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
+      }
+    },
+    [cycleCaught, bucketKey, showUncaughtOnly]
+  );
+
+  // A tile is hidden by the uncaught-only filter when it's caught — unless it was
+  // cycled during this session (kept visible so the full cycle stays reachable).
+  const isHiddenByUncaught = useCallback(
+    (key: string) => showUncaughtOnly && marks[key] === "caught" && !keepVisible.has(key),
+    [showUncaughtOnly, marks, keepVisible]
+  );
 
   // Shared name/type matcher used by both the National and regional views.
   // `id` is the national-dex id (used for type membership); name/displayName are
@@ -75,10 +110,10 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
   const visibleRegionalEntries = useMemo(() => {
     if (!regionalEntries) return [];
     return regionalEntries.filter((e) => {
-      if (showUncaughtOnly && marks[e.catchKey ?? String(e.nationalId)] === "caught") return false;
+      if (isHiddenByUncaught(e.catchKey ?? String(e.nationalId))) return false;
       return matchesFilters(e.nationalId, e.name, e.displayName);
     });
-  }, [regionalEntries, showUncaughtOnly, marks, matchesFilters]);
+  }, [regionalEntries, isHiddenByUncaught, matchesFilters]);
 
   // Filter to base Pokemon only (id 1-1025), deduplicated by id, sorted by id
   const basePokemon = useMemo(() => {
@@ -135,12 +170,12 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
     let count = 0;
     for (const list of pokemonByGen.values()) {
       for (const p of list) {
-        if (showUncaughtOnly && marks[String(p.id)] === "caught") continue;
+        if (isHiddenByUncaught(String(p.id))) continue;
         if (matchesFilters(p.id, p.name, p.displayName)) count++;
       }
     }
     return count;
-  }, [pokemonByGen, showUncaughtOnly, marks, matchesFilters]);
+  }, [pokemonByGen, isHiddenByUncaught, matchesFilters]);
 
   // The max Pokemon ID enabled based on current generation
   const maxEnabledId = useMemo(() => {
@@ -347,12 +382,12 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
                   onClick={() => {
-                    if (markMode) { cycleCaught(bucketKey, catchKey); return; }
+                    if (markMode) { handleCycle(catchKey); return; }
                     addPokemonModule(entry.name, "evolution");
                   }}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    cycleCaught(bucketKey, catchKey);
+                    handleCycle(catchKey);
                   }}
                   className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)}`}
                   title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${markTitleHint(mark)}`}
@@ -414,7 +449,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
         {GENERATIONS.map((gen) => {
           const allInGen = pokemonByGen.get(gen.id) || [];
           const pokemon = allInGen.filter((p) => {
-            if (showUncaughtOnly && marks[String(p.id)] === "caught") return false;
+            if (isHiddenByUncaught(String(p.id))) return false;
             return matchesFilters(p.id, p.name, p.displayName);
           });
           if (pokemon.length === 0) return null;
@@ -443,7 +478,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                     <button
                       key={pkmn.name}
                       onClick={() => {
-                        if (markMode) { cycleCaught(bucketKey, String(pkmn.id)); return; }
+                        if (markMode) { handleCycle(String(pkmn.id)); return; }
                         if (isEnabled) {
                           addPokemonModule(pkmn.name, "evolution");
                         } else {
@@ -458,7 +493,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                       }}
                       onContextMenu={(e) => {
                         e.preventDefault();
-                        cycleCaught(bucketKey, String(pkmn.id));
+                        handleCycle(String(pkmn.id));
                       }}
                       className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)} ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"}`}
                       title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${markTitleHint(mark)}`}
