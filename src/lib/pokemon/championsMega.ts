@@ -50,3 +50,16 @@ const idSet = new Set(getChampionsMegas().map((m) => m.id));
 export function isChampionsMega(name: string): boolean {
   return idSet.has(name.toLowerCase());
 }
+
+const stoneByName = new Map(getChampionsMegas().map((m) => [m.id, m.stone]));
+
+/** Mega stone item for a Champions Mega (e.g. "pyroar-mega" -> "Pyroarite"), or null. */
+export function getChampionsMegaStone(name: string | null): string | null {
+  if (!name) return null;
+  return stoneByName.get(name.toLowerCase()) || null;
+}
+
+/** All Champions Mega stone item names (for item pickers). Deduped, sorted. */
+export function getChampionsMegaStones(): string[] {
+  return [...new Set(getChampionsMegas().map((m) => m.stone).filter(Boolean))].sort();
+}

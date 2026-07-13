@@ -23,6 +23,7 @@ import {
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { PokemonTypeName } from "@/types/pokemon";
 import { ModuleShell } from "@/components/layout/ModuleShell";
+import { ChampionsRulesChip } from "@/components/champions/ChampionsRulesChip";
 
 interface Props {
   module: DamageCalcModuleType;
@@ -50,7 +51,7 @@ function DamageClassIcon({ damageClass }: { damageClass: string }) {
 
 export function DamageCalcModule({ module, isOverlay = false, isFullscreen = false }: Props) {
   const { removeModule, swapDamageCalcPokemon, setDamageCalcMove, toggleFullscreen } = useModuleStore();
-  const { globalGeneration } = useGenerationStore();
+  const { globalGeneration, championsMode } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
 
   // Fetch attacker's learnset for move display names
@@ -170,6 +171,11 @@ export function DamageCalcModule({ module, isOverlay = false, isFullscreen = fal
   // where `content` is a direct flex child of the fullscreen column.
   const content = (
     <div className={`p-3 ${isFullscreen ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
+        {championsMode && (
+          <div className="mb-2 flex justify-center">
+            <ChampionsRulesChip />
+          </div>
+        )}
         {/* Main Grid: Attacker | Controls | Defender. Reflows on the module's own
             width (container query), not the viewport — so a narrow-dragged module
             stacks even on a big screen. */}

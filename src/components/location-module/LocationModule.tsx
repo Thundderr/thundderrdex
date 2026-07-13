@@ -3,6 +3,8 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { useModuleStore } from "@/stores/moduleStore";
+import { useGenerationStore } from "@/stores/generationStore";
+import { ChampionsNotApplicableBanner } from "@/components/champions/ChampionsNotApplicableBanner";
 import { LocationModule as LocationModuleType } from "@/types/module";
 import { useLocationArea, LocationAreaData, VersionEncounters, MethodEncounters } from "@/hooks/useLocationArea";
 import { useLocationAreaList, LocationAreaListItem } from "@/hooks/useLocationAreaList";
@@ -194,6 +196,7 @@ function VersionSection({ versionGroup, onPokemonClick }: {
 
 export function LocationModule({ module, isOverlay = false }: Props) {
   const { setLocationArea, selectModule, addModule, setPokemon, clearNewlyCreatedModule, toggleExtended } = useModuleStore();
+  const championsMode = useGenerationStore((s) => s.championsMode);
 
   const { data: locationData, isLoading, error } = useLocationArea(module.locationAreaName);
   const { data: locationList } = useLocationAreaList();
@@ -342,6 +345,7 @@ export function LocationModule({ module, isOverlay = false }: Props) {
       className={module.isExtended ? "col-span-1 md:col-span-2" : ""}
       bodyClassName={`p-4 overflow-auto ${module.customHeight ? "flex-1 min-h-0" : "min-h-[clamp(16rem,40dvh,28rem)]"}`}
     >
+        {championsMode && <ChampionsNotApplicableBanner feature="wild encounters" />}
         {isSearching ? (
           <div className="relative">
             <input

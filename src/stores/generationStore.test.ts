@@ -7,12 +7,17 @@ import { useGenerationStore } from "./generationStore";
 beforeEach(() => {
   useGenerationStore.setState({
     globalGeneration: 9,
+    championsMode: false,
   });
 });
 
 describe("generationStore", () => {
   it("defaults to Gen 9", () => {
     expect(useGenerationStore.getState().globalGeneration).toBe(9);
+  });
+
+  it("defaults championsMode to false", () => {
+    expect(useGenerationStore.getState().championsMode).toBe(false);
   });
 
   describe("setGeneration", () => {
@@ -30,6 +35,33 @@ describe("generationStore", () => {
 
     it("does not throw when calling into moduleStore", () => {
       expect(() => useGenerationStore.getState().setGeneration(4)).not.toThrow();
+    });
+
+    it("leaves Champions mode when a generation is picked", () => {
+      useGenerationStore.getState().setChampionsMode(true);
+      useGenerationStore.getState().setGeneration(3);
+      expect(useGenerationStore.getState().championsMode).toBe(false);
+      expect(useGenerationStore.getState().globalGeneration).toBe(3);
+    });
+  });
+
+  describe("setChampionsMode", () => {
+    it("enables Champions and pins the generation to 9", () => {
+      useGenerationStore.getState().setGeneration(3);
+      useGenerationStore.getState().setChampionsMode(true);
+      expect(useGenerationStore.getState().championsMode).toBe(true);
+      expect(useGenerationStore.getState().globalGeneration).toBe(9);
+    });
+
+    it("disables Champions without changing the generation", () => {
+      useGenerationStore.getState().setChampionsMode(true);
+      useGenerationStore.getState().setChampionsMode(false);
+      expect(useGenerationStore.getState().championsMode).toBe(false);
+      expect(useGenerationStore.getState().globalGeneration).toBe(9);
+    });
+
+    it("does not throw when calling into moduleStore", () => {
+      expect(() => useGenerationStore.getState().setChampionsMode(true)).not.toThrow();
     });
   });
 });

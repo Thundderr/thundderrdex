@@ -8,7 +8,7 @@ import { GenLetters } from "./GenLetters";
 // Horizontal generation picker used in the mobile header row. Desktop uses the
 // GenerationRail instead. `stretch` makes the buttons fill the available width.
 export function GenerationSelector({ stretch = false }: { stretch?: boolean }) {
-  const { globalGeneration, setGeneration } = useGenerationStore();
+  const { globalGeneration, championsMode, setGeneration, setChampionsMode } = useGenerationStore();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -16,11 +16,13 @@ export function GenerationSelector({ stretch = false }: { stretch?: boolean }) {
   }, []);
 
   const currentGen = isMounted ? globalGeneration : 9;
+  const champions = isMounted ? championsMode : false;
 
   return (
     <div className={`flex items-center gap-1 ${stretch ? "w-full" : ""}`}>
       {GENERATION_CONFIG.map((config) => {
-        const isSelected = config.gen === currentGen;
+        // Champions pins the generation to 9 but shouldn't light up Gen 9.
+        const isSelected = !champions && config.gen === currentGen;
         return (
           <button
             key={config.gen}
@@ -37,6 +39,20 @@ export function GenerationSelector({ stretch = false }: { stretch?: boolean }) {
           </button>
         );
       })}
+      {/* Champions: a battle format layered on Gen 9, toggled on/off here. */}
+      <button
+        onClick={() => setChampionsMode(!champions)}
+        aria-pressed={champions}
+        className={`
+          relative px-1.5 py-1 rounded transition-all text-xs font-bold ${stretch ? "flex-1 text-center" : ""}
+          ${champions ? "bg-slate-800 ring-2 ring-amber-400" : "bg-slate-800 hover:bg-slate-700"}
+        `}
+        title="Champions — view Pokémon as they are in Pokémon Champions (click to toggle)"
+      >
+        <span className={`flex items-center ${stretch ? "justify-center" : ""}`} style={{ color: "#FBBF24" }}>
+          C
+        </span>
+      </button>
     </div>
   );
 }

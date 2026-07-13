@@ -18,8 +18,19 @@ import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { getGenerationFeatures, POKEMON_TYPES, getZCrystals, isZCrystal, getItemsForGeneration, getCommonItemsForGeneration, getDynamaxHpMultiplier, canGigantamax, getMaxMoveName, getZMoveName, getGMaxMove, isMegaPokemon, getMegaStone } from "@/lib/utils/generationConfig";
 import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
+import { isChampionsMega, getChampionsMegaStone, getChampionsMegaStones } from "@/lib/pokemon/championsMega";
 import { genderState } from "@/lib/pokemon/gender";
 import { GenderToggle } from "@/components/pokemon-module/GenderToggle";
+
+// Champions uses a Stat Point (SP) budget instead of raw EVs: 66 SP total, max
+// 32 per stat, 1 SP = 8 EVs. We store the equivalent EVs (capped at 252 by the
+// stat engine) and present/edit them as SP while Champions mode is on.
+const CHAMPIONS_LEVEL = 50;
+const SP_PER_EV = 8;
+const MAX_SP_PER_STAT = 32;
+const MAX_SP_TOTAL = 66;
+const evToSp = (ev: number) => Math.round(ev / SP_PER_EV);
+const spToEv = (sp: number) => Math.min(252, sp * SP_PER_EV);
 
 interface Props {
   moduleId: string;
@@ -114,7 +125,7 @@ function ItemIcon({ item, size = 24 }: { item: string; size?: number }) {
 
 export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen, onConfigChange }: Props) {
   const { setDamageCalcAttacker, setDamageCalcDefender, setDamageCalcMove } = useModuleStore();
-  const { globalGeneration, setGeneration } = useGenerationStore();
+  const { globalGeneration, setGeneration, championsMode } = useGenerationStore();
   const genFeatures = getGenerationFeatures(globalGeneration);
   const { data: pokemonList } = usePokemonList();
   const { data: pokemon, isLoading: pokemonLoading } = usePokemon(config.pokemonName);
@@ -284,14 +295,17 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
     return speed;
   }, [calculatedStats, config.boosts.spe, config.status, config.item]);
 
-  // Get available items for the current generation
+  // Get available items for the current generation. In Champions mode, add the
+  // new Champions Mega stones (they have no mainline/PokéAPI item entry).
   const allItemsForGen = useMemo(() => {
-    return getItemsForGeneration(globalGeneration);
-  }, [globalGeneration]);
+    const base = getItemsForGeneration(globalGeneration);
+    return championsMode ? [...new Set([...getChampionsMegaStones(), ...base])] : base;
+  }, [globalGeneration, championsMode]);
 
   const commonItemsForGen = useMemo(() => {
-    return getCommonItemsForGeneration(globalGeneration);
-  }, [globalGeneration]);
+    const base = getCommonItemsForGeneration(globalGeneration);
+    return championsMode ? [...new Set([...getChampionsMegaStones(), ...base])] : base;
+  }, [globalGeneration, championsMode]);
 
   // Filter items based on search query
   const filteredItemOptions = useMemo(() => {
@@ -383,6 +397,16 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
     const value = parseInputValue(rawValue);
     const clampedValue = Math.max(0, Math.min(252, value));
     updateConfig({ evs: { ...config.evs, [stat]: clampedValue } });
+  };
+
+  // Champions SP editor: cap each stat at 32 SP and the whole spread at 66 SP,
+  // then store the equivalent EVs.
+  const spTotal = STAT_KEYS.reduce((sum, k) => sum + evToSp(config.evs[k]), 0);
+  const updateSp = (stat: keyof StatValues, rawValue: string) => {
+    const desired = Math.max(0, Math.min(MAX_SP_PER_STAT, parseInputValue(rawValue)));
+    const otherTotal = spTotal - evToSp(config.evs[stat]);
+    const allowed = Math.max(0, Math.min(desired, MAX_SP_TOTAL - otherTotal));
+    updateConfig({ evs: { ...config.evs, [stat]: spToEv(allowed) } });
   };
 
   const updateBoost = (boostKey: string, value: number) => {
@@ -492,18 +516,29 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
     }
   }, [pokemon, abilities]);
 
-  // Auto-set Mega Stone when a Mega Pokemon is selected
+  // Auto-set Mega Stone when a Mega Pokemon is selected. Champions introduces new
+  // Megas (with no PokéAPI/mainline entry) whose stones come from @pkmn/dex.
   useEffect(() => {
     if (config.pokemonName) {
-      const megaStone = getMegaStone(config.pokemonName);
+      const megaStone = getMegaStone(config.pokemonName) ?? getChampionsMegaStone(config.pokemonName);
       if (megaStone && config.item !== megaStone) {
         updateConfig({ item: megaStone });
       }
     }
   }, [config.pokemonName]);
 
-  // Check if current Pokemon is a Mega (for locking item)
-  const isCurrentMega = isMegaPokemon(config.pokemonName);
+  // In Champions mode, all Pokémon are Level 50 and Terastallization is disabled,
+  // so normalize the config (the level input and Tera picker are hidden in the UI).
+  useEffect(() => {
+    if (!championsMode) return;
+    const patch: Partial<DamageCalcPokemonConfig> = {};
+    if (config.level !== CHAMPIONS_LEVEL) patch.level = CHAMPIONS_LEVEL;
+    if (config.teraType) patch.teraType = null;
+    if (Object.keys(patch).length > 0) updateConfig(patch);
+  }, [championsMode, config.level, config.teraType]);
+
+  // Check if current Pokemon is a Mega (for locking item) — including Champions Megas.
+  const isCurrentMega = isMegaPokemon(config.pokemonName) || isChampionsMega(config.pokemonName ?? "");
 
   // Focus move input when editing
   useEffect(() => {
@@ -884,22 +919,29 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
 
   return (
     <div className="bg-slate-800 rounded-lg p-2 space-y-2 min-w-0">
-      {/* Level - above Pokemon select (fullscreen only) */}
+      {/* Level - above Pokemon select (fullscreen only). Champions is Level 50
+          only, so the level is fixed and shown as static text. */}
       {isFullscreen && config.pokemonName && pokemon && (
         <div className="flex items-center gap-1 text-xs">
           <span className="text-slate-400">Lv</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={config.level}
-            onChange={(e) =>
-              updateConfig({
-                level: Math.max(1, Math.min(100, parseInputValue(e.target.value) || 1)),
-              })
-            }
-            className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-1 text-white text-center focus:outline-none focus:border-blue-500"
-          />
+          {championsMode ? (
+            <span className="text-white font-medium" title="Champions battles are all Level 50">
+              {CHAMPIONS_LEVEL}
+            </span>
+          ) : (
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={config.level}
+              onChange={(e) =>
+                updateConfig({
+                  level: Math.max(1, Math.min(100, parseInputValue(e.target.value) || 1)),
+                })
+              }
+              className="w-10 bg-slate-700 border border-slate-600 rounded px-1 py-1 text-white text-center focus:outline-none focus:border-blue-500"
+            />
+          )}
         </div>
       )}
 
@@ -1024,10 +1066,10 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
           </div>
 
           {/* Gimmick Controls (Gen 7+) */}
-          {pokemonExistsInGen && (genFeatures.hasTera || genFeatures.hasZMoves || genFeatures.hasDynamax) && (
+          {pokemonExistsInGen && ((genFeatures.hasTera && !championsMode) || genFeatures.hasZMoves || genFeatures.hasDynamax) && (
             <div className="flex-shrink-0 flex flex-col gap-1">
-              {/* Terastallize - Gen 9 */}
-              {genFeatures.hasTera && (
+              {/* Terastallize - Gen 9. Not available in Champions (Tera is disabled there). */}
+              {genFeatures.hasTera && !championsMode && (
                 <select
                   value={config.teraType || ""}
                   onChange={(e) => {
@@ -1298,7 +1340,9 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
               <div className="px-2 py-1"></div>
               <div className="px-1 py-1 text-center">Base</div>
               <div className="px-1 py-1 text-center">IVs</div>
-              <div className="px-1 py-1 text-center">EVs</div>
+              <div className="px-1 py-1 text-center" title={championsMode ? "Stat Points (Champions): 66 total, max 32 per stat" : undefined}>
+                {championsMode ? "SP" : "EVs"}
+              </div>
               <div className="px-1 py-1 text-center"></div>
               <div className="px-1 py-1 text-center"></div>
             </div>
@@ -1350,8 +1394,8 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      value={config.evs[stat]}
-                      onChange={(e) => updateEv(stat, e.target.value)}
+                      value={championsMode ? evToSp(config.evs[stat]) : config.evs[stat]}
+                      onChange={(e) => (championsMode ? updateSp(stat, e.target.value) : updateEv(stat, e.target.value))}
                       className="w-full bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-white text-center focus:outline-none focus:border-blue-500"
                     />
                   </div>
@@ -1393,11 +1437,22 @@ export function PokemonConfigPanel({ moduleId, config, isAttacker, isFullscreen,
                 {pokemon.stats.total}
               </div>
               <div className="px-1 py-1.5"></div>
-              <div className={`px-1 py-1.5 text-center font-medium ${
-                evTotal > 510 ? "text-red-400" : evTotal === 510 ? "text-green-400" : "text-slate-400"
-              }`}>
-                {evTotal}
-              </div>
+              {championsMode ? (
+                <div
+                  className={`px-1 py-1.5 text-center font-medium ${
+                    spTotal > MAX_SP_TOTAL ? "text-red-400" : spTotal === MAX_SP_TOTAL ? "text-green-400" : "text-slate-400"
+                  }`}
+                  title={`Stat Points used (max ${MAX_SP_TOTAL})`}
+                >
+                  {spTotal}
+                </div>
+              ) : (
+                <div className={`px-1 py-1.5 text-center font-medium ${
+                  evTotal > 510 ? "text-red-400" : evTotal === 510 ? "text-green-400" : "text-slate-400"
+                }`}>
+                  {evTotal}
+                </div>
+              )}
               <div className="px-1 py-1.5"></div>
               <div className="px-1 py-1.5"></div>
             </div>

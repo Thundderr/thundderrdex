@@ -14,6 +14,8 @@ import { TYPES_BY_GENERATION, TYPE_COLORS } from "@/data/typeChart";
 import { getPokemonGenerationRange } from "@/lib/utils/pokemonGeneration";
 import { TypeBadge } from "@/components/type-chart/TypeBadge";
 import { ModuleShell } from "@/components/layout/ModuleShell";
+import { isSpeciesInChampions } from "@/data/championsRoster";
+import { ChampionsRulesChip } from "@/components/champions/ChampionsRulesChip";
 
 interface Props {
   module: TeamBuilderModuleType;
@@ -33,7 +35,7 @@ function TeamSlot({
   globalGeneration: number;
 }) {
   const { setTeamSlot, clearTeamSlot } = useModuleStore();
-  const { setGeneration } = useGenerationStore();
+  const { setGeneration, championsMode } = useGenerationStore();
   const { data: pokemon } = usePokemon(pokemonName);
   const { data: pokemonList } = usePokemonList();
 
@@ -55,6 +57,9 @@ function TeamSlot({
     const { minGen, maxGen } = getPokemonGenerationRange(pokemonName, pokemon.id);
     return globalGeneration >= minGen && (maxGen === null || globalGeneration <= maxGen);
   }, [pokemon, pokemonName, globalGeneration]);
+
+  // In Champions mode, flag a slot whose species isn't in the Champions roster.
+  const champIneligible = championsMode && !!pokemon && !isSpeciesInChampions(pokemon.id);
 
   const filteredResults = useMemo(() => {
     if (!query || !pokemonList) return [];
@@ -124,7 +129,7 @@ function TeamSlot({
   }, [highlightedIndex, filteredResults.length]);
 
   return (
-    <div className={`relative bg-slate-800 rounded-lg p-2 ${!pokemonExistsInGen && pokemon ? "opacity-50" : ""}`}>
+    <div className={`relative bg-slate-800 rounded-lg p-2 ${(!pokemonExistsInGen && pokemon) || champIneligible ? "opacity-50" : ""}`}>
       {isSearching ? (
         <div className="relative">
           <input
@@ -214,6 +219,9 @@ function TeamSlot({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-white truncate">{pokemon.displayName}</p>
+            {champIneligible && (
+              <p className="text-2xs font-semibold text-amber-400/90 leading-tight">Not in Champions</p>
+            )}
             <div className="flex gap-0.5 mt-0.5">
               {genTypes.map((type) => (
                 <span
@@ -410,7 +418,7 @@ function TeamCoverage({
 }
 
 export function TeamBuilderModule({ module, isOverlay = false }: Props) {
-  const { globalGeneration } = useGenerationStore();
+  const { globalGeneration, championsMode } = useGenerationStore();
 
   return (
     <ModuleShell
@@ -420,6 +428,11 @@ export function TeamBuilderModule({ module, isOverlay = false }: Props) {
       className="col-span-1 md:col-span-2"
       bodyClassName={`p-4 flex flex-col ${module.customHeight ? "flex-1 min-h-0 overflow-y-auto" : ""}`}
     >
+      {championsMode && (
+        <div className="mb-2">
+          <ChampionsRulesChip />
+        </div>
+      )}
       {/* Team Slots Grid */}
       <div className="grid grid-cols-2 @2xl:grid-cols-3 gap-2">
         {module.teamSlots.map((pokemonName, index) => (

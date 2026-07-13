@@ -7,6 +7,7 @@ import { GenderToggle } from "@/components/pokemon-module/GenderToggle";
 import { useEvolution, EvolutionNode } from "@/hooks/useEvolution";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useGenerationStore } from "@/stores/generationStore";
+import { isSpeciesInChampions, isMegaInChampions } from "@/data/championsRoster";
 import { getTypesForGeneration } from "@/lib/pokeapi/transformers";
 import { TYPES_BY_GENERATION } from "@/data/typeChart";
 import { isMegaPokemon, getMegaPokemonInfo, isRegionalVariant, getRegionalVariantInfo } from "@/lib/utils/generationConfig";
@@ -353,7 +354,7 @@ function EvolutionTree({ root, currentPokemonName, onSelect }: EvolutionTreeProp
 
 export function PokemonModule({ module, isOverlay = false }: Props) {
   const { setPokemon, setActiveTab, setStatModifiers, addPokemonModule, toggleExtended } = useModuleStore();
-  const { globalGeneration, setGeneration } = useGenerationStore();
+  const { globalGeneration, setGeneration, championsMode } = useGenerationStore();
   const {
     data: pokemon,
     isLoading,
@@ -1133,6 +1134,23 @@ export function PokemonModule({ module, isOverlay = false }: Props) {
                         <span className="rounded bg-teal-600/80 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
                           Champions
                         </span>
+                      )}
+                      {championsMode && (
+                        isSpeciesInChampions(pokemon.id) ? (
+                          <span
+                            title={`${pokemon.displayName} is usable in Pokémon Champions${isMegaInChampions(pokemon.id) ? " (its Mega Evolution is too)" : ""}.`}
+                            className="rounded bg-amber-400/15 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-300 ring-1 ring-inset ring-amber-400/40"
+                          >
+                            In Champions{isMegaInChampions(pokemon.id) ? " · Mega" : ""}
+                          </span>
+                        ) : (
+                          <span
+                            title={`${pokemon.displayName} is not in the Pokémon Champions roster.`}
+                            className="rounded bg-slate-700/70 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400"
+                          >
+                            Not in Champions
+                          </span>
+                        )
                       )}
                       {hasGenderToggle && (
                         <GenderToggle showFemale={showFemale} onToggle={setShowFemale} />

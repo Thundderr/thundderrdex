@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getChampionsMegas, isChampionsMega } from "./championsMega";
+import { getChampionsMegas, isChampionsMega, getChampionsMegaStone, getChampionsMegaStones } from "./championsMega";
 
 describe("getChampionsMegas", () => {
   const megas = getChampionsMegas();
@@ -40,5 +40,22 @@ describe("isChampionsMega", () => {
     expect(isChampionsMega("floette-mega")).toBe(true);
     expect(isChampionsMega("charizard-mega-y")).toBe(false);
     expect(isChampionsMega("incineroar")).toBe(false);
+  });
+});
+
+describe("Champions mega stones", () => {
+  it("resolves a mega's stone by name", () => {
+    expect(getChampionsMegaStone("pyroar-mega")).toBe("Pyroarite");
+    expect(getChampionsMegaStone("floette-mega")).toBe("Floettite");
+    expect(getChampionsMegaStone("incineroar")).toBeNull();
+    expect(getChampionsMegaStone(null)).toBeNull();
+  });
+
+  it("exposes a non-trivial, deduped, non-empty stone list", () => {
+    const stones = getChampionsMegaStones();
+    expect(stones.length).toBeGreaterThan(20);
+    expect(new Set(stones).size).toBe(stones.length); // deduped
+    expect(stones.every((s) => s.length > 0)).toBe(true); // no empties
+    expect(stones).toContain("Pyroarite");
   });
 });

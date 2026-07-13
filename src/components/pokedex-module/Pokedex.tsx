@@ -6,6 +6,8 @@ import { usePokemonList } from "@/hooks/usePokemonList";
 import { usePokedex } from "@/hooks/usePokedex";
 import { usePokemonOfType } from "@/hooks/usePokemonOfType";
 import { useGenerationStore } from "@/stores/generationStore";
+import { isSpeciesInChampions, isFormInChampions } from "@/data/championsRoster";
+import { ChampionsRulesChip } from "@/components/champions/ChampionsRulesChip";
 import { useModuleStore } from "@/stores/moduleStore";
 import { useCaughtStore, CatchMark, NATIONAL_BUCKET } from "@/stores/caughtStore";
 import { GENERATIONS } from "@/data/generations";
@@ -23,7 +25,7 @@ interface PokedexProps {
 
 export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexProps) {
   const { data: allPokemon, isLoading, isError, refetch } = usePokemonList();
-  const { globalGeneration, setGeneration } = useGenerationStore();
+  const { globalGeneration, setGeneration, championsMode } = useGenerationStore();
   const { addPokemonModule, setPokedexDex } = useModuleStore();
   const caught = useCaughtStore((s) => s.caught);
   const cycleCaught = useCaughtStore((s) => s.cycleCaught);
@@ -299,6 +301,7 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
 
         {/* Counts + toggles, kept together as the row wraps. */}
         <div className="shrink-0 flex items-center gap-2">
+          {championsMode && <ChampionsRulesChip />}
           {totalCount > 0 && (
             <div className="shrink-0 text-xs text-slate-400 whitespace-nowrap">
               <span className="font-semibold text-emerald-400">{caughtCount}</span> caught
@@ -378,6 +381,8 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 // collapse every tile onto one shared `marks[undefined]` key.
                 const catchKey = entry.catchKey ?? String(entry.nationalId);
                 const mark = marks[catchKey];
+                // In Champions mode, dim entries not usable in Champions.
+                const champDim = championsMode && !isFormInChampions(catchKey);
                 return (
                 <button
                   key={`${entry.regionalNumber}-${entry.name}`}
@@ -389,8 +394,8 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                     e.preventDefault();
                     handleCycle(catchKey);
                   }}
-                  className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)}`}
-                  title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${markTitleHint(mark)}`}
+                  className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)} ${champDim ? "opacity-30 grayscale" : ""}`}
+                  title={`${entry.displayName} — ${selectedDex.displayName} #${String(entry.regionalNumber).padStart(3, "0")} (Nat. #${String(entry.nationalId).padStart(3, "0")})${champDim ? " — not in Champions" : ""}${markTitleHint(mark)}`}
                 >
                   <MarkBadge mark={mark} />
                   <Image
@@ -474,6 +479,8 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                 {pokemon.map((pkmn) => {
                   const isEnabled = pkmn.id <= maxEnabledId;
                   const mark = marks[String(pkmn.id)];
+                  // In Champions mode, dim species not in the Champions roster.
+                  const champDim = championsMode && !isSpeciesInChampions(pkmn.id);
                   return (
                     <button
                       key={pkmn.name}
@@ -495,8 +502,8 @@ export function Pokedex({ moduleId, selectedDexId: selectedDexIdProp }: PokedexP
                         e.preventDefault();
                         handleCycle(String(pkmn.id));
                       }}
-                      className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)} ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"}`}
-                      title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${markTitleHint(mark)}`}
+                      className={`relative flex flex-col items-center p-1.5 rounded transition-colors ${markTileClasses(mark)} ${isEnabled ? "" : "opacity-30 grayscale cursor-pointer"} ${champDim ? "opacity-30 grayscale" : ""}`}
+                      title={`${pkmn.displayName} #${String(pkmn.id).padStart(3, "0")}${champDim ? " — not in Champions" : ""}${markTitleHint(mark)}`}
                     >
                       <MarkBadge mark={mark} />
                       <Image

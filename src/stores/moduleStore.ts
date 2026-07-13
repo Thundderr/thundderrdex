@@ -3,6 +3,12 @@ import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 import { PokemonModule, TeamBuilderModule, DamageCalcModule, LocationModule, PokedexModule, CatchRateModule, TrainingModule, ScoutingModule, DamageCalcPokemonConfig, DamageCalcFieldConfig, DamageCalcSideConfig, AnyModule, ModuleTab, ModuleType, RecentSearch, WorkspaceTab, TeamBattleSlot, TeamBattleTeam, SavedTeam } from "@/types/module";
 import { StatModifiers, DEFAULT_STAT_MODIFIERS, StatValues, clampEv, clampIv, clampLevel, getEvTotal } from "@/lib/utils/statCalculator";
+import { useGenerationStore } from "./generationStore";
+
+// Champions battles are all at level 50. New damage-calc Pokémon start there
+// while Champions mode is on (users can still change it). Read lazily at
+// call-time to avoid a static import cycle with the generation store.
+const CHAMPIONS_LEVEL = 50;
 
 const MAX_RECENT_SEARCHES = 20;
 
@@ -604,6 +610,10 @@ export const useModuleStore = create<ModuleStore>()(
       // Damage Calculator methods
       addDamageCalcModule: () => {
         const newModule = createDamageCalcModule();
+        if (useGenerationStore.getState().championsMode) {
+          newModule.attacker.level = CHAMPIONS_LEVEL;
+          newModule.defender.level = CHAMPIONS_LEVEL;
+        }
         set((state) => ({
           tabs: updateActiveTabModules(state, (modules) => [...modules, newModule]),
           newlyCreatedModuleId: newModule.id,
