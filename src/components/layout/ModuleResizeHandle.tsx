@@ -9,11 +9,15 @@ const MIN_HEIGHT = 160;
 // Ignore pointer jitter below this so a sloppy click doesn't lock in a size
 const MOVE_THRESHOLD = 4;
 
-// Fluid default height for data-heavy modules: scales with the viewport so the
-// dashboard fills nicely on big screens instead of leaving empty space, while
-// the rem floor/ceiling keep it readable at zoom extremes. dvh (not vh) tracks
-// mobile browser chrome. A user drag (customHeight) always overrides this.
-export const DEFAULT_TALL_HEIGHT = "clamp(24rem, 60dvh, 48rem)";
+// Data-heavy modules stretch to fill the available column height rather than
+// stopping at a fixed size: a floor so they're never cramped, and a ceiling of
+// one screen so a content-rich module scrolls internally instead of growing
+// unbounded. The grid stretches its rows (align-content), so with a sparse
+// dashboard the row — and these modules — fill the viewport, while a dense
+// dashboard falls back to natural, capped heights. dvh (not vh) tracks mobile
+// browser chrome. A user drag (customHeight) always overrides both bounds.
+export const MODULE_TALL_MIN = "24rem";
+export const MODULE_TALL_MAX = "100dvh";
 
 /**
  * Inline style for a module's root element carrying its size.
@@ -24,8 +28,15 @@ export const DEFAULT_TALL_HEIGHT = "clamp(24rem, 60dvh, 48rem)";
 export function moduleSizeStyle(module: BaseModule, defaultTall = false): CSSProperties {
   const style: CSSProperties & Record<string, string | number> = {};
   if (module.customWidthCols) style["--module-cols"] = module.customWidthCols;
-  if (module.customHeight) style.height = `${module.customHeight}px`;
-  else if (defaultTall) style.height = DEFAULT_TALL_HEIGHT;
+  if (module.customHeight) {
+    style.height = `${module.customHeight}px`;
+  } else if (defaultTall) {
+    // No fixed height: the grid row stretches these to fill available space
+    // (down to the min), and the max keeps a content-rich module scrolling
+    // internally rather than running off the page.
+    style.minHeight = MODULE_TALL_MIN;
+    style.maxHeight = MODULE_TALL_MAX;
+  }
   return style;
 }
 

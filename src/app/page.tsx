@@ -13,7 +13,7 @@ export default function Home() {
           <GenerationRail />
           <div className="flex-1 flex flex-col overflow-hidden">
             <TabBar />
-            <main className="relative flex-1 overflow-y-auto p-4 md:p-6">
+            <main className="relative flex flex-col flex-1 overflow-y-auto p-4 md:p-6">
               <ModuleContainer />
             </main>
           </div>
