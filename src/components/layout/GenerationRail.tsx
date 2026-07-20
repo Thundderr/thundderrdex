@@ -5,10 +5,10 @@ import { useGenerationStore } from "@/stores/generationStore";
 import { GENERATION_CONFIG } from "@/data/generationGames";
 import { GenLetters } from "./GenLetters";
 
-// Thin desktop-only rail down the left edge: one button per generation, the
-// current one ring-highlighted. Replaces the old left sidebar and frees the
-// header row for the module buttons. The seam below Gen 9 is reserved for the
-// future Champions row (separate follow-up spec).
+// Thin desktop-only rail down the left edge: one button per generation (plus the
+// Champions toggle), the current one ring-highlighted. Only the controls carry
+// the rail's surface colour; the empty space below matches the module-area
+// background, so the rail reads as a compact panel rather than a full-height bar.
 export function GenerationRail() {
   const { globalGeneration, championsMode, setGeneration, setChampionsMode } = useGenerationStore();
   const [isMounted, setIsMounted] = useState(false);
@@ -24,8 +24,11 @@ export function GenerationRail() {
   const champions = isMounted ? championsMode : false;
 
   return (
-    <aside className="hidden md:flex w-12 shrink-0 flex-col items-stretch gap-1 overflow-y-auto border-r border-slate-800 bg-slate-900 p-1">
-      {GENERATION_CONFIG.map((config) => {
+    <aside className="hidden md:flex w-12 shrink-0 flex-col overflow-y-auto bg-app">
+      {/* Surface-coloured panel holds just the controls; its rounded bottom marks
+          the transition to the module-area-coloured space below. */}
+      <div className="flex shrink-0 flex-col items-stretch gap-1 rounded-b-xl bg-slate-900 p-1 pb-3">
+        {GENERATION_CONFIG.map((config) => {
         // A generation is "selected" only when Champions mode is off — Champions
         // pins the generation to 9, but shouldn't light up the Gen 9 button.
         const isSelected = !champions && config.gen === currentGen;
@@ -59,6 +62,7 @@ export function GenerationRail() {
             C
           </span>
         </button>
+        </div>
       </div>
     </aside>
   );
